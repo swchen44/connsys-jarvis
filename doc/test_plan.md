@@ -1,11 +1,12 @@
 # Connsys Jarvis — 測試計畫
 
-**文件版本**：v1.2
+**文件版本**：v1.3
 **日期**：2026-03-27
 **依據**：agents-requirements.md v3.2, agents-design.md v3.2
 **變更說明**：
 - v1.1 — setup.py 路徑改為 scripts/setup.py；新增 TC-12 pytest 單元測試
 - v1.2 — 修正 TC-02 Step 6（預設 identity-only，無 count header）；更新 TC-12 測試數 57→61（含 --with-all-experts tests）；新增 TC-13（--with-all-experts 整合）、TC-14（--debug 日誌）
+- v1.3 — TC-02 補充 Step 8、9（驗證 include_all_experts=false 及 install_order）；對齊需求書 FR-02-4 reference count 與 FR-02-8 dependencies/internal 定義
 
 ---
 
@@ -58,6 +59,8 @@
 | 5 | `ls .claude/skills/ \| wc -l` | 13 |
 | 6 | `cat CLAUDE.md` | 預設 identity-only 格式：只含 wifi-bora-memory-slim-expert 的 soul/rules/duties/expert.md，**不含**「N Experts 已安裝」count header |
 | 7 | `cat .connsys-jarvis/.installed-experts.json` | experts 陣列含 2 個 Expert，wifi-bora-memory-slim-expert 的 is_identity=true |
+| 8 | `python3 -c "import json; d=json.load(open('.connsys-jarvis/.installed-experts.json')); print(d.get('include_all_experts'))"` | `False`（預設 identity-only）|
+| 9 | 驗證 install_order：framework-base-expert=1、wifi-bora-memory-slim-expert=2 | 符合（依安裝順序遞增）|
 
 ---
 

@@ -1,7 +1,7 @@
 # Connsys Jarvis — 測試報告
 
 **報告日期**：2026-03-27
-**測試計畫**：test_plan.md v1.2
+**測試計畫**：test_plan.md v1.3
 **實作版本**：v1.2（commit: e168935）
 **測試環境**：macOS Darwin 24.3.0, Python 3.12.9, uv 已安裝
 **測試工具**：tmux session `connsys-verify` + bash + pytest
@@ -64,6 +64,8 @@
 | 5 | `.claude/skills/` 共 13 個 | 13 | ✅ |
 | 6 | `CLAUDE.md` 預設 identity-only：只含 wifi-bora-memory-slim-expert 的 soul/rules/duties/expert.md，**無** count header | 符合（無「2 Experts 已安裝」）| ✅ |
 | 7 | `wifi-bora-memory-slim-expert` 的 `is_identity=true` | 符合 | ✅ |
+| 8 | `include_all_experts` = `False`（預設 identity-only）| `False` | ✅ |
+| 9 | install_order：framework=1、wifi=2 | framework-base-expert=1, wifi-bora-memory-slim-expert=2 | ✅ |
 
 **依賴解析驗證**：
 

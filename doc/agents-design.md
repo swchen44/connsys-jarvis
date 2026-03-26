@@ -795,18 +795,26 @@ source .connsys-jarvis/.env
 ```
 setup.py --add wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json
 
-Step 1：讀取 expert.json，取得 dependencies 清單
-  dependencies: [
-    "framework/experts/framework-base-expert",
-    "wifi-bora/experts/wifi-bora-base-expert",
-    "sys-bora/experts/sys-bora-preflight-expert"
-  ]
+Step 1：讀取 expert.json，取得 dependencies 與 internal
+
+  dependencies 的每個元素對四個 key（skills/hooks/agents/commands）各自套用選擇規則：
+    "all"            → 繼承該 Expert 資料夾下的全部項目
+    ["name1","name2"] → 只繼承指定清單
+    省略 key          → 不繼承（空集合）
+
+  範例（wifi-bora-memory-slim-expert 的 dependencies）：
+    framework-base-expert  → skills: [指定 3 個], hooks: "all", commands: [指定 2 個]
+    wifi-bora-base-expert  → skills: [指定 5 個]
+    sys-bora-preflight     → skills: [指定 2 個]
+
+  internal 下的項目永遠全部建立（不需選擇規則）：
+    wifi-bora-memory-slim-expert → skills/: 3 個私有 skill
 
 Step 2：遞迴讀取所有依賴的 expert.json，合併所有要建立的 link
   framework-base-expert          → skills（指定清單）、hooks（all）、commands（指定清單）
   wifi-bora-base-expert          → skills（指定清單）
   sys-bora-preflight-expert      → skills（指定清單）
-  wifi-bora-memory-slim-expert   → skills/*（internal）
+  wifi-bora-memory-slim-expert   → skills/*（internal，全部）
 
 Step 3：套用 exclude_symlink 過濾不需要的 link
   wifi-bora-memory-slim-expert.json 中若設定 patterns: [".*-lsp-.*"]
@@ -891,7 +899,7 @@ cd connsys-jarvis && uvx pytest scripts/test/test_setup.py -v
 uv run --with pytest pytest scripts/test/test_setup.py -v
 ```
 
-**測試覆蓋範圍**（`test_setup.py` 共 57 個測試）：
+**測試覆蓋範圍**（`test_setup.py` 共 61 個測試）：
 
 | 測試類 | 函式 | 測試數 |
 |--------|------|--------|
@@ -900,7 +908,7 @@ uv run --with pytest pytest scripts/test/test_setup.py -v
 | `TestResolveItems` | `resolve_items()` | 6 |
 | `TestApplyExcludePatterns` | `apply_exclude_patterns()` | 4 |
 | `TestGenerateClaudeMdSingle` | `generate_claude_md()` 單 Expert | 4 |
-| `TestGenerateClaudeMdMulti` | `generate_claude_md()` 多 Expert | 4 |
+| `TestGenerateClaudeMdMulti` | `generate_claude_md()` 多 Expert（identity-only × 4 + --with-all-experts × 4）| 8 |
 | `TestWriteEnvFile` | `write_env_file()` + 環境變數驗證 | 10 |
 | `TestInstalledExpertsSchema` | `.installed-experts.json` 讀寫 | 3 |
 | `TestIntegrationInit` | `--init` 整合測試 | 8 |

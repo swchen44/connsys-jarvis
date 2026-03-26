@@ -654,11 +654,11 @@ workspace/                                       ← $CONNSYS_JARVIS_WORKSPACE_R
 | FR-02-1 | `connsys-jarvis/scripts/setup.py` 為**唯一安裝程式**，以 Python stdlib 實作，用 `uv run ./connsys-jarvis/scripts/setup.py` 執行 | Must | 單一入口，避免每個 Expert 各自維護 install.sh；Python stdlib 無需額外依賴 |
 | FR-02-2 | 支援 `--init <expert.json>` 參數：**全新安裝**，清除所有既有 link，讀取 expert.json 及其 dependencies，重建所有 symlink，重新生成 CLAUDE.md 和 .env | Must | 初次安裝或強制重建時使用 |
 | FR-02-3 | 支援 `--add <expert.json>` 參數：**疊加安裝**，在既有 Expert 基礎上加入新的 Expert；CLAUDE.md 預設只包含最後安裝 Expert 的 identity（soul/rules/duties/expert.md），加上 `--with-all-experts` 旗標則同時輸出所有已安裝 Expert 的 expert.md（Identity + Capabilities 雙區段） | Must | 多 Expert 安裝流程；預設 identity-only 避免 context 過大，`--with-all-experts` 視需要開啟全能力 |
-| FR-02-4 | 支援 `--remove <expert.json>` 參數：從已安裝清單移除此 Expert，依剩餘 Expert 重建 symlink 和 CLAUDE.md | Must | 移除特定 Expert，不影響其他 Expert |
+| FR-02-4 | 支援 `--remove <expert.json>` 參數：從已安裝清單移除此 Expert，依剩餘 Expert 重建 symlink 和 CLAUDE.md；**Reference Count 規則**：只有當 symlink 不再被任何其他已安裝 Expert 的 `declared_symlinks` 引用時才刪除，有共用的 symlink 保留 | Must | 移除特定 Expert 時，不破壞其他 Expert 依賴的共用 symlinks |
 | FR-02-5 | 支援 `--uninstall` 參數：清除所有 link 和 CLAUDE.md，但保留 `.connsys-jarvis/log/` 和 `.connsys-jarvis/memory/` | Must | 完全清除安裝，保留記憶 |
 | FR-02-6 | 支援 `--list` 參數：列出目前已安裝的 Expert 清單及所有 symlink 及來源 | Must | 讓同仁了解目前安裝狀態 |
 | FR-02-7 | 支援 `--doctor` 參數：診斷所有 symlink 是否 dangling、列出已安裝 Expert、檢查 Python/uv/uvx 環境 | Must | 快速排查安裝問題 |
-| FR-02-8 | setup.py 讀取 `expert.json` 的 `dependencies` 陣列，遞迴解析所有依賴，依選擇規則計算完整 symlink 清單：**①** `"all"` → 繼承全部；**②** 明確列出名稱 → 只繼承該清單；**③** 省略 key → 不繼承（空集合）。四個 key（skills/hooks/agents/commands）各自獨立控制 | Must | 精確控制每個依賴 expert 貢獻的 link，避免不必要的 skill 被載入 |
+| FR-02-8 | setup.py 讀取 `expert.json` 兩類來源：**① `dependencies`**（引用其他 Expert 的 symlinks）和 **② `internal`**（本 Expert 自有的 skills/hooks/commands）。`dependencies` 陣列每個元素可針對四個 key（skills/hooks/agents/commands）各自指定選擇規則：**`"all"`** → 繼承該 Expert 的全部；**`["name1","name2"]`** → 只繼承指定清單；**省略 key** → 不繼承（空集合）。`internal` 下的四個 key 永遠全部建立 | Must | 精確控制每個依賴 expert 貢獻的 link；internal 與 dependencies 分開，避免不必要的 skill 被載入 |
 | FR-02-9 | expert.json 支援 `exclude_symlink.patterns`（全域 regex 清單），在所有 link 建立完成後（Step 1+2），於 Step 3 移除名稱符合任一 pattern 的 link | Must | 全域過濾可跨所有 dependency 統一移除不需要的 link，正則表達式提供更彈性的匹配 |
 | FR-02-10 | setup.py 執行後將環境變數寫入 `workspace/.connsys-jarvis/.env`；同仁需手動執行 `source .connsys-jarvis/.env` | Must | 環境變數需存入 shell，Python 程式本身無法修改 parent shell 環境 |
 | FR-02-11 | setup.py 每次執行結束後自動印出提示訊息：`✅ 安裝完成。請執行：source .connsys-jarvis/.env` | Must | 避免同仁忘記 source，導致環境變數失效 |
