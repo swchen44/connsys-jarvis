@@ -244,6 +244,8 @@ connsys-jarvis/
 framework-expert-discovery-knowhow   ← 有哪些 Expert 及各自能力
 framework-handoff-flow               ← 交接流程 SOP
 framework-memory-tool                ← connsys-memory 操作
+framework-skill-create-flow          ← 互動式建立符合規範的 Skill（SKILL.md + 目錄結構）
+framework-expert-create-flow         ← 互動式建立符合規範的 Expert（soul/rules/duties/expert.md + expert.json）
 
 # wifi domain
 wifi-bora-protocol-knowhow                ← Wi-Fi 協定基礎知識
@@ -337,7 +339,8 @@ connsys-jarvis/
 │           │   ├── framework-expert-discovery-knowhow/
 │           │   ├── framework-handoff-flow/
 │           │   ├── framework-memory-tool/
-│           │   └── framework-skill-create-flow/
+│           │   ├── framework-skill-create-flow/
+│           │   └── framework-expert-create-flow/
 │           ├── hooks/
 │           │   ├── session-start.sh
 │           │   ├── session-end.sh
@@ -967,7 +970,138 @@ tags: [internal]
 
 ---
 
-## 8. Script 實作語言優先策略
+## 8. Framework Expert/Skill 建立工具設計
+
+`framework-base-expert` 內建兩個輔助建立 flow，供工程師快速產出符合規範的 Expert / Skill 內容。兩個 flow 均作為 `framework-base-expert` 的 internal skill，安裝 framework-base-expert 後即可使用。
+
+---
+
+### 8.1 `framework-skill-create-flow`
+
+**目的**：互動式引導工程師建立一個完整、符合規範的 Skill，避免遺漏必要章節或放錯目錄。
+
+**觸發詞**（範例）：
+- 「幫我建立一個 skill」
+- 「create skill」
+- 「我要新增一個 \<名稱> 的 skill」
+
+**互動流程**：
+
+```
+1. 詢問 Skill 基本資訊
+   - Skill 名稱（{domain}-{name}-{type}，提示命名規則）
+   - 所屬 Expert（internal 還是 base expert）
+   - Type：flow / knowhow / tool（解釋三種類型差異）
+   - 一句話描述（寫入 YAML description）
+
+2. 詢問 Skill 內容
+   - 觸發條件：什麼情況下 AI 應呼叫此 Skill？
+   - How it works：主要執行步驟（逐步引導）
+   - 有哪些相依 Skill？
+   - 有什麼邊界或限制？
+   - 請給一個使用範例
+
+3. 產生輸出
+   ├── {skill-dir}/SKILL.md         ← 含完整 frontmatter + 各章節
+   ├── {skill-dir}/README.md        ← 歷史、目的、開發說明
+   └── {skill-dir}/test/
+       └── test-basic.sh            ← 驗證 SKILL.md 基本結構的 shell 腳本
+
+4. 確認路徑後，詢問是否執行 test-basic.sh 驗證
+```
+
+**SKILL.md 章節標準**（framework-skill-create-flow 確保全部存在）：
+
+| 章節 | 說明 | 必要 |
+|------|------|------|
+| YAML frontmatter | name / description / version / domain / type / scope / tags | ✅ |
+| `## Trigger` | 觸發詞與觸發條件 | ✅ |
+| `## How it works` | 執行步驟（numbered list）| ✅ |
+| `## 範例` | 至少 1 個完整範例 | ✅ |
+| `## 相依 Skills` | 列出依賴的其他 Skill | 有則加 |
+| `## 限制與邊界` | 什麼情況不適用 | ✅ |
+
+---
+
+### 8.2 `framework-expert-create-flow`
+
+**目的**：互動式引導工程師建立一個新 Expert 的完整資料夾結構，把使用者的自然語言描述轉化為品質好、符合 connsys-jarvis 規範的四個核心文件（soul / rules / duties / expert.md）與 expert.json。
+
+**觸發詞**（範例）：
+- 「幫我建立一個新的 expert」
+- 「create expert」
+- 「我要新增一個 \<名稱> 的 expert」
+
+**互動流程**：
+
+```
+1. 詢問 Expert 基本定義
+   - Expert 名稱（{domain}-{name}-expert，提示命名規則）
+   - 所屬 Domain
+   - 一句話描述（這個 Expert 的核心任務）
+
+2. 引導 soul.md 內容
+   - 這個 Expert 的身分認同是什麼？（Identity）
+   - 它的核心價值和原則？（Values & Principles）
+   - 溝通風格？主動/被動？正式/非正式？
+   - 有什麼獨特的個性特質？（Personality）
+
+3. 引導 rules.md 內容
+   - 它必須永遠做哪些事？（Must Always）
+   - 它絕對不能做哪些事？（Must Never）
+   - 邊界：它不負責哪些工作？（Boundaries）
+   - 若規則衝突，優先順序？（Conflict Resolution）
+
+4. 引導 duties.md 內容
+   - 它的主要職責有哪些？（Primary Duties）
+   - 哪些工作是明確不在其職責範圍？（Segregation of Duties）
+   - 如何衡量它做得好不好？（KPIs）
+
+5. 產生 expert.md
+   - 自動根據以上輸入生成 Overview、Key Behaviors、Tools Available
+   - Skills 表格（初始空白，待工程師填入）
+   - Hooks 表格（預設繼承 framework-base-expert 的 hooks）
+
+6. 產生 expert.json 初稿
+   - 自動填入 name / version / description / domain
+   - dependencies 預設包含 framework-base-expert
+   - internal skills/hooks 空白，待工程師填入
+
+7. 建立資料夾骨架
+   {domain}/experts/{expert-name}/
+   ├── expert.json    ← 初稿
+   ├── soul.md        ← 完整填寫
+   ├── rules.md       ← 完整填寫
+   ├── duties.md      ← 完整填寫
+   ├── expert.md      ← 完整填寫
+   ├── skills/        ← 空資料夾（待建立 Skill）
+   ├── hooks/         ← 空資料夾（若需要 Expert-level hook）
+   └── README.md      ← 初稿（含安裝指令）
+```
+
+**四個核心文件標準章節**（framework-expert-create-flow 確保全部存在）：
+
+| 文件 | 必要章節 |
+|------|---------|
+| `soul.md` | `## Identity` / `## Values & Principles` / `## Communication Style` / `## Personality` |
+| `rules.md` | `## Must Always` / `## Must Never` / `## Boundaries` / `## Conflict Resolution` |
+| `duties.md` | `## Primary Duties` / `## Segregation of Duties` / `## KPIs` |
+| `expert.md` | `## Overview` / `## Key Behaviors` / `## Tools Available` / `## Skills` 表格 / `## Hooks` 表格 |
+
+---
+
+### 8.3 兩個 Flow 的定位差異
+
+| | `framework-skill-create-flow` | `framework-expert-create-flow` |
+|--|-------------------------------|-------------------------------|
+| **建立對象** | 單一 Skill（SKILL.md + test）| 整個 Expert 資料夾（4 個文件 + expert.json）|
+| **互動深度** | 中（著重 trigger / steps / 範例）| 深（著重身分、職責、邊界的精確定義）|
+| **輸出物** | SKILL.md / README.md / test-basic.sh | soul.md / rules.md / duties.md / expert.md / expert.json / 資料夾骨架 |
+| **後續動作** | 加入 expert.json 的 internal.skills 清單 | 執行 `setup.py --init` 安裝 |
+
+---
+
+## 9. Script 實作語言優先策略
 
 適用範圍：所有 Hook（`hooks/`）與 Skill 內的可執行腳本（`test/`、helper scripts）。
 
@@ -1805,7 +1939,7 @@ framework/experts/framework-learn-expert/skills/
 
 | Domain | Expert | Internal Skills（該 Expert 自己擁有的 skills） |
 |--------|--------|-----------------------------------------------|
-| framework | framework-base-expert | framework-expert-discovery-knowhow, framework-handoff-flow, framework-memory-tool, framework-skill-create-flow |
+| framework | framework-base-expert | framework-expert-discovery-knowhow, framework-handoff-flow, framework-memory-tool, framework-skill-create-flow, framework-expert-create-flow |
 | sys-bora | sys-bora-base-expert | sys-bora-gerrit-tool, sys-bora-repo-tool, sys-bora-build-knowhow, sys-bora-arch-knowhow, sys-bora-ld-knowhow, sys-bora-config-knowhow, sys-bora-manifest-build-knowhow |
 | sys-bora | sys-bora-preflight-expert | sys-bora-preflight-flow, sys-bora-preflight-result-tool, sys-bora-gerrit-commit-flow, sys-bora-ci-label-knowhow |
 | wifi-bora | wifi-bora-base-expert | wifi-bora-protocol-knowhow, wifi-bora-arch-knowhow, wifi-bora-coderule-knowhow, wifi-bora-build-flow, wifi-bora-rompatch-knowhow, wifi-bora-linkerscript-knowhow, wifi-bora-symbolmap-knowhow, wifi-bora-memory-knowhow, wifi-bora-sds-knowhow |

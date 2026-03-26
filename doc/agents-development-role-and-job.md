@@ -83,7 +83,9 @@
 | P1 | `setup-claude.sh` 實作（寫入 settings.json）| `setup-claude.sh` | 分離於 scripts/setup.py（setup.py 不修改 settings.json）|
 | P1 | Hooks 實作（Shell 優先）| `session-start.sh` / `session-end.sh` / `pre-compact.sh` / `mid-session-checkpoint.sh` / `shared-utils.sh` | |
 | P1 | Python helper 實作 | `memory-helper.py`（YAML 解析、token 計算）| Shell hooks 呼叫 |
-| P1 | `framework-base-expert` skills | `framework-handoff-flow` / `framework-expert-discovery-knowhow` / `framework-memory-tool` | |
+| P1 | `framework-base-expert` 核心 skills | `framework-handoff-flow` / `framework-expert-discovery-knowhow` / `framework-memory-tool` | |
+| P1 | `framework-skill-create-flow` skill | 互動式引導建立符合規範的 Skill（SKILL.md + README.md + test-basic.sh）| SKILL.md 模板定稿 |
+| P1 | `framework-expert-create-flow` skill | 互動式引導建立符合規範的 Expert（soul/rules/duties/expert.md + expert.json + 資料夾骨架）| expert.json schema 定稿 |
 | P1 | `registry.json` 初版 | 列出所有 expert + metadata | Domain Owner 開始後持續更新 |
 | P2 | `.connsys-jarvis/memory/` 三區結構初始化邏輯 | `scripts/setup.py --init` 首次執行時建立 `shared/working/handoffs/` | |
 
@@ -319,10 +321,12 @@
 | F-06 | 1 | P1 | `setup-claude.sh` 實作（寫入 settings.json，分離於 setup.py）| `setup-claude.sh` | F-05 |
 | F-07 | 1 | P1 | Hooks 實作（Shell 優先）| `session-start.sh / session-end.sh / pre-compact.sh / mid-session-checkpoint.sh / shared-utils.sh` | — |
 | F-08 | 1 | P1 | Python memory helper | `memory-helper.py`（YAML 解析、token 計算，Shell hooks 呼叫）| F-07 |
-| F-09 | 1 | P1 | `framework-base-expert` skills | `framework-handoff-flow / framework-expert-discovery-knowhow / framework-memory-tool` | F-01, F-07 |
+| F-09 | 1 | P1 | `framework-base-expert` 核心 skills | `framework-handoff-flow / framework-expert-discovery-knowhow / framework-memory-tool` | F-01, F-07 |
 | F-10 | 1 | P1 | `registry.json` 初版 | 所有 expert 目錄 + metadata | — |
 | F-11 | 2 | P2 | `.connsys-jarvis/memory/` 三區初始化邏輯 | `shared/ working/ handoffs/` 由 `--init` 自動建立 | F-05 |
-| F-12 | 3 | P3 | `framework-skill-create-expert` | AI 輔助建立 SKILL.md | Phase 2 完成 |
+| F-13 | 1 | P1 | `framework-skill-create-flow` skill | 互動式引導建立符合規範的 Skill（SKILL.md + README.md + test-basic.sh 初版）| F-02（SKILL.md 模板）|
+| F-14 | 1 | P1 | `framework-expert-create-flow` skill | 互動式引導建立符合規範的 Expert（soul/rules/duties/expert.md + expert.json + 資料夾骨架）| F-01（expert.json schema）|
+| F-12 | 3 | P3 | `framework-learn-expert` | 分析 connsys-memory → 自動產生 skill PR | Phase 2 完成 |
 
 **所需人力**：1 名 Framework Engineer（Phase 0–1 全力投入，Phase 2 起轉技術支援）
 

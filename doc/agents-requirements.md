@@ -631,7 +631,7 @@ workspace/                                       ← $CONNSYS_JARVIS_WORKSPACE_R
 
 | Expert | Domain | 依賴 | 任務描述 |
 |--------|--------|------|---------|
-| `framework-base-expert` | framework | — | 管理 connsys expert 生態系；提供建立 skill/expert、合規安全審查 |
+| `framework-base-expert` | framework | — | 管理 connsys expert 生態系；提供 Expert/Skill 建立輔助（`framework-expert-create-flow`、`framework-skill-create-flow`）、手交接、記憶管理 |
 | `sys-bora-base-expert` | sys-bora | — | SoC/OS/build system 基礎知識；manifest 下載與 build.py 流程；cpu/os API、ld、firmware config 基礎 |
 | `sys-bora-preflight-expert` | sys-bora（跨 domain 共用）| sys-bora-base | gerrit commit/preflight 操作；CI/CD label 定義；preflight 結果分析與自動修復；tmux/agent-browser 操作 |
 | `wifi-bora-base-expert` | wifi-bora | — | wifi-bora fw 下載/編譯/build pass-fail；Wi-Fi 標準基礎；ROM patch/linkerscript；memory symbol；fw 架構與 SDS；自動上傳程式碼 |
@@ -809,6 +809,20 @@ git -C "$CONNSYS_JARVIS_MEMORY_PATH" push origin main
 - 執行環境已安裝 Claude Code CLI、Git、bash
 - 同仁的 git config user.name 即其工號（企業環境統一設定）
 - `connsys-memory` remote 由管理者預先建立並開放所有同仁寫入
+
+### FR-07：Framework Expert/Skill 建立工具
+
+為降低新建 Expert 和 Skill 的門檻，`framework-base-expert` 提供兩個輔助建立的 flow skill，確保產出符合 connsys-jarvis 規範。
+
+| 編號 | 需求 | 優先級 | 理由 |
+|------|------|--------|------|
+| FR-07-1 | **`framework-skill-create-flow`**：互動式引導工程師建立符合規範的 Skill。接收使用者對 Skill 用途的描述，輸出完整的 SKILL.md（含 YAML frontmatter、必要章節）、README.md、`test/test-basic.sh` 初版，並放置於正確的五層目錄結構 | Must | 降低建立 Skill 的門檻；確保每個 Skill 包含所有必要章節（觸發條件、How it works、範例、限制），避免遺漏造成 AI 誤用 |
+| FR-07-2 | `framework-skill-create-flow` 輸出的 SKILL.md 須包含以下章節：**① YAML frontmatter**（name/description/version/domain/type/scope/tags）、**② Trigger**（觸發詞與條件）、**③ How it works**（步驟說明）、**④ 範例**（至少 1 個）、**⑤ 相依 Skills**（若有）、**⑥ 限制與邊界** | Must | 完整的 SKILL.md 讓 AI 準確理解何時呼叫、如何執行 |
+| FR-07-3 | `framework-skill-create-flow` 建立 Skill 後，詢問是否要執行 `test/test-basic.sh` 驗證基本結構完整性 | Should | 即時確認 Skill 結構正確，避免安裝後才發現問題 |
+| FR-07-4 | **`framework-expert-create-flow`**：互動式引導工程師建立符合規範的 Expert 資料夾結構。接收使用者對 Expert 角色、職責、適用場景的描述，輸出高品質的 `soul.md`、`rules.md`、`duties.md`、`expert.md`、`expert.json` 初稿，並建立標準資料夾骨架 | Must | 降低建立 Expert 的門檻；確保四個核心文件（soul/rules/duties/expert）結構完整、語意清晰，避免 Expert 定義模糊導致 AI 行為不一致 |
+| FR-07-5 | `framework-expert-create-flow` 輸出的四個核心文件須符合：**soul.md**（Identity / Values & Principles / Communication Style / Personality）、**rules.md**（Must Always / Must Never / Boundaries / Conflict Resolution）、**duties.md**（Primary Duties / Segregation of Duties / KPIs）、**expert.md**（Overview / Key Behaviors / Tools Available / Skills 表格 / Hooks 表格） | Must | 四個文件各有明確的結構責任；結構一致才能讓 framework-base-expert 的 hand-off 和 discovery 機制正確運作 |
+| FR-07-6 | `framework-expert-create-flow` 產生的 `expert.json` 初稿含正確的 schema 欄位（name/version/description/domain/type/dependencies/internal/exclude_symlink），dependencies 預設包含 `framework-base-expert` | Must | 減少工程師手動填寫 expert.json 的錯誤；新 Expert 預設繼承 framework-base-expert 的 hooks 和 commands |
+| FR-07-7 | 兩個 flow skill 均作為 `framework-base-expert` 的 internal skills，透過 `scripts/setup.py --init framework/experts/framework-base-expert/expert.json` 安裝後即可使用 | Must | 建立工具隨 framework 安裝，不需額外操作 |
 
 ---
 
