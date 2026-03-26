@@ -1,10 +1,10 @@
 # Connsys Jarvis — 測試報告
 
-**報告日期**：2026-03-26
-**測試計畫**：test_plan.md v1.0
-**實作版本**：v1.0（commit: 8490158）
-**測試環境**：macOS Darwin 24.3.0, Python 3.13.2, uv 已安裝
-**測試工具**：tmux session `connsys-verify` + bash
+**報告日期**：2026-03-27
+**測試計畫**：test_plan.md v1.2
+**實作版本**：v1.2（commit: e168935）
+**測試環境**：macOS Darwin 24.3.0, Python 3.12.9, uv 已安裝
+**測試工具**：tmux session `connsys-verify` + bash + pytest
 
 ---
 
@@ -12,11 +12,12 @@
 
 | 指標 | 數值 |
 |------|------|
-| 測試案例總數 | 11 |
-| **通過** | **11** |
+| 測試案例總數 | 14 |
+| **通過** | **14** |
 | 失敗 | 0 |
 | Skill 測試腳本 | 16/16 pass |
 | Skill 測試 checks | 41/41 pass |
+| pytest 單元測試 | 61/61 pass |
 
 **整體結論：✅ 全部通過**
 
@@ -61,7 +62,7 @@
 | 3 | 既有 symlinks 顯示 `[=]`（idempotent）| 10 個 `[=]` | ✅ |
 | 4 | 新 symlinks 顯示 `[+]` | 10 個 `[+]` | ✅ |
 | 5 | `.claude/skills/` 共 13 個 | 13 | ✅ |
-| 6 | `CLAUDE.md` 含「2 Experts 已安裝」 | 符合 | ✅ |
+| 6 | `CLAUDE.md` 預設 identity-only：只含 wifi-bora-memory-slim-expert 的 soul/rules/duties/expert.md，**無** count header | 符合（無「2 Experts 已安裝」）| ✅ |
 | 7 | `wifi-bora-memory-slim-expert` 的 `is_identity=true` | 符合 | ✅ |
 
 **依賴解析驗證**：
@@ -232,6 +233,98 @@ doctor_ok=26（含環境項）  doctor_fail=0
 
 ---
 
+### TC-12：pytest 單元測試（scripts/test/test_setup.py）
+
+**結果：✅ PASS（61/61）**
+
+```
+$ cd connsys-jarvis && uvx pytest scripts/test/test_setup.py -v
+============================== 61 passed in 0.18s ==============================
+```
+
+| 測試類別 | Tests | 結果 |
+|---------|-------|------|
+| `TestDetectScenario` | 3 | ✅ |
+| `TestGetCodespacePath` | 2 | ✅ |
+| `TestResolveItems` | 6 | ✅ |
+| `TestApplyExcludePatterns` | 4 | ✅ |
+| `TestGenerateClaudeMdSingle` | 4 | ✅ |
+| `TestGenerateClaudeMdMulti`（含 default + --with-all-experts）| 8 | ✅ |
+| `TestWriteEnvFile` | 10 | ✅ |
+| `TestInstalledExpertsSchema` | 3 | ✅ |
+| `TestIntegrationInit` | 8 | ✅ |
+| `TestIntegrationAdd` | 5 | ✅ |
+| `TestIntegrationRemove` | 5 | ✅ |
+| `TestIntegrationUninstall` | 3 | ✅ |
+| **合計** | **61** | **✅ 全通過** |
+
+---
+
+### TC-13：--with-all-experts 整合測試
+
+**結果：✅ PASS**
+
+**執行指令**：
+```bash
+python3 ./connsys-jarvis/scripts/setup.py --add --with-all-experts \
+  wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json
+```
+
+| Step | 驗收條件 | 實際結果 | 狀態 |
+|------|---------|---------|------|
+| 2 | 輸出「完成！Expert 'wifi-bora-memory-slim-expert' 已加入」 | 符合 | ✅ |
+| 3 | CLAUDE.md 含「2 Experts 已安裝」count header | `# Consys Experts（2 Experts 已安裝）` | ✅ |
+| 4 | CLAUDE.md 含 framework-base-expert/expert.md | 符合（Capabilities 區段）| ✅ |
+| 5 | CLAUDE.md 含 wifi-bora-memory-slim-expert/soul.md | 符合（Identity 區段）| ✅ |
+| 6 | CLAUDE.md 含 `## Expert Identity` 區段 | 符合 | ✅ |
+| 7 | CLAUDE.md 含 `## Expert Capabilities` 區段 | 符合 | ✅ |
+| 8 | `.installed-experts.json` 的 `include_all_experts` = `True` | True | ✅ |
+
+**CLAUDE.md 結構驗證**：
+```
+# Consys Experts（2 Experts 已安裝）
+
+## Expert Identity（以最後安裝的 Expert 為主）
+@connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/soul.md
+@connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/rules.md
+@connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/duties.md
+
+## Expert Capabilities
+@connsys-jarvis/framework/experts/framework-base-expert/expert.md
+@connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/expert.md
+
+@CLAUDE.local.md
+```
+
+---
+
+### TC-14：--debug 日誌測試
+
+**結果：✅ PASS**
+
+**執行指令**：
+```bash
+python3 ./connsys-jarvis/scripts/setup.py --debug --init \
+  framework/experts/framework-base-expert/expert.json
+```
+
+| Step | 驗收條件 | 實際結果 | 狀態 |
+|------|---------|---------|------|
+| 2 | `--debug` 時 console 含 DEBUG 訊息（> 0 行）| 57 行 DEBUG | ✅ |
+| 3 | `.connsys-jarvis/log/setup.log` 存在 | 存在 | ✅ |
+| 4 | 日誌檔含 DEBUG 記錄（> 0 行）| 57 行 DEBUG | ✅ |
+| 5 | 不加 `--debug` 時 console 無 DEBUG 輸出 | 0 行（僅 WARNING+）| ✅ |
+| 6 | 日誌檔在不加 `--debug` 後仍存在（file handler 不受影響）| 存在 | ✅ |
+
+**雙處理器行為驗證**：
+
+| 場景 | Console handler | File handler |
+|------|----------------|--------------|
+| 無 `--debug` | WARNING+ 只顯示重要訊息 | DEBUG 全記錄到 setup.log |
+| 加 `--debug` | DEBUG 全輸出到 stderr | DEBUG 全記錄到 setup.log |
+
+---
+
 ## 缺陷記錄
 
 在測試過程中發現並修復的缺陷：
@@ -258,15 +351,17 @@ doctor_ok=26（含環境項）  doctor_fail=0
 | FR-02-8 dependency 解析 | TC-02 | ✅ |
 | FR-02-9 exclude_symlink | TC-10 | ✅ |
 | FR-02-10 .env 生成 | TC-04 | ✅ |
+| FR-02-17 pytest 單元測試 | TC-12 | ✅ |
 | FR-03 環境變數 | TC-04, TC-06 | ✅ |
 | FR-04-6/8 Skill test/ | TC-09 | ✅ |
-| FR-05-2/3 CLAUDE.md | TC-01, TC-02, TC-05 | ✅ |
+| FR-05-2/3 CLAUDE.md | TC-01, TC-02, TC-05, TC-13 | ✅ |
 | US-01 Agent First | TC-01, TC-04 | ✅ |
 | US-02 Legacy | TC-06 | ✅ |
-| US-06 --add | TC-02 | ✅ |
+| US-06 --add / --with-all-experts | TC-02, TC-13 | ✅ |
 | US-07 --remove | TC-05 | ✅ |
+| --debug logging | TC-14 | ✅ |
 
-**覆蓋率：16/16 需求項目（100%）**
+**覆蓋率：18/18 需求項目（100%）**
 
 ---
 
@@ -282,17 +377,25 @@ tmux send-keys -t connsys-verify \
 
 # 執行各 TC
 tmux send-keys -t connsys-verify \
-  "python3 ./connsys-jarvis/setup.py --init framework/experts/framework-base-expert/expert.json" Enter
+  "python3 ./connsys-jarvis/scripts/setup.py --init framework/experts/framework-base-expert/expert.json" Enter
 tmux send-keys -t connsys-verify \
-  "python3 ./connsys-jarvis/setup.py --add wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json" Enter
+  "python3 ./connsys-jarvis/scripts/setup.py --add wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json" Enter
 tmux send-keys -t connsys-verify \
-  "python3 ./connsys-jarvis/setup.py --doctor" Enter
+  "python3 ./connsys-jarvis/scripts/setup.py --add --with-all-experts wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json" Enter
 tmux send-keys -t connsys-verify \
-  "python3 ./connsys-jarvis/setup.py --remove wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json" Enter
+  "python3 ./connsys-jarvis/scripts/setup.py --debug --init framework/experts/framework-base-expert/expert.json" Enter
 tmux send-keys -t connsys-verify \
-  "python3 ./connsys-jarvis/setup.py --list" Enter
+  "python3 ./connsys-jarvis/scripts/setup.py --doctor" Enter
 tmux send-keys -t connsys-verify \
-  "python3 ./connsys-jarvis/setup.py --uninstall" Enter
+  "python3 ./connsys-jarvis/scripts/setup.py --remove wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json" Enter
+tmux send-keys -t connsys-verify \
+  "python3 ./connsys-jarvis/scripts/setup.py --list" Enter
+tmux send-keys -t connsys-verify \
+  "python3 ./connsys-jarvis/scripts/setup.py --uninstall" Enter
+
+# pytest 單元測試
+tmux send-keys -t connsys-verify \
+  "cd <jarvis_path> && uvx pytest scripts/test/test_setup.py -v" Enter
 
 # 查看輸出
 tmux capture-pane -t connsys-verify -p

@@ -1,9 +1,11 @@
 # Connsys Jarvis — 測試計畫
 
-**文件版本**：v1.1
-**日期**：2026-03-26
+**文件版本**：v1.2
+**日期**：2026-03-27
 **依據**：agents-requirements.md v3.2, agents-design.md v3.2
-**變更說明**：v1.1 — setup.py 路徑改為 scripts/setup.py；新增 TC-12 pytest 單元測試
+**變更說明**：
+- v1.1 — setup.py 路徑改為 scripts/setup.py；新增 TC-12 pytest 單元測試
+- v1.2 — 修正 TC-02 Step 6（預設 identity-only，無 count header）；更新 TC-12 測試數 57→61（含 --with-all-experts tests）；新增 TC-13（--with-all-experts 整合）、TC-14（--debug 日誌）
 
 ---
 
@@ -54,7 +56,7 @@
 | 3 | 確認輸出含 `[=]`（既有跳過）| framework 的 3 skills + 5 hooks + 2 commands 顯示 `[=]` |
 | 4 | 確認輸出含 `[+]`（新建） | wifi-bora 5 skills + sys-bora 2 skills + internal 3 skills |
 | 5 | `ls .claude/skills/ \| wc -l` | 13 |
-| 6 | `cat CLAUDE.md` | 含「2 Experts 已安裝」+ identity 以 wifi-bora-memory-slim-expert 為主 |
+| 6 | `cat CLAUDE.md` | 預設 identity-only 格式：只含 wifi-bora-memory-slim-expert 的 soul/rules/duties/expert.md，**不含**「N Experts 已安裝」count header |
 | 7 | `cat .connsys-jarvis/.installed-experts.json` | experts 陣列含 2 個 Expert，wifi-bora-memory-slim-expert 的 is_identity=true |
 
 ---
@@ -220,7 +222,7 @@
 
 ## TC-12：pytest 單元測試（scripts/test/test_setup.py）
 
-**目的**：驗證 `setup.py` 核心函式的單元測試全部通過，含環境變數生成測試
+**目的**：驗證 `setup.py` 核心函式的單元測試全部通過，含環境變數生成、`--with-all-experts` 模式測試
 **對應需求**：FR-02-17
 
 ### Steps
@@ -228,14 +230,52 @@
 | # | 步驟 | 預期結果 |
 |---|------|---------|
 | 1 | `cd /Users/swchen.tw/git/testing/agents/connsys-jarvis` | 進入 jarvis 目錄 |
-| 2 | `uvx pytest scripts/test/test_setup.py -v` | 執行所有 57 個測試 |
+| 2 | `uvx pytest scripts/test/test_setup.py -v` | 執行所有 61 個測試 |
 | 3 | 確認 `TestDetectScenario`（3 tests）| 3 passed |
 | 4 | 確認 `TestGetCodespacePath`（2 tests）| 2 passed |
 | 5 | 確認 `TestResolveItems`（6 tests）| 6 passed |
 | 6 | 確認 `TestApplyExcludePatterns`（4 tests）| 4 passed |
 | 7 | 確認 `TestGenerateClaudeMdSingle`（4 tests）| 4 passed |
-| 8 | 確認 `TestGenerateClaudeMdMulti`（4 tests）| 4 passed |
+| 8 | 確認 `TestGenerateClaudeMdMulti`（8 tests）含預設 identity-only（4）與 `--with-all-experts`（4）| 8 passed |
 | 9 | 確認 `TestWriteEnvFile`（10 tests）含環境變數前綴 `CONNSYS_JARVIS_` 驗證 | 10 passed |
 | 10 | 確認 `TestInstalledExpertsSchema`（3 tests）| 3 passed |
 | 11 | 確認整合測試 `TestIntegrationInit/Add/Remove/Uninstall`（21 tests）| 21 passed |
-| 12 | 最終輸出 | `57 passed in X.XXs` |
+| 12 | 最終輸出 | `61 passed in X.XXs` |
+
+---
+
+## TC-13：--with-all-experts 整合測試
+
+**目的**：驗證 `--add --with-all-experts` 時 CLAUDE.md 包含所有 Expert 的 expert.md，且偏好儲存在 `.installed-experts.json`
+**對應需求**：US-06, FR-05-2
+
+### Steps
+
+| # | 步驟 | 預期結果 |
+|---|------|---------|
+| 1 | 前置：TC-01 完成後（framework-base-expert 已安裝）| |
+| 2 | `python3 ./connsys-jarvis/scripts/setup.py --add --with-all-experts wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json` | 輸出「完成！Expert 'wifi-bora-memory-slim-expert' 已加入」 |
+| 3 | `cat CLAUDE.md \| grep "2 Experts"` | 含「2 Experts 已安裝」count header |
+| 4 | `cat CLAUDE.md \| grep "framework-base-expert/expert.md"` | 含 framework-base-expert/expert.md（Capabilities 區段）|
+| 5 | `cat CLAUDE.md \| grep "wifi-bora-memory-slim-expert/soul.md"` | 含 wifi-bora-memory-slim-expert/soul.md（Identity 區段）|
+| 6 | `cat CLAUDE.md \| grep "Expert Identity"` | 含 `## Expert Identity` 區段 header |
+| 7 | `cat CLAUDE.md \| grep "Expert Capabilities"` | 含 `## Expert Capabilities` 區段 header |
+| 8 | `python3 -c "import json; d=json.load(open('.connsys-jarvis/.installed-experts.json')); print(d['include_all_experts'])"` | `True` |
+
+---
+
+## TC-14：--debug 日誌測試
+
+**目的**：驗證 `--debug` 開啟後 DEBUG 訊息寫入日誌檔，無 `--debug` 時日誌檔仍存在但 console 只顯示 WARNING+
+**對應需求**：FR-02 (logging)
+
+### Steps
+
+| # | 步驟 | 預期結果 |
+|---|------|---------|
+| 1 | 前置：TC-01 完成後（workspace 已建立）| |
+| 2 | `python3 ./connsys-jarvis/scripts/setup.py --debug --init framework/experts/framework-base-expert/expert.json 2>&1 \| grep -c DEBUG` | console 輸出包含多行 DEBUG 訊息（> 0）|
+| 3 | `ls .connsys-jarvis/log/setup.log` | 日誌檔案存在 |
+| 4 | `grep -c DEBUG .connsys-jarvis/log/setup.log` | 日誌檔含多行 DEBUG 記錄（> 0）|
+| 5 | `python3 ./connsys-jarvis/scripts/setup.py --init framework/experts/framework-base-expert/expert.json 2>&1 \| grep -c DEBUG \|\| echo 0` | console 無 DEBUG 輸出（輸出 0）|
+| 6 | `ls .connsys-jarvis/log/setup.log` | 日誌檔仍存在（file handler 不受 --debug 影響）|
