@@ -6,32 +6,70 @@
   "description": "分析 Wi-Fi Bora ROM/RAM footprint，協助精簡記憶體用量",
   "version": "1.0.0",
   "is_base": false,
-  "triggers": ["memory slim", "ROM 優化", "RAM 分析", "footprint", "記憶體"],
-  "transitions": {"ANALYSIS_DONE": "wifi-bora-cr-robot-expert"},
+  "triggers": [
+    "memory slim",
+    "ROM 優化",
+    "RAM 分析",
+    "footprint",
+    "記憶體"
+  ],
+  "transitions": {
+    "ANALYSIS_DONE": "wifi-bora-cr-robot-expert"
+  },
   "dependencies": [
     {
       "expert": "framework/experts/framework-base-expert",
-      "skills": ["framework-expert-discovery-knowhow", "framework-handoff-flow", "framework-memory-tool"],
+      "skills": [
+        "framework-expert-discovery-knowhow",
+        "framework-handoff-flow",
+        "framework-memory-tool"
+      ],
       "hooks": "all",
       "agents": [],
-      "commands": ["framework-experts-tool", "framework-handoff-tool"]
+      "commands": [
+        "framework-experts-tool",
+        "framework-handoff-tool"
+      ]
     },
     {
       "expert": "wifi-bora/experts/wifi-bora-base-expert",
-      "skills": ["wifi-bora-arch-knowhow", "wifi-bora-memory-knowhow", "wifi-bora-linkerscript-knowhow", "wifi-bora-symbolmap-knowhow", "wifi-bora-build-flow"]
+      "skills": [
+        "wifi-bora-arch-knowhow",
+        "wifi-bora-memory-knowhow",
+        "wifi-bora-linkerscript-knowhow",
+        "wifi-bora-symbolmap-knowhow",
+        "wifi-bora-build-flow"
+      ]
     },
     {
       "expert": "sys-bora/experts/sys-bora-preflight-expert",
-      "skills": ["sys-bora-gerrit-commit-flow", "sys-bora-preflight-flow"]
+      "skills": [
+        "sys-bora-gerrit-commit-flow",
+        "sys-bora-preflight-flow"
+      ]
     }
   ],
   "internal": {
-    "skills": ["wifi-bora-memslim-flow", "wifi-bora-ast-tool", "wifi-bora-lsp-tool"],
+    "skills": [
+      "wifi-bora-memslim-flow",
+      "wifi-bora-ast-tool",
+      "wifi-bora-lsp-tool"
+    ],
     "hooks": [],
     "agents": [],
     "commands": []
   },
-  "scenarios": ["agent-first", "legacy"],
-  "human_in_the_loop": {"require_confirm": ["git push", "make clean"]},
-  "exclude_symlink": {"patterns": []}
+  "scenarios": [
+    "agent-first",
+    "legacy"
+  ],
+  "human_in_the_loop": {
+    "require_confirm": [
+      "git push",
+      "make clean"
+    ]
+  },
+  "exclude_symlink": {
+    "patterns": []
+  }
 }

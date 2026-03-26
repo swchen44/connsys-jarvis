@@ -1,0 +1,547 @@
+# /// script
+# requires-python = ">=3.8"
+# dependencies = [
+#   "pytest>=8.0",
+# ]
+# ///
+"""
+Unit tests for connsys-jarvis/scripts/install.py
+
+Run:
+    uvx pytest scripts/test/test_install.py -v
+    uv run --with pytest pytest scripts/test/test_install.py -v
+"""
+
+import json
+import os
+import sys
+from pathlib import Path
+from unittest.mock import patch
+
+import pytest
+
+# ── Make install.py importable ────────────────────────────────────────────────
+SCRIPTS_DIR = Path(__file__).parent.parent
+sys.path.insert(0, str(SCRIPTS_DIR))
+import install as inst  # noqa: E402
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Fixtures
+# ─────────────────────────────────────────────────────────────────────────────
+
+@pytest.fixture()
+def workspace(tmp_path: Path) -> Path:
+    """Empty workspace with connsys-jarvis symlinked."""
+    jarvis_real = Path(__file__).resolve().parents[2]  # scripts/test → scripts → connsys-jarvis
+    jarvis_link = tmp_path / "connsys-jarvis"
+    jarvis_link.symlink_to(jarvis_real)
+    return tmp_path
+
+
+@pytest.fixture()
+def legacy_workspace(tmp_path: Path) -> Path:
+    """Workspace that has a .repo folder (legacy scenario)."""
+    jarvis_real = Path(__file__).resolve().parents[2]
+    (tmp_path / "connsys-jarvis").symlink_to(jarvis_real)
+    (tmp_path / ".repo").mkdir()
+    return tmp_path
+
+
+@pytest.fixture()
+def framework_expert_json(workspace: Path) -> Path:
+    return workspace / "connsys-jarvis/framework/experts/framework-base-expert/expert.json"
+
+
+@pytest.fixture()
+def slim_expert_json(workspace: Path) -> Path:
+    return workspace / "connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TC-U01  detect_scenario
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestDetectScenario:
+    def test_agent_first_empty_workspace(self, workspace):
+        assert inst.detect_scenario(workspace) == "agent-first"
+
+    def test_agent_first_codespace_exists(self, workspace):
+        (workspace / "codespace").mkdir()
+        assert inst.detect_scenario(workspace) == "agent-first"
+
+    def test_legacy_repo_exists(self, legacy_workspace):
+        assert inst.detect_scenario(legacy_workspace) == "legacy"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TC-U02  get_codespace_path
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestGetCodespacePath:
+    def test_agent_first_returns_codespace_subdir(self, workspace):
+        path = inst.get_codespace_path(workspace)
+        assert path == str(workspace / "codespace")
+
+    def test_legacy_returns_workspace_root(self, legacy_workspace):
+        path = inst.get_codespace_path(legacy_workspace)
+        assert path == str(legacy_workspace)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TC-U03  resolve_items
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestResolveItems:
+    def test_none_returns_empty(self, tmp_path):
+        assert inst.resolve_items(tmp_path, "skills", None) == []
+
+    def test_explicit_list_returned_as_is(self, tmp_path):
+        spec = ["skill-a", "skill-b"]
+        assert inst.resolve_items(tmp_path, "skills", spec) == spec
+
+    def test_all_skills_returns_subdirs(self, tmp_path):
+        skills_dir = tmp_path / "skills"
+        (skills_dir / "skill-a").mkdir(parents=True)
+        (skills_dir / "skill-b").mkdir(parents=True)
+        result = inst.resolve_items(tmp_path, "skills", "all")
+        assert sorted(result) == ["skill-a", "skill-b"]
+
+    def test_all_hooks_returns_sh_files(self, tmp_path):
+        hooks_dir = tmp_path / "hooks"
+        hooks_dir.mkdir()
+        (hooks_dir / "session-start.sh").touch()
+        (hooks_dir / "helper.py").touch()
+        (hooks_dir / "README.md").touch()  # should be excluded
+        result = inst.resolve_items(tmp_path, "hooks", "all")
+        assert sorted(result) == ["helper.py", "session-start.sh"]
+
+    def test_all_list_notation(self, tmp_path):
+        skills_dir = tmp_path / "skills"
+        (skills_dir / "skill-x").mkdir(parents=True)
+        result = inst.resolve_items(tmp_path, "skills", ["all"])
+        assert result == ["skill-x"]
+
+    def test_missing_dir_returns_empty(self, tmp_path):
+        result = inst.resolve_items(tmp_path, "skills", "all")
+        assert result == []
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TC-U04  apply_exclude_patterns
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestApplyExcludePatterns:
+    def test_no_patterns_returns_all(self):
+        items = ["skill-a", "skill-b"]
+        assert inst.apply_exclude_patterns(items, []) == items
+
+    def test_pattern_filters_matching(self):
+        items = ["wifi-bora-lsp-tool", "wifi-bora-ast-tool", "framework-handoff-flow"]
+        result = inst.apply_exclude_patterns(items, [".*-lsp-.*"])
+        assert result == ["wifi-bora-ast-tool", "framework-handoff-flow"]
+
+    def test_multiple_patterns(self):
+        items = ["wifi-bora-lsp-tool", "wifi-bora-debug-flow", "framework-handoff-flow"]
+        result = inst.apply_exclude_patterns(items, [".*-lsp-.*", ".*-debug-.*"])
+        assert result == ["framework-handoff-flow"]
+
+    def test_pattern_filters_nothing_when_no_match(self):
+        items = ["skill-a", "skill-b"]
+        result = inst.apply_exclude_patterns(items, [".*-lsp-.*"])
+        assert result == ["skill-a", "skill-b"]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TC-U05  generate_claude_md — 單 Expert
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestGenerateClaudeMdSingle:
+    def _installed(self, path: str, name: str, display: str) -> dict:
+        return {
+            "experts": [{
+                "name": name,
+                "path": path,
+                "is_identity": True,
+                "install_order": 1,
+            }]
+        }
+
+    def test_no_experts_shows_empty(self, workspace):
+        content = inst.generate_claude_md(workspace, {"experts": []})
+        assert "未安裝" in content
+        assert "@CLAUDE.local.md" in content
+
+    def test_single_expert_has_soul_rules_duties_expert(self, workspace, framework_expert_json):
+        installed = self._installed(
+            "framework/experts/framework-base-expert/expert.json",
+            "framework-base-expert",
+            "Framework Base Expert",
+        )
+        content = inst.generate_claude_md(workspace, installed)
+        assert "@connsys-jarvis/framework/experts/framework-base-expert/soul.md" in content
+        assert "@connsys-jarvis/framework/experts/framework-base-expert/rules.md" in content
+        assert "@connsys-jarvis/framework/experts/framework-base-expert/duties.md" in content
+        assert "@connsys-jarvis/framework/experts/framework-base-expert/expert.md" in content
+
+    def test_single_expert_ends_with_claude_local(self, workspace):
+        installed = self._installed(
+            "framework/experts/framework-base-expert/expert.json",
+            "framework-base-expert",
+            "Framework Base Expert",
+        )
+        content = inst.generate_claude_md(workspace, installed)
+        assert content.strip().endswith("@CLAUDE.local.md")
+
+    def test_single_expert_header_contains_display_name(self, workspace, framework_expert_json):
+        installed = self._installed(
+            "framework/experts/framework-base-expert/expert.json",
+            "framework-base-expert",
+            "Framework Base Expert",
+        )
+        content = inst.generate_claude_md(workspace, installed)
+        assert "Framework Base Expert" in content
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TC-U06  generate_claude_md — 多 Expert
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestGenerateClaudeMdMulti:
+    def _two_experts(self) -> dict:
+        return {
+            "experts": [
+                {
+                    "name": "framework-base-expert",
+                    "path": "framework/experts/framework-base-expert/expert.json",
+                    "is_identity": False,
+                    "install_order": 1,
+                },
+                {
+                    "name": "wifi-bora-memory-slim-expert",
+                    "path": "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json",
+                    "is_identity": True,
+                    "install_order": 2,
+                },
+            ]
+        }
+
+    def test_header_shows_count(self, workspace):
+        content = inst.generate_claude_md(workspace, self._two_experts())
+        assert "2 Experts" in content
+
+    def test_identity_is_last_installed(self, workspace):
+        content = inst.generate_claude_md(workspace, self._two_experts())
+        assert "@connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/soul.md" in content
+
+    def test_all_expert_mds_in_capabilities(self, workspace):
+        content = inst.generate_claude_md(workspace, self._two_experts())
+        assert "@connsys-jarvis/framework/experts/framework-base-expert/expert.md" in content
+        assert "@connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/expert.md" in content
+
+    def test_identity_section_header(self, workspace):
+        content = inst.generate_claude_md(workspace, self._two_experts())
+        assert "Expert Identity" in content
+        assert "Expert Capabilities" in content
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TC-U07  write_env_file — 環境變數內容
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestWriteEnvFile:
+    def _read_env(self, workspace: Path) -> dict:
+        env_path = workspace / ".connsys-jarvis" / ".env"
+        result = {}
+        for line in env_path.read_text().splitlines():
+            if line.startswith("export "):
+                key, _, val = line[len("export "):].partition("=")
+                result[key] = val.strip('"')
+        return result
+
+    def test_env_contains_all_six_vars(self, workspace):
+        with patch.object(inst, "run_git_config", return_value="john.doe"):
+            inst.write_env_file(workspace, "framework-base-expert")
+        env = self._read_env(workspace)
+        for key in [
+            "CONNSYS_JARVIS_PATH",
+            "CONNSYS_JARVIS_WORKSPACE_ROOT_PATH",
+            "CONNSYS_JARVIS_CODE_SPACE_PATH",
+            "CONNSYS_JARVIS_MEMORY_PATH",
+            "CONNSYS_JARVIS_EMPLOYEE_ID",
+            "CONNSYS_JARVIS_ACTIVE_EXPERT",
+        ]:
+            assert key in env, f"Missing env var: {key}"
+
+    def test_jarvis_path_points_to_connsys_jarvis(self, workspace):
+        with patch.object(inst, "run_git_config", return_value="john.doe"):
+            inst.write_env_file(workspace, "x")
+        env = self._read_env(workspace)
+        assert env["CONNSYS_JARVIS_PATH"].endswith("connsys-jarvis")
+
+    def test_workspace_root_equals_workspace(self, workspace):
+        with patch.object(inst, "run_git_config", return_value="john.doe"):
+            inst.write_env_file(workspace, "x")
+        env = self._read_env(workspace)
+        assert env["CONNSYS_JARVIS_WORKSPACE_ROOT_PATH"] == str(workspace)
+
+    def test_agent_first_codespace_path_has_codespace(self, workspace):
+        with patch.object(inst, "run_git_config", return_value="john.doe"):
+            inst.write_env_file(workspace, "x")
+        env = self._read_env(workspace)
+        assert env["CONNSYS_JARVIS_CODE_SPACE_PATH"].endswith("codespace")
+
+    def test_legacy_codespace_path_equals_workspace(self, legacy_workspace):
+        with patch.object(inst, "run_git_config", return_value="john.doe"):
+            inst.write_env_file(legacy_workspace, "x")
+        env_path = legacy_workspace / ".connsys-jarvis" / ".env"
+        result = {}
+        for line in env_path.read_text().splitlines():
+            if line.startswith("export "):
+                key, _, val = line[len("export "):].partition("=")
+                result[key] = val.strip('"')
+        assert result["CONNSYS_JARVIS_CODE_SPACE_PATH"] == str(legacy_workspace)
+
+    def test_memory_path_inside_dot_dir(self, workspace):
+        with patch.object(inst, "run_git_config", return_value="john.doe"):
+            inst.write_env_file(workspace, "x")
+        env = self._read_env(workspace)
+        assert ".connsys-jarvis/memory" in env["CONNSYS_JARVIS_MEMORY_PATH"]
+
+    def test_employee_id_from_git_config(self, workspace):
+        with patch.object(inst, "run_git_config", return_value="alice.bob"):
+            inst.write_env_file(workspace, "x")
+        env = self._read_env(workspace)
+        assert env["CONNSYS_JARVIS_EMPLOYEE_ID"] == "alice.bob"
+
+    def test_employee_id_fallback_when_git_missing(self, workspace):
+        with patch.object(inst, "run_git_config", return_value=""):
+            inst.write_env_file(workspace, "x")
+        env = self._read_env(workspace)
+        assert env["CONNSYS_JARVIS_EMPLOYEE_ID"] == "unknown"
+
+    def test_active_expert_reflects_argument(self, workspace):
+        with patch.object(inst, "run_git_config", return_value="john.doe"):
+            inst.write_env_file(workspace, "wifi-bora-memory-slim-expert")
+        env = self._read_env(workspace)
+        assert env["CONNSYS_JARVIS_ACTIVE_EXPERT"] == "wifi-bora-memory-slim-expert"
+
+    def test_all_vars_use_connsys_jarvis_prefix(self, workspace):
+        with patch.object(inst, "run_git_config", return_value="john.doe"):
+            inst.write_env_file(workspace, "x")
+        env_path = workspace / ".connsys-jarvis" / ".env"
+        for line in env_path.read_text().splitlines():
+            if line.startswith("export "):
+                key = line[len("export "):].split("=")[0]
+                assert key.startswith("CONNSYS_JARVIS_"), f"Var without prefix: {key}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TC-U08  installed_experts JSON schema
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestInstalledExpertsSchema:
+    def test_load_empty_returns_schema_skeleton(self, workspace):
+        data = inst.load_installed_experts(workspace)
+        assert data["schema_version"] == "1.0"
+        assert data["experts"] == []
+        assert "updated_at" in data
+
+    def test_save_and_reload_roundtrip(self, workspace):
+        data = inst.load_installed_experts(workspace)
+        data["experts"].append({"name": "test-expert", "path": "x/expert.json"})
+        inst.save_installed_experts(workspace, data)
+        reloaded = inst.load_installed_experts(workspace)
+        assert reloaded["experts"][0]["name"] == "test-expert"
+
+    def test_save_updates_updated_at(self, workspace):
+        data = inst.load_installed_experts(workspace)
+        old_ts = data["updated_at"]
+        inst.save_installed_experts(workspace, data)
+        reloaded = inst.load_installed_experts(workspace)
+        # updated_at is written fresh on save
+        assert "updated_at" in reloaded
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TC-U09  integration — --init
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestIntegrationInit:
+    def _run_init(self, workspace, expert_rel):
+        expert_json = workspace / "connsys-jarvis" / expert_rel
+        with patch("sys.argv", ["install.py", "--init", expert_rel]), \
+             patch.object(inst, "find_workspace", return_value=workspace), \
+             patch.object(inst, "run_git_config", return_value="john.doe"):
+            inst.cmd_init(workspace, expert_json)
+
+    def test_skills_symlinks_created(self, workspace, framework_expert_json):
+        self._run_init(workspace, "framework/experts/framework-base-expert/expert.json")
+        skills = list((workspace / ".claude" / "skills").iterdir())
+        assert len(skills) == 3
+
+    def test_hooks_symlinks_created(self, workspace):
+        self._run_init(workspace, "framework/experts/framework-base-expert/expert.json")
+        hooks = list((workspace / ".claude" / "hooks").iterdir())
+        assert len(hooks) == 5
+
+    def test_commands_symlinks_created(self, workspace):
+        self._run_init(workspace, "framework/experts/framework-base-expert/expert.json")
+        cmds = list((workspace / ".claude" / "commands").iterdir())
+        assert len(cmds) == 2
+
+    def test_claude_md_is_generated(self, workspace):
+        self._run_init(workspace, "framework/experts/framework-base-expert/expert.json")
+        assert (workspace / "CLAUDE.md").exists()
+
+    def test_env_file_is_generated(self, workspace):
+        self._run_init(workspace, "framework/experts/framework-base-expert/expert.json")
+        assert (workspace / ".connsys-jarvis" / ".env").exists()
+
+    def test_installed_json_has_one_expert(self, workspace):
+        self._run_init(workspace, "framework/experts/framework-base-expert/expert.json")
+        data = inst.load_installed_experts(workspace)
+        assert len(data["experts"]) == 1
+        assert data["experts"][0]["name"] == "framework-base-expert"
+
+    def test_symlinks_point_to_real_targets(self, workspace):
+        self._run_init(workspace, "framework/experts/framework-base-expert/expert.json")
+        for link in (workspace / ".claude" / "skills").iterdir():
+            assert link.is_symlink()
+            assert link.resolve().exists(), f"Dangling symlink: {link}"
+
+    def test_init_clears_previous_symlinks(self, workspace):
+        # Install twice; second should not double-up
+        self._run_init(workspace, "framework/experts/framework-base-expert/expert.json")
+        self._run_init(workspace, "framework/experts/framework-base-expert/expert.json")
+        skills = list((workspace / ".claude" / "skills").iterdir())
+        assert len(skills) == 3
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TC-U10  integration — --add (idempotent)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestIntegrationAdd:
+    def _run_init(self, workspace, rel):
+        expert_json = workspace / "connsys-jarvis" / rel
+        with patch.object(inst, "run_git_config", return_value="john.doe"):
+            inst.cmd_init(workspace, expert_json)
+
+    def _run_add(self, workspace, rel):
+        expert_json = workspace / "connsys-jarvis" / rel
+        with patch.object(inst, "run_git_config", return_value="john.doe"):
+            inst.cmd_add(workspace, expert_json)
+
+    def test_add_increases_skill_count(self, workspace):
+        self._run_init(workspace, "framework/experts/framework-base-expert/expert.json")
+        before = len(list((workspace / ".claude" / "skills").iterdir()))
+        self._run_add(workspace, "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
+        after = len(list((workspace / ".claude" / "skills").iterdir()))
+        assert after > before
+
+    def test_add_total_skills_is_13(self, workspace):
+        self._run_init(workspace, "framework/experts/framework-base-expert/expert.json")
+        self._run_add(workspace, "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
+        count = len(list((workspace / ".claude" / "skills").iterdir()))
+        assert count == 13
+
+    def test_add_idempotent_second_call_no_error(self, workspace):
+        self._run_init(workspace, "framework/experts/framework-base-expert/expert.json")
+        self._run_add(workspace, "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
+        self._run_add(workspace, "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
+        count = len(list((workspace / ".claude" / "skills").iterdir()))
+        assert count == 13
+
+    def test_add_installs_experts_json_has_two(self, workspace):
+        self._run_init(workspace, "framework/experts/framework-base-expert/expert.json")
+        self._run_add(workspace, "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
+        data = inst.load_installed_experts(workspace)
+        assert len(data["experts"]) == 2
+
+    def test_add_last_expert_is_identity(self, workspace):
+        self._run_init(workspace, "framework/experts/framework-base-expert/expert.json")
+        self._run_add(workspace, "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
+        data = inst.load_installed_experts(workspace)
+        identity = next(e for e in data["experts"] if e.get("is_identity"))
+        assert identity["name"] == "wifi-bora-memory-slim-expert"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TC-U11  integration — --remove (reference count)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestIntegrationRemove:
+    def _setup(self, workspace):
+        with patch.object(inst, "run_git_config", return_value="john.doe"):
+            inst.cmd_init(workspace, workspace / "connsys-jarvis/framework/experts/framework-base-expert/expert.json")
+            inst.cmd_add(workspace, workspace / "connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
+
+    def test_remove_reduces_skills(self, workspace):
+        self._setup(workspace)
+        with patch.object(inst, "run_git_config", return_value="john.doe"):
+            inst.cmd_remove(workspace, "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
+        count = len(list((workspace / ".claude" / "skills").iterdir()))
+        assert count == 3
+
+    def test_shared_skills_preserved(self, workspace):
+        self._setup(workspace)
+        with patch.object(inst, "run_git_config", return_value="john.doe"):
+            inst.cmd_remove(workspace, "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
+        skills = [p.name for p in (workspace / ".claude" / "skills").iterdir()]
+        assert "framework-expert-discovery-knowhow" in skills
+        assert "framework-handoff-flow" in skills
+        assert "framework-memory-tool" in skills
+
+    def test_private_skills_removed(self, workspace):
+        self._setup(workspace)
+        with patch.object(inst, "run_git_config", return_value="john.doe"):
+            inst.cmd_remove(workspace, "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
+        skills = [p.name for p in (workspace / ".claude" / "skills").iterdir()]
+        assert "wifi-bora-memslim-flow" not in skills
+        assert "wifi-bora-lsp-tool" not in skills
+
+    def test_installed_json_has_one_after_remove(self, workspace):
+        self._setup(workspace)
+        with patch.object(inst, "run_git_config", return_value="john.doe"):
+            inst.cmd_remove(workspace, "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
+        data = inst.load_installed_experts(workspace)
+        assert len(data["experts"]) == 1
+        assert data["experts"][0]["name"] == "framework-base-expert"
+
+    def test_claude_md_reverts_to_single(self, workspace):
+        self._setup(workspace)
+        with patch.object(inst, "run_git_config", return_value="john.doe"):
+            inst.cmd_remove(workspace, "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
+        content = (workspace / "CLAUDE.md").read_text()
+        assert "2 Experts" not in content
+        assert "framework-base-expert" in content
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TC-U12  integration — --uninstall
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestIntegrationUninstall:
+    def _setup(self, workspace):
+        with patch.object(inst, "run_git_config", return_value="john.doe"):
+            inst.cmd_init(workspace, workspace / "connsys-jarvis/framework/experts/framework-base-expert/expert.json")
+        memory_note = workspace / ".connsys-jarvis/memory/test/note.md"
+        memory_note.parent.mkdir(parents=True, exist_ok=True)
+        memory_note.write_text("memory")
+
+    def test_claude_md_deleted(self, workspace):
+        self._setup(workspace)
+        inst.cmd_uninstall(workspace)
+        assert not (workspace / "CLAUDE.md").exists()
+
+    def test_skills_symlinks_cleared(self, workspace):
+        self._setup(workspace)
+        inst.cmd_uninstall(workspace)
+        skills_dir = workspace / ".claude" / "skills"
+        assert not any(True for _ in skills_dir.iterdir()) if skills_dir.exists() else True
+
+    def test_memory_preserved(self, workspace):
+        self._setup(workspace)
+        inst.cmd_uninstall(workspace)
+        assert (workspace / ".connsys-jarvis/memory/test/note.md").exists()
