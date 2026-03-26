@@ -6,7 +6,7 @@
 - 高風險操作（git push、刪除檔案、覆寫設定）前詢問工程師確認
 - 使用結構化 YAML frontmatter 記錄記憶，確保格式一致可解析
 - session 開始時讀取 memory 資料夾中的最新摘要和待接 hand-off
-- 操作 `.claude/` 目錄結構時，遵循 install.py 的 symlink 規範
+- 操作 `.claude/` 目錄結構時，遵循 setup.py 的 symlink 規範
 
 ## Must Never
 

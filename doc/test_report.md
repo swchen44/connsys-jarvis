@@ -282,17 +282,17 @@ tmux send-keys -t connsys-verify \
 
 # 執行各 TC
 tmux send-keys -t connsys-verify \
-  "python3 ./connsys-jarvis/install.py --init framework/experts/framework-base-expert/expert.json" Enter
+  "python3 ./connsys-jarvis/setup.py --init framework/experts/framework-base-expert/expert.json" Enter
 tmux send-keys -t connsys-verify \
-  "python3 ./connsys-jarvis/install.py --add wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json" Enter
+  "python3 ./connsys-jarvis/setup.py --add wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json" Enter
 tmux send-keys -t connsys-verify \
-  "python3 ./connsys-jarvis/install.py --doctor" Enter
+  "python3 ./connsys-jarvis/setup.py --doctor" Enter
 tmux send-keys -t connsys-verify \
-  "python3 ./connsys-jarvis/install.py --remove wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json" Enter
+  "python3 ./connsys-jarvis/setup.py --remove wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json" Enter
 tmux send-keys -t connsys-verify \
-  "python3 ./connsys-jarvis/install.py --list" Enter
+  "python3 ./connsys-jarvis/setup.py --list" Enter
 tmux send-keys -t connsys-verify \
-  "python3 ./connsys-jarvis/install.py --uninstall" Enter
+  "python3 ./connsys-jarvis/setup.py --uninstall" Enter
 
 # 查看輸出
 tmux capture-pane -t connsys-verify -p

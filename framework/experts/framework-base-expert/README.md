@@ -5,7 +5,7 @@ Connsys Jarvis 框架層 Expert，提供跨 domain 共用的 skill/hook/command�
 ## 安裝
 
 ```bash
-python connsys-jarvis/install.py --init framework/experts/framework-base-expert/expert.json
+python connsys-jarvis/setup.py --init framework/experts/framework-base-expert/expert.json
 ```
 
 ## 包含的 Skills

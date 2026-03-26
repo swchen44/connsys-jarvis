@@ -6,7 +6,7 @@ Connsys Jarvis 是一個多 Expert AI 助理框架，為 ConnSys 工程師提供
 
 ```
 connsys-jarvis/
-├── install.py          ← 安裝程式（Python stdlib only）
+├── setup.py          ← 安裝程式（Python stdlib only）
 ├── registry.json       ← 所有 Expert 的全域清單
 ├── framework/          ← 框架層 Expert（跨 domain 共用）
 ├── wifi-bora/          ← WiFi Bora domain Experts
@@ -23,7 +23,7 @@ connsys-jarvis/
 
 ```bash
 # 從 workspace 根目錄執行
-python connsys-jarvis/install.py --init wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json
+python connsys-jarvis/setup.py --init wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json
 
 # 載入環境變數
 source .connsys-jarvis/.env
@@ -32,31 +32,31 @@ source .connsys-jarvis/.env
 ### 新增 Expert
 
 ```bash
-python connsys-jarvis/install.py --add sys-bora/experts/sys-bora-preflight-expert/expert.json
+python connsys-jarvis/setup.py --add sys-bora/experts/sys-bora-preflight-expert/expert.json
 ```
 
 ### 移除 Expert
 
 ```bash
-python connsys-jarvis/install.py --remove sys-bora-preflight-expert
+python connsys-jarvis/setup.py --remove sys-bora-preflight-expert
 ```
 
 ### 列出已安裝的 Experts
 
 ```bash
-python connsys-jarvis/install.py --list
+python connsys-jarvis/setup.py --list
 ```
 
 ### 健康檢查
 
 ```bash
-python connsys-jarvis/install.py --doctor
+python connsys-jarvis/setup.py --doctor
 ```
 
 ### 卸載
 
 ```bash
-python connsys-jarvis/install.py --uninstall
+python connsys-jarvis/setup.py --uninstall
 ```
 
 ## Expert 結構

@@ -67,7 +67,7 @@ ENV_FILE            = ".env"                  # 環境變數輸出檔
 SCHEMA_VERSION      = "1.0"                   # .installed-experts.json 的 schema 版本
 
 # ─── Logger ───────────────────────────────────────────────────────────────────
-# 使用 module-level logger，方便 test_install.py 等 caller 注入 handler。
+# 使用 module-level logger，方便 test_setup.py 等 caller 注入 handler。
 # 預設不加任何 handler（避免 "No handlers could be found" 警告），
 # 由 setup_logging() 在 main() 中統一設定。
 logger = logging.getLogger("connsys_jarvis.setup")
@@ -159,7 +159,7 @@ def find_workspace(script_path: Path) -> Path:
 
     **使用約定**：使用者必須從 workspace root 執行，例如：
         cd /path/to/workspace
-        python ./connsys-jarvis/scripts/install.py --init ...
+        python ./connsys-jarvis/scripts/setup.py --init ...
 
     Args:
         script_path: sys.argv[0] 的 Path（保留此參數以維持介面一致性，目前未使用）
@@ -808,7 +808,7 @@ def write_env_file(workspace: Path, active_expert_name: str) -> None:
 
     # 所有變數統一 CONNSYS_JARVIS_ 前綴
     lines = [
-        "# .connsys-jarvis/.env — 由 install.py 自動生成，勿手動編輯",
+        "# .connsys-jarvis/.env — 由 setup.py 自動生成，勿手動編輯",
         f"# 生成時間：{now_iso()}",
         "",
         f'export CONNSYS_JARVIS_PATH="{jarvis_path}"',

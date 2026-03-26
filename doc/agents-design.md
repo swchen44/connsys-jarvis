@@ -58,7 +58,7 @@ Consys Expert = Agent 核心能力 + Workflow（hooks）+ Tool（commands）+ Kn
 | **多版本共存** | 可以同時維護多個 Expert 版本，切換只需重新 link |
 | **零侵入性** | Workspace 的 `.claude/` 只有 symlink，不污染 expert repo |
 | **跨平台** | Linux/macOS 用 symlink；Windows 用 copy（自動降級） |
-| **未來框架遷移** | 換成 OpenClaw 或其他框架時，install.py 只需改寫 target 路徑 |
+| **未來框架遷移** | 換成 OpenClaw 或其他框架時，setup.py 只需改寫 target 路徑 |
 
 參考：[open-gitagent/gitagent](https://github.com/open-gitagent/gitagent)
 
@@ -159,7 +159,7 @@ connsys-jarvis/
 
 ### 2.5 Layer 4：Expert 內部資料夾
 
-每個 expert 的資料夾結構（**expert 資料夾本身不含 install.sh 和 CLAUDE.md**，由頂層 `connsys-jarvis/install.py` 統一管理）：
+每個 expert 的資料夾結構（**expert 資料夾本身不含 install.sh 和 CLAUDE.md**，由頂層 `connsys-jarvis/setup.py` 統一管理）：
 
 ```
 {expert}/
@@ -174,7 +174,7 @@ connsys-jarvis/
 │                     Interaction Boundaries
 ├── duties.md      ← Segregation of duties policy and role boundaries
 ├── expert.md      ← Key Behaviors, Constraints, Tools Available, Skills
-│                     （install.py 讀此檔產生 CLAUDE.md @include）
+│                     （setup.py 讀此檔產生 CLAUDE.md @include）
 │
 │   # ── Content Folders ────────────────────────────────────
 ├── skills/        ← Knowledge：多個 skill 資料夾（每個 skill 見 Layer 5）
@@ -320,9 +320,9 @@ sys-bora-cicd-tool
 
 connsys-jarvis/
 ├── scripts/                        ← 安裝程式與測試
-│   ├── install.py                  ← 唯一安裝程式（Python stdlib）
+│   ├── setup.py                  ← 唯一安裝程式（Python stdlib）
 │   └── test/
-│       └── test_install.py         ← pytest 單元測試（uvx pytest）
+│       └── test_setup.py         ← pytest 單元測試（uvx pytest）
 ├── README.md
 │
 ├── framework/                      ← 框架 domain（跨所有 domain 共用）
@@ -598,24 +598,24 @@ Step 3：套用 exclude_symlink.patterns，移除名稱符合任一 regex 的 li
 
 ---
 
-## 5. scripts/install.py 設計
+## 5. scripts/setup.py 設計
 
-`scripts/install.py` 是 **connsys-jarvis 唯一的安裝程式**，位於 `connsys-jarvis/scripts/install.py`，以 Python stdlib 實作，用 `uv run` 執行。Expert 資料夾**不再含 install.sh**。
+`scripts/setup.py` 是 **connsys-jarvis 唯一的安裝程式**，位於 `connsys-jarvis/scripts/setup.py`，以 Python stdlib 實作，用 `uv run` 執行。Expert 資料夾**不再含 install.sh**。
 
 ### 5.1 執行方式與參數
 
 ```bash
 # 安裝指令（所有指令後都需 source .env）
-uv run ./connsys-jarvis/scripts/install.py --init   framework/experts/framework-base-expert/expert.json
-uv run ./connsys-jarvis/scripts/install.py --add    wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json
-uv run ./connsys-jarvis/scripts/install.py --remove wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json
-uv run ./connsys-jarvis/scripts/install.py --uninstall
+uv run ./connsys-jarvis/scripts/setup.py --init   framework/experts/framework-base-expert/expert.json
+uv run ./connsys-jarvis/scripts/setup.py --add    wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json
+uv run ./connsys-jarvis/scripts/setup.py --remove wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json
+uv run ./connsys-jarvis/scripts/setup.py --uninstall
 
 # 查詢 / 診斷
-uv run ./connsys-jarvis/scripts/install.py --list
-uv run ./connsys-jarvis/scripts/install.py --doctor
+uv run ./connsys-jarvis/scripts/setup.py --list
+uv run ./connsys-jarvis/scripts/setup.py --doctor
 
-# source 環境變數（每次執行 install.py 後都需要）
+# source 環境變數（每次執行 setup.py 後都需要）
 source .connsys-jarvis/.env
 ```
 
@@ -628,14 +628,14 @@ source .connsys-jarvis/.env
 | `--list` | 列出目前 `.claude/` 中所有已安裝的 symlink 及來源 Expert | 唯讀 |
 | `--doctor` | 診斷 symlink 健康、環境版本（Python/uv/uvx）| 唯讀 |
 
-> 每次 `--init`、`--add`、`--remove` 後，install.py 自動印出提示：
+> 每次 `--init`、`--add`、`--remove` 後，setup.py 自動印出提示：
 > ```
 > ✅ 安裝完成。請執行：source .connsys-jarvis/.env
 > ```
 
-### 5.2 install.py 的 Symlink 建立邏輯
+### 5.2 setup.py 的 Symlink 建立邏輯
 
-install.py 讀取 `expert.json` 的 `dependencies` + `internal`，依序在 workspace `.claude/` 建立 symlinks：
+setup.py 讀取 `expert.json` 的 `dependencies` + `internal`，依序在 workspace `.claude/` 建立 symlinks：
 
 ```
 安裝 wifi-bora-memory-slim-expert 時的 .claude/ 結果：
@@ -674,35 +674,35 @@ install.py 讀取 `expert.json` 的 `dependencies` + `internal`，依序在 work
 
 ### 5.3 .connsys-jarvis/ 隱藏資料夾設計
 
-install.py 在 workspace 根目錄建立隱藏資料夾 `.connsys-jarvis/`，存放所有 runtime 資料：
+setup.py 在 workspace 根目錄建立隱藏資料夾 `.connsys-jarvis/`，存放所有 runtime 資料：
 
 ```
 workspace/
-├── .connsys-jarvis/              ← install.py 建立（.gitignore 排除）
+├── .connsys-jarvis/              ← setup.py 建立（.gitignore 排除）
 │   ├── .env                      ← 環境變數（source .connsys-jarvis/.env）
 │   ├── .installed-experts.json   ← 已安裝 Expert 狀態清單（JSON，schema 詳見 §5.3.1）
-│   ├── log/                      ← install.py 執行 debug log
+│   ├── log/                      ← setup.py 執行 debug log
 │   │   └── 2026-03-26/
 │   │       └── install.log
 │   └── memory/                   ← 本地記憶（session-stop 時上傳 connsys-memory repo）
 │       └── {expert-name}/
 │           └── 2026-03-26/
 │               └── 10:30-wifi-bora-memory-slim-expert-memory.md
-└── CLAUDE.md                     ← install.py 生成（@include expert.md 等）
+└── CLAUDE.md                     ← setup.py 生成（@include expert.md 等）
 ```
 
-> Windows 不支援 symlink 時，install.py 自動降級為 copy 模式（功能相同，但更新 expert 後需重新安裝）。
+> Windows 不支援 symlink 時，setup.py 自動降級為 copy 模式（功能相同，但更新 expert 後需重新安裝）。
 
 ### 5.3.1 .installed-experts.json Schema
 
-install.py 在每次 `--init` / `--add` / `--remove` 後更新此檔，記錄完整安裝狀態供後續操作使用。
+setup.py 在每次 `--init` / `--add` / `--remove` 後更新此檔，記錄完整安裝狀態供後續操作使用。
 
 **欄位說明**：
 
 | 欄位 | 型別 | 說明 |
 |------|------|------|
 | `schema_version` | string | 格式版本，目前為 `"1.0"` |
-| `updated_at` | string（ISO 8601） | 最後一次 install.py 更新的時間 |
+| `updated_at` | string（ISO 8601） | 最後一次 setup.py 更新的時間 |
 | `experts[].name` | string | 對應 expert.json 的 `name` |
 | `experts[].domain` | string | 對應 expert.json 的 `domain` |
 | `experts[].version` | string | 對應 expert.json 的 `version` |
@@ -767,10 +767,10 @@ install.py 在每次 `--init` / `--add` / `--remove` 後更新此檔，記錄完
 
 ### 5.4 .env 環境變數設計
 
-install.py 執行後，將環境變數寫入 `.connsys-jarvis/.env`：
+setup.py 執行後，將環境變數寫入 `.connsys-jarvis/.env`：
 
 ```bash
-# .connsys-jarvis/.env（由 install.py 生成，勿手動編輯）
+# .connsys-jarvis/.env（由 setup.py 生成，勿手動編輯）
 export CONNSYS_JARVIS_PATH="/Users/john.doe/workspace/connsys-jarvis"
 export CONNSYS_JARVIS_WORKSPACE_ROOT_PATH="/Users/john.doe/workspace"
 export CONNSYS_JARVIS_CODE_SPACE_PATH="/Users/john.doe/workspace/codespace"
@@ -779,12 +779,12 @@ export CONNSYS_JARVIS_EMPLOYEE_ID="john.doe"
 export CONNSYS_JARVIS_ACTIVE_EXPERT="wifi-bora-memory-slim-expert"
 ```
 
-使用者每次執行 install.py 後需手動 source：
+使用者每次執行 setup.py 後需手動 source：
 ```bash
 source .connsys-jarvis/.env
 ```
 
-> install.py 執行結束後自動印出提示，避免忘記 source。
+> setup.py 執行結束後自動印出提示，避免忘記 source。
 
 ### 5.5 多 Expert 安裝設計（--init / --add）
 
@@ -793,7 +793,7 @@ source .connsys-jarvis/.env
 **依賴解析流程**：
 
 ```
-install.py --add wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json
+setup.py --add wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json
 
 Step 1：讀取 expert.json，取得 dependencies 清單
   dependencies: [
@@ -824,21 +824,21 @@ Step 8：印出變更清單（新增/移除/保留）+ source 提示
 
 ```bash
 # 全新安裝（第一次）
-uv run ./connsys-jarvis/scripts/install.py --init framework/experts/framework-base-expert/expert.json
+uv run ./connsys-jarvis/scripts/setup.py --init framework/experts/framework-base-expert/expert.json
 source .connsys-jarvis/.env
 
 # 加入 wifi-bora-memory-slim-expert（自動帶入 dependencies）
-uv run ./connsys-jarvis/scripts/install.py --add wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json
+uv run ./connsys-jarvis/scripts/setup.py --add wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json
 source .connsys-jarvis/.env
 
 # 查看安裝結果
-uv run ./connsys-jarvis/scripts/install.py --list
+uv run ./connsys-jarvis/scripts/setup.py --list
 ```
 
 ### 5.6 --doctor 診斷輸出
 
 ```
-$ uv run ./connsys-jarvis/scripts/install.py --doctor
+$ uv run ./connsys-jarvis/scripts/setup.py --doctor
 
 === Connsys Jarvis Doctor ===
 
@@ -873,25 +873,25 @@ Symlinks 健康狀態：
 
 ```
 scripts/
-├── install.py          ← 主安裝程式（Python stdlib，PEP 723）
+├── setup.py          ← 主安裝程式（Python stdlib，PEP 723）
 └── test/
-    └── test_install.py ← pytest 單元測試
+    └── test_setup.py ← pytest 單元測試
 ```
 
 **執行測試**：
 
 ```bash
 # 從 workspace 根目錄執行（connsys-jarvis 為 symlink）
-uvx pytest connsys-jarvis/scripts/test/test_install.py -v
+uvx pytest connsys-jarvis/scripts/test/test_setup.py -v
 
 # 或從 connsys-jarvis 目錄執行
-cd connsys-jarvis && uvx pytest scripts/test/test_install.py -v
+cd connsys-jarvis && uvx pytest scripts/test/test_setup.py -v
 
 # 使用 uv run（若未安裝 uvx）
-uv run --with pytest pytest scripts/test/test_install.py -v
+uv run --with pytest pytest scripts/test/test_setup.py -v
 ```
 
-**測試覆蓋範圍**（`test_install.py` 共 57 個測試）：
+**測試覆蓋範圍**（`test_setup.py` 共 57 個測試）：
 
 | 測試類 | 函式 | 測試數 |
 |--------|------|--------|
@@ -912,7 +912,7 @@ uv run --with pytest pytest scripts/test/test_install.py -v
 
 ## 6. 環境變數設計
 
-install.py 執行後將環境變數寫入 `workspace/.connsys-jarvis/.env`，使用者手動 source 後即可在 skill、hook、agent 中使用。
+setup.py 執行後將環境變數寫入 `workspace/.connsys-jarvis/.env`，使用者手動 source 後即可在 skill、hook、agent 中使用。
 所有變數統一使用 `CONNSYS_JARVIS_` 前綴：
 
 ```bash
@@ -1123,7 +1123,7 @@ if __name__ == "__main__":
 
 ## 9. CLAUDE.md 生成機制
 
-install.py 在 `$CONNSYS_JARVIS_WORKSPACE_ROOT_PATH`（workspace 根目錄）生成 `CLAUDE.md`。
+setup.py 在 `$CONNSYS_JARVIS_WORKSPACE_ROOT_PATH`（workspace 根目錄）生成 `CLAUDE.md`。
 
 ### 9.1 單 Expert 安裝
 
@@ -1168,7 +1168,7 @@ install.py 在 `$CONNSYS_JARVIS_WORKSPACE_ROOT_PATH`（workspace 根目錄）生
 - 測試環境：172.16.0.x 系列
 ```
 
-> install.py 在 CLAUDE.md 末尾加入 `@CLAUDE.local.md`，若檔案不存在 Claude Code 會忽略。
+> setup.py 在 CLAUDE.md 末尾加入 `@CLAUDE.local.md`，若檔案不存在 Claude Code 會忽略。
 
 ---
 
@@ -1186,7 +1186,7 @@ install.py 在 `$CONNSYS_JARVIS_WORKSPACE_ROOT_PATH`（workspace 根目錄）生
 複雜邏輯（JSON 解析、記憶壓縮）：呼叫 memory-helper.py
 ```
 
-Hooks 設定於 project level（`workspace/.claude/settings.json`），由 `install.py` 在 `--init` / `--add` 時寫入。
+Hooks 設定於 project level（`workspace/.claude/settings.json`），由 `setup.py` 在 `--init` / `--add` 時寫入。
 
 ### 10.2 connsys-memory Repo 結構（後臺遠端）
 
@@ -1350,7 +1350,7 @@ expert.json（以 wifi-bora-memory-slim-expert 為例）：
 ### 11.2 Expert-to-Expert 交接序列圖
 
 ```
-同仁        wifi-bora-memory-slim-expert   install.py     wifi-bora-cr-robot-expert
+同仁        wifi-bora-memory-slim-expert   setup.py     wifi-bora-cr-robot-expert
   │                      │                    │                    │
   │── 開始記憶體分析任務 ──►│                    │                    │
   │                      │                    │                    │
@@ -1361,7 +1361,7 @@ expert.json（以 wifi-bora-memory-slim-expert 為例）：
   │                      │                    │                    │
   │  [同仁確認切換]        │                    │                    │
   │                      │                    │                    │
-  │── uv run install.py --init ...cr-robot...json ──►│                    │
+  │── uv run setup.py --init ...cr-robot...json ──►│                    │
   │                      │                    │                    │
   │              ┌────────────────────┐        │                    │
   │              │ hand-off hook 觸發 │        │                    │
@@ -1504,7 +1504,7 @@ employee_id: john.doe
 | **Local Memory 無 GC** | `memory/shared/`、`memory/handoffs/` 無自動清理機制，長期使用後可能無限增長 | FW-04 |
 | **registry.json 格式未定義** | `registry.json` 存在但格式尚未設計，expert-discovery skill 目前僅能手動列表 | FW-05 |
 | **connsys-memory 同帳號多開衝突** | 同一人同時開多個 Claude 視窗時，若 Session ID 無法取得，timestamp fallback 仍有極小衝突機率 | FR-06-9（優先用 Session ID）|
-| **Windows symlink** | Windows 不支援 symlink，install.py 自動降級為 copy 模式；copy 模式下更新 expert 內容後需重新執行 install.py | 無（自動處理）|
+| **Windows symlink** | Windows 不支援 symlink，setup.py 自動降級為 copy 模式；copy 模式下更新 expert 內容後需重新執行 setup.py | 無（自動處理）|
 | **Human in the Loop 無超時機制** | 目前 HitL 確認行為由 prompt 驅動，無自動超時或「不再詢問」機制 | Phase 2 設計 |
 
 ---

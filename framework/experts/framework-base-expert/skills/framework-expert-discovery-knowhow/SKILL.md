@@ -59,11 +59,11 @@ tags: [framework, discovery, expert-selection]
 cat connsys-jarvis/registry.json
 
 # 安裝 Expert
-python connsys-jarvis/install.py --add <domain>/experts/<expert-name>/expert.json
+python connsys-jarvis/setup.py --add <domain>/experts/<expert-name>/expert.json
 ```
 
 ## 注意事項
 
 - 多個 Expert 可同時安裝，但以最後安裝的 Expert 為主 identity
 - 若不確定選哪個 Expert，優先選擇 base expert 後再依需求升級
-- Expert 之間有依賴關係（`dependencies` 欄位），install.py 會自動處理
+- Expert 之間有依賴關係（`dependencies` 欄位），setup.py 會自動處理

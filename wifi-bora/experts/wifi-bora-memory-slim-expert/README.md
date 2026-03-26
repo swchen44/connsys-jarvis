@@ -5,7 +5,7 @@
 ## 安裝
 
 ```bash
-python connsys-jarvis/install.py --init wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json
+python connsys-jarvis/setup.py --init wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json
 ```
 
 ## 包含的 Skills

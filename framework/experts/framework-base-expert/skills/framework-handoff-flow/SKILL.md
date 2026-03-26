@@ -96,7 +96,7 @@ Hand-off 文件已生成：.connsys-jarvis/memory/handoffs/...
 
 請執行以下步驟切換 Expert：
 1. 在 Claude 設定中將 expert 更換為 <新 Expert 名稱>
-2. 或執行：python connsys-jarvis/install.py --add <新 expert.json 路徑>
+2. 或執行：python connsys-jarvis/setup.py --add <新 expert.json 路徑>
 3. 重新開啟 session 後，新 Expert 會自動讀取 hand-off 文件
 ```
 
