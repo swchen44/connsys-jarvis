@@ -1,0 +1,19 @@
+{
+  "name": "wifi-logan-base-expert",
+  "display_name": "WiFi Logan Base Expert",
+  "domain": "wifi-logan",
+  "owner": "wifi-logan-team",
+  "description": "WiFi Logan domain 共用基礎知識與工具",
+  "version": "1.0.0",
+  "is_base": true,
+  "triggers": ["logan", "wifi-logan"],
+  "transitions": {},
+  "dependencies": [],
+  "internal": {
+    "skills": [],
+    "hooks": [],
+    "agents": [],
+    "commands": []
+  },
+  "exclude_symlink": {"patterns": []}
+}

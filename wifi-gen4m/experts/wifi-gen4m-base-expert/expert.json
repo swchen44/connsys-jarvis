@@ -1,0 +1,19 @@
+{
+  "name": "wifi-gen4m-base-expert",
+  "display_name": "WiFi Gen4M Base Expert",
+  "domain": "wifi-gen4m",
+  "owner": "wifi-gen4m-team",
+  "description": "WiFi Gen4M domain 共用基礎知識與工具",
+  "version": "1.0.0",
+  "is_base": true,
+  "triggers": ["gen4m", "wifi-gen4m"],
+  "transitions": {},
+  "dependencies": [],
+  "internal": {
+    "skills": [],
+    "hooks": [],
+    "agents": [],
+    "commands": []
+  },
+  "exclude_symlink": {"patterns": []}
+}

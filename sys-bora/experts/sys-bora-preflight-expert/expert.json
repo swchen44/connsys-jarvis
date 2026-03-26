@@ -1,0 +1,24 @@
+{
+  "name": "sys-bora-preflight-expert",
+  "display_name": "Sys Bora Preflight Expert",
+  "domain": "sys-bora",
+  "owner": "sys-team",
+  "description": "gerrit commit/preflight 操作；CI/CD label 定義；preflight 結果分析",
+  "version": "1.0.0",
+  "is_base": false,
+  "triggers": ["gerrit", "preflight", "CR", "code review", "CI/CD", "submit"],
+  "transitions": {},
+  "dependencies": [
+    {
+      "expert": "sys-bora/experts/sys-bora-base-expert",
+      "skills": "all"
+    }
+  ],
+  "internal": {
+    "skills": ["sys-bora-preflight-flow", "sys-bora-gerrit-commit-flow"],
+    "hooks": [],
+    "agents": [],
+    "commands": []
+  },
+  "exclude_symlink": {"patterns": []}
+}

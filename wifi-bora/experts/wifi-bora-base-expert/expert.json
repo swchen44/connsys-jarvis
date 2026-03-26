@@ -1,0 +1,20 @@
+{
+  "name": "wifi-bora-base-expert",
+  "display_name": "WiFi Bora Base Expert",
+  "domain": "wifi-bora",
+  "owner": "wifi-bora-team",
+  "description": "wifi-bora domain 共用 skill/hook/command/agent 的容器",
+  "version": "1.0.0",
+  "is_base": true,
+  "triggers": [],
+  "transitions": {},
+  "dependencies": [],
+  "internal": {
+    "skills": ["wifi-bora-protocol-knowhow", "wifi-bora-arch-knowhow", "wifi-bora-build-flow",
+               "wifi-bora-memory-knowhow", "wifi-bora-linkerscript-knowhow", "wifi-bora-symbolmap-knowhow"],
+    "hooks": [],
+    "agents": [],
+    "commands": []
+  },
+  "exclude_symlink": {"patterns": []}
+}

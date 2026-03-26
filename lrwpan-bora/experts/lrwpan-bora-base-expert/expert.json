@@ -1,0 +1,19 @@
+{
+  "name": "lrwpan-bora-base-expert",
+  "display_name": "LR-WPAN Bora Base Expert",
+  "domain": "lrwpan-bora",
+  "owner": "lrwpan-bora-team",
+  "description": "LR-WPAN (802.15.4/Zigbee/Thread) Bora domain 基礎知識與工具",
+  "version": "1.0.0",
+  "is_base": true,
+  "triggers": ["zigbee", "Thread", "802.15.4", "lrwpan", "LR-WPAN"],
+  "transitions": {},
+  "dependencies": [],
+  "internal": {
+    "skills": [],
+    "hooks": [],
+    "agents": [],
+    "commands": []
+  },
+  "exclude_symlink": {"patterns": []}
+}

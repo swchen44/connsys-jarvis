@@ -1,0 +1,19 @@
+{
+  "name": "bt-bora-base-expert",
+  "display_name": "Bluetooth Bora Base Expert",
+  "domain": "bt-bora",
+  "owner": "bt-bora-team",
+  "description": "Bluetooth Bora domain 共用基礎知識與工具",
+  "version": "1.0.0",
+  "is_base": true,
+  "triggers": ["bluetooth", "BT", "BLE", "bt-bora"],
+  "transitions": {},
+  "dependencies": [],
+  "internal": {
+    "skills": [],
+    "hooks": [],
+    "agents": [],
+    "commands": []
+  },
+  "exclude_symlink": {"patterns": []}
+}

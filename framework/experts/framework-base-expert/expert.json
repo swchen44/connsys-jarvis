@@ -1,0 +1,19 @@
+{
+  "name": "framework-base-expert",
+  "display_name": "Framework Base Expert",
+  "domain": "framework",
+  "owner": "framework-team",
+  "description": "管理 connsys expert 生態系；提供跨所有 domain 共用的 skill/hook/command",
+  "version": "1.0.0",
+  "is_base": true,
+  "triggers": [],
+  "transitions": {},
+  "dependencies": [],
+  "internal": {
+    "skills": ["framework-expert-discovery-knowhow", "framework-handoff-flow", "framework-memory-tool"],
+    "hooks": ["session-start.sh", "session-end.sh", "pre-compact.sh", "mid-session-checkpoint.sh", "shared-utils.sh"],
+    "agents": [],
+    "commands": ["framework-experts-tool", "framework-handoff-tool"]
+  },
+  "exclude_symlink": {"patterns": []}
+}
