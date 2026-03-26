@@ -261,13 +261,13 @@
    - 補建 wifi-bora-coverity-expert 自己的 internal skills 的 symlink
      (wifi-bora-coverity-flow, wifi-bora-coverity-cr-tool, wifi-bora-risk-report-flow)
    - 跳過已存在的 symlinks（wifi-bora-base-expert 已建好的不重複建立）
-4. 重新生成 CLAUDE.md，內容同時包含兩個 Expert（以最後安裝的 Expert identity 為主）：
+4. 重新生成 CLAUDE.md（預設 identity-only 格式，以最後安裝的 Expert 為主）：
    @connsys-jarvis/wifi-bora/experts/wifi-bora-coverity-expert/soul.md
    @connsys-jarvis/wifi-bora/experts/wifi-bora-coverity-expert/rules.md
    @connsys-jarvis/wifi-bora/experts/wifi-bora-coverity-expert/duties.md
-   @connsys-jarvis/wifi-bora/experts/wifi-bora-base-expert/expert.md
    @connsys-jarvis/wifi-bora/experts/wifi-bora-coverity-expert/expert.md
    @CLAUDE.local.md
+   （若加 --with-all-experts 參數，則同時加入所有 Expert 的 expert.md）
 5. 印出變更清單：
    ✓ 新增: wifi-bora-coverity-flow, wifi-bora-coverity-cr-tool, wifi-bora-risk-report-flow
    ○ 已存在 (跳過): wifi-bora-protocol-knowhow, wifi-bora-build-flow, ... (base 的 skills)
@@ -277,8 +277,9 @@
 **驗收條件**：
 - `--add` 不移除現有 symlinks，只補建新 expert 的 internal skills
 - 已存在的 symlink 跳過（idempotent，不報錯）
-- CLAUDE.md 重新生成，所有已安裝 Expert 均出現在 @include 清單中
-- `.connsys-jarvis/.installed-experts.json`（安裝狀態記錄）更新，新增 wifi-bora-coverity-expert 條目
+- CLAUDE.md 預設只包含最後安裝 Expert（identity）的 soul/rules/duties/expert.md
+- 加上 `--with-all-experts` 時，CLAUDE.md 以 Identity/Capabilities 雙區段呈現所有已安裝 Expert 的 expert.md
+- `.connsys-jarvis/.installed-experts.json`（安裝狀態記錄）更新，新增 wifi-bora-coverity-expert 條目；`include_all_experts` 欄位記錄本次是否使用 `--with-all-experts`
 
 ---
 
@@ -652,7 +653,7 @@ workspace/                                       ← $CONNSYS_JARVIS_WORKSPACE_R
 |------|------|--------|------|
 | FR-02-1 | `connsys-jarvis/scripts/setup.py` 為**唯一安裝程式**，以 Python stdlib 實作，用 `uv run ./connsys-jarvis/scripts/setup.py` 執行 | Must | 單一入口，避免每個 Expert 各自維護 install.sh；Python stdlib 無需額外依賴 |
 | FR-02-2 | 支援 `--init <expert.json>` 參數：**全新安裝**，清除所有既有 link，讀取 expert.json 及其 dependencies，重建所有 symlink，重新生成 CLAUDE.md 和 .env | Must | 初次安裝或強制重建時使用 |
-| FR-02-3 | 支援 `--add <expert.json>` 參數：**疊加安裝**，在既有 Expert 基礎上加入新的 Expert（清除後依完整 Expert 清單重建）| Must | 多 Expert 安裝流程 |
+| FR-02-3 | 支援 `--add <expert.json>` 參數：**疊加安裝**，在既有 Expert 基礎上加入新的 Expert；CLAUDE.md 預設只包含最後安裝 Expert 的 identity（soul/rules/duties/expert.md），加上 `--with-all-experts` 旗標則同時輸出所有已安裝 Expert 的 expert.md（Identity + Capabilities 雙區段） | Must | 多 Expert 安裝流程；預設 identity-only 避免 context 過大，`--with-all-experts` 視需要開啟全能力 |
 | FR-02-4 | 支援 `--remove <expert.json>` 參數：從已安裝清單移除此 Expert，依剩餘 Expert 重建 symlink 和 CLAUDE.md | Must | 移除特定 Expert，不影響其他 Expert |
 | FR-02-5 | 支援 `--uninstall` 參數：清除所有 link 和 CLAUDE.md，但保留 `.connsys-jarvis/log/` 和 `.connsys-jarvis/memory/` | Must | 完全清除安裝，保留記憶 |
 | FR-02-6 | 支援 `--list` 參數：列出目前已安裝的 Expert 清單及所有 symlink 及來源 | Must | 讓同仁了解目前安裝狀態 |
