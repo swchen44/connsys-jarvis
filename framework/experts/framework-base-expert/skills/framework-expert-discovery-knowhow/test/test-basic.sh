@@ -5,8 +5,9 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../../../../../../../.." && pwd)"
-REGISTRY="$REPO_ROOT/connsys-jarvis/registry.json"
+# test/ → skill-dir/ → skills/ → expert/ → experts/ → domain/ → connsys-jarvis root
+JARVIS_ROOT="$(cd "$SCRIPT_DIR/../../../../../../" && pwd)"
+REGISTRY="$JARVIS_ROOT/registry.json"
 
 PASS=0
 FAIL=0
@@ -16,10 +17,10 @@ check() {
     local result="$2"
     if [ "$result" = "true" ]; then
         echo "  PASS: $desc"
-        ((PASS++))
+        PASS=$((PASS+1))
     else
         echo "  FAIL: $desc"
-        ((FAIL++))
+        FAIL=$((FAIL+1))
     fi
 }
 

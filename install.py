@@ -42,10 +42,10 @@ def today_iso() -> str:
 
 def find_workspace(script_path: Path) -> Path:
     """
-    install.py is at <workspace>/connsys-jarvis/install.py
-    So workspace = parent of connsys-jarvis/
+    Workspace = current working directory (where user runs the command from).
+    User is expected to run: python ./connsys-jarvis/install.py from workspace root.
     """
-    return script_path.resolve().parent.parent
+    return Path.cwd()
 
 
 def get_dot_dir(workspace: Path) -> Path:
@@ -535,19 +535,37 @@ def cmd_add(workspace: Path, expert_json_rel: str):
     print(f"\n完成！Expert '{expert_data['name']}' 已加入。")
 
 
-def cmd_remove(workspace: Path, expert_name: str):
-    """--remove: remove one expert."""
+def cmd_remove(workspace: Path, expert_arg: str):
+    """--remove: remove one expert (accepts path like wifi-bora/experts/foo/expert.json or expert name)."""
     print(f"\n=== Connsys Jarvis Remove ===")
-    print(f"Expert: {expert_name}")
+    print(f"Expert: {expert_arg}")
+
+    # Resolve expert name from argument (may be a path or a name)
+    if "/" in expert_arg or expert_arg.endswith(".json"):
+        expert_json_path = get_jarvis_dir(workspace) / expert_arg
+        if expert_json_path.exists():
+            expert_name = load_expert_json(expert_json_path).get("name", "")
+        else:
+            # Try extracting name from path: .../experts/{name}/expert.json
+            parts = Path(expert_arg).parts
+            expert_name = parts[-2] if len(parts) >= 2 else expert_arg
+    else:
+        expert_name = expert_arg
 
     installed = load_installed_experts(workspace)
-    target = next((e for e in installed["experts"] if e["name"] == expert_name), None)
+    target = next(
+        (e for e in installed["experts"]
+         if e["name"] == expert_name or e["path"] == expert_arg),
+        None
+    )
     if not target:
-        print(f"ERROR: Expert '{expert_name}' 未安裝", file=sys.stderr)
+        print(f"ERROR: Expert '{expert_arg}' 未安裝", file=sys.stderr)
         sys.exit(1)
 
+    target_name = target["name"]
+
     # Remove from list
-    remaining = [e for e in installed["experts"] if e["name"] != expert_name]
+    remaining = [e for e in installed["experts"] if e["name"] != target_name]
 
     # Reference count: build all symlinks that remaining experts would create
     symlink_ref_count = {}  # (kind, name) → count
@@ -592,7 +610,7 @@ def cmd_remove(workspace: Path, expert_name: str):
     new_active = remaining[-1]["name"] if remaining else "none"
     write_env_file(workspace, new_active)
 
-    print(f"\n完成！Expert '{expert_name}' 已移除。")
+    print(f"\n完成！Expert '{target_name}' 已移除。")
 
 
 def cmd_uninstall(workspace: Path):
