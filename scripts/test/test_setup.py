@@ -5,11 +5,11 @@
 # ]
 # ///
 """
-Unit tests for connsys-jarvis/scripts/install.py
+Unit tests for connsys-jarvis/scripts/setup.py
 
 Run:
-    uvx pytest scripts/test/test_install.py -v
-    uv run --with pytest pytest scripts/test/test_install.py -v
+    uvx pytest scripts/test/test_setup.py -v
+    uv run --with pytest pytest scripts/test/test_setup.py -v
 """
 
 import json
@@ -20,10 +20,10 @@ from unittest.mock import patch
 
 import pytest
 
-# ── Make install.py importable ────────────────────────────────────────────────
+# ── Make setup.py importable ─────────────────────────────────────────────────
 SCRIPTS_DIR = Path(__file__).parent.parent
 sys.path.insert(0, str(SCRIPTS_DIR))
-import install as inst  # noqa: E402
+import setup as inst  # noqa: E402
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -208,8 +208,15 @@ class TestGenerateClaudeMdSingle:
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TestGenerateClaudeMdMulti:
-    def _two_experts(self) -> dict:
+    """測試多 Expert 情境下 generate_claude_md 的兩種模式：
+      - 預設（include_all_experts=False）：只輸出 identity expert 的四份文件
+      - --with-all-experts（include_all_experts=True）：Identity + 所有 expert.md
+    """
+
+    def _two_experts(self, include_all: bool = False) -> dict:
+        """建立含兩個 Expert 的 installed dict。"""
         return {
+            "include_all_experts": include_all,
             "experts": [
                 {
                     "name": "framework-base-expert",
@@ -226,21 +233,51 @@ class TestGenerateClaudeMdMulti:
             ]
         }
 
-    def test_header_shows_count(self, workspace):
-        content = inst.generate_claude_md(workspace, self._two_experts())
+    # ── 預設模式（include_all_experts=False）──
+
+    def test_default_uses_identity_expert_only(self, workspace):
+        """預設：只包含 identity expert（最後安裝）的四份文件。"""
+        content = inst.generate_claude_md(workspace, self._two_experts(include_all=False))
+        assert "@connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/soul.md" in content
+        assert "@connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/rules.md" in content
+        assert "@connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/duties.md" in content
+        assert "@connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/expert.md" in content
+
+    def test_default_excludes_other_expert_md(self, workspace):
+        """預設：其他 Expert 的 expert.md 不應出現。"""
+        content = inst.generate_claude_md(workspace, self._two_experts(include_all=False))
+        assert "@connsys-jarvis/framework/experts/framework-base-expert/expert.md" not in content
+
+    def test_default_no_expert_count_header(self, workspace):
+        """預設：不顯示「N Experts 已安裝」count header（與單 Expert 格式相同）。"""
+        content = inst.generate_claude_md(workspace, self._two_experts(include_all=False))
+        assert "2 Experts" not in content
+
+    def test_default_ends_with_claude_local(self, workspace):
+        content = inst.generate_claude_md(workspace, self._two_experts(include_all=False))
+        assert content.strip().endswith("@CLAUDE.local.md")
+
+    # ── --with-all-experts 模式（include_all_experts=True）──
+
+    def test_with_all_experts_header_shows_count(self, workspace):
+        """--with-all-experts：顯示 Expert 數量。"""
+        content = inst.generate_claude_md(workspace, self._two_experts(include_all=True))
         assert "2 Experts" in content
 
-    def test_identity_is_last_installed(self, workspace):
-        content = inst.generate_claude_md(workspace, self._two_experts())
+    def test_with_all_experts_identity_soul_present(self, workspace):
+        """--with-all-experts：identity expert 的 soul/rules/duties 存在。"""
+        content = inst.generate_claude_md(workspace, self._two_experts(include_all=True))
         assert "@connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/soul.md" in content
 
-    def test_all_expert_mds_in_capabilities(self, workspace):
-        content = inst.generate_claude_md(workspace, self._two_experts())
+    def test_with_all_experts_all_expert_mds_present(self, workspace):
+        """--with-all-experts：所有 Expert 的 expert.md 都存在。"""
+        content = inst.generate_claude_md(workspace, self._two_experts(include_all=True))
         assert "@connsys-jarvis/framework/experts/framework-base-expert/expert.md" in content
         assert "@connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/expert.md" in content
 
-    def test_identity_section_header(self, workspace):
-        content = inst.generate_claude_md(workspace, self._two_experts())
+    def test_with_all_experts_section_headers(self, workspace):
+        """--with-all-experts：包含 Identity 和 Capabilities 區段。"""
+        content = inst.generate_claude_md(workspace, self._two_experts(include_all=True))
         assert "Expert Identity" in content
         assert "Expert Capabilities" in content
 
@@ -370,7 +407,7 @@ class TestInstalledExpertsSchema:
 class TestIntegrationInit:
     def _run_init(self, workspace, expert_rel):
         expert_json = workspace / "connsys-jarvis" / expert_rel
-        with patch("sys.argv", ["install.py", "--init", expert_rel]), \
+        with patch("sys.argv", ["setup.py", "--init", expert_rel]), \
              patch.object(inst, "find_workspace", return_value=workspace), \
              patch.object(inst, "run_git_config", return_value="john.doe"):
             inst.cmd_init(workspace, expert_json)
@@ -514,8 +551,10 @@ class TestIntegrationRemove:
         with patch.object(inst, "run_git_config", return_value="john.doe"):
             inst.cmd_remove(workspace, "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
         content = (workspace / "CLAUDE.md").read_text()
-        assert "2 Experts" not in content
+        # 移除後只剩單一 Expert，CLAUDE.md 應回到單 Expert 格式
         assert "framework-base-expert" in content
+        # 單 Expert 格式不含 count header
+        assert "Experts" not in content or "Expert:" in content
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -4,8 +4,8 @@
 # dependencies = []
 # ///
 """
-connsys-jarvis/scripts/install.py — Connsys Jarvis 安裝管理程式
-================================================================
+connsys-jarvis/scripts/setup.py — Connsys Jarvis 安裝管理程式
+==============================================================
 
 **用途**：管理 Connsys Expert 在 workspace 中的安裝、更新與移除。
 核心工作是在 workspace 的 `.claude/` 目錄建立 symlinks，指向
@@ -13,16 +13,23 @@ connsys-jarvis repo 中 Expert 的 skills / hooks / agents / commands，
 並生成 CLAUDE.md 和 .connsys-jarvis/.env 等設定檔。
 
 **執行方式（從 workspace 根目錄）**：
-    uv run ./connsys-jarvis/scripts/install.py --init   <expert.json>
-    uv run ./connsys-jarvis/scripts/install.py --add    <expert.json>
-    uv run ./connsys-jarvis/scripts/install.py --remove <expert-name>
-    uv run ./connsys-jarvis/scripts/install.py --uninstall
-    uv run ./connsys-jarvis/scripts/install.py --list
-    uv run ./connsys-jarvis/scripts/install.py --doctor
-    uv run ./connsys-jarvis/scripts/install.py --debug --init <expert.json>
+    python ./connsys-jarvis/scripts/setup.py --init   <expert.json>
+    python ./connsys-jarvis/scripts/setup.py --add    <expert.json>
+    python ./connsys-jarvis/scripts/setup.py --add    <expert.json> --with-all-experts
+    python ./connsys-jarvis/scripts/setup.py --remove <expert-name>
+    python ./connsys-jarvis/scripts/setup.py --uninstall
+    python ./connsys-jarvis/scripts/setup.py --list
+    python ./connsys-jarvis/scripts/setup.py --doctor
+    python ./connsys-jarvis/scripts/setup.py --debug --init <expert.json>
+
+**CLAUDE.md 多 Expert 模式**：
+  - 預設（不加旗標）：CLAUDE.md 只包含最後安裝的 Expert 的
+    soul.md / rules.md / duties.md / expert.md（單 Expert 格式）
+  - --with-all-experts：在 Identity 區段後加入所有已安裝 Expert 的 expert.md
+    （Capabilities 區段），讓 Claude 了解多個 Expert 的能力
 
 **Debug 模式**：加 --debug 旗標後，console 顯示 DEBUG 層級訊息；
-同時寫入 .connsys-jarvis/log/install.log（不論是否加 --debug）。
+同時寫入 .connsys-jarvis/log/setup.log（不論是否加 --debug）。
 
 **設計原則**：
   - Pure Python stdlib（無第三方依賴），相容 PEP 723 inline script metadata
@@ -30,10 +37,10 @@ connsys-jarvis repo 中 Expert 的 skills / hooks / agents / commands，
   - 所有安裝狀態持久化於 .connsys-jarvis/.installed-experts.json
 
 **相關文件**：
-  - agents-requirements.md  — 功能需求
-  - agents-design.md        — 系統設計
-  - scripts/README.md       — 開發者指南
-  - scripts/test/test_install.py — pytest 單元測試
+  - doc/agents-requirements.md  — 功能需求
+  - doc/agents-design.md        — 系統設計
+  - scripts/README.md           — 開發者指南
+  - scripts/test/test_setup.py  — pytest 單元測試
 """
 
 import logging
@@ -63,7 +70,7 @@ SCHEMA_VERSION      = "1.0"                   # .installed-experts.json 的 sche
 # 使用 module-level logger，方便 test_install.py 等 caller 注入 handler。
 # 預設不加任何 handler（避免 "No handlers could be found" 警告），
 # 由 setup_logging() 在 main() 中統一設定。
-logger = logging.getLogger("connsys_jarvis.install")
+logger = logging.getLogger("connsys_jarvis.setup")
 
 
 # ─── Logging Setup ────────────────────────────────────────────────────────────
@@ -631,14 +638,22 @@ def clear_claude_symlinks(workspace: Path) -> None:
 
 # ─── CLAUDE.md Generation ─────────────────────────────────────────────────────
 # CLAUDE.md 是 Claude Code 啟動時自動載入的 context 檔。
-# 根據安裝的 Expert 數量，生成不同格式：
-#   單一 Expert: 完整的 soul/rules/duties/expert @include
-#   多個 Expert: Identity 區段（主 Expert 的身份設定） + Capabilities 區段（所有 expert.md）
+#
+# **兩種生成模式**（由 installed["include_all_experts"] 控制）：
+#
+#   預設（include_all_experts = False）：
+#     不論安裝幾個 Expert，CLAUDE.md 都只包含最後安裝（identity）Expert 的
+#     soul / rules / duties / expert.md。Claude 以單一角色運作，不感知其他 Expert。
+#
+#   --with-all-experts（include_all_experts = True）：
+#     Identity 區段：identity Expert 的 soul / rules / duties
+#     Capabilities 區段：所有已安裝 Expert 的 expert.md
+#     適合需要 Claude 同時了解多個 Expert 能力的場景。
 
 def generate_claude_md(workspace: Path, installed: dict) -> str:
     """生成 CLAUDE.md 的文字內容。
 
-    **單一 Expert 格式**（最常見）：
+    **預設格式**（不論 1 或 N 個 Expert，只呈現最後安裝的 Expert）：
         # Consys Expert: WiFi Bora Memory Slim Expert
         @connsys-jarvis/wifi-bora/experts/.../soul.md
         @connsys-jarvis/wifi-bora/experts/.../rules.md
@@ -646,7 +661,7 @@ def generate_claude_md(workspace: Path, installed: dict) -> str:
         @connsys-jarvis/wifi-bora/experts/.../expert.md
         @CLAUDE.local.md
 
-    **多 Expert 格式**：
+    **--with-all-experts 格式**（多 Expert 時才有意義）：
         # Consys Experts（N Experts 已安裝）
         ## Expert Identity（以最後安裝的 Expert 為主）
         @connsys-jarvis/.../soul.md   ← identity expert 的身份定義
@@ -657,40 +672,50 @@ def generate_claude_md(workspace: Path, installed: dict) -> str:
         @connsys-jarvis/.../expert.md
         @CLAUDE.local.md
 
-    **@CLAUDE.local.md**：workspace 本地個人化設定，檔案不存在時 Claude Code 會忽略。
+    **設計考量**：
+      預設不加入其他 Expert 的 expert.md，避免 context 膨脹造成
+      Claude 注意力稀釋。只有明確需要跨 Expert 能力感知時才用 --with-all-experts。
+
+    **@CLAUDE.local.md**：workspace 本地個人化設定，不存在時 Claude Code 會忽略。
 
     Args:
-        workspace: workspace 根目錄（用來讀取 expert.json）
-        installed: load_installed_experts 的回傳值
+        workspace: workspace 根目錄（用來讀取 expert.json 取得 display_name）
+        installed: load_installed_experts 的回傳值；
+                   installed["include_all_experts"] 決定輸出格式
 
     Returns:
         CLAUDE.md 的完整文字內容（string）
     """
-    experts = installed.get("experts", [])
-    logger.debug("generate_claude_md: %d experts", len(experts))
+    experts      = installed.get("experts", [])
+    include_all  = installed.get("include_all_experts", False)
+    logger.debug("generate_claude_md: %d experts, include_all=%s", len(experts), include_all)
 
     if not experts:
         return "# Connsys Jarvis\n\n（未安裝任何 Expert）\n\n@CLAUDE.local.md\n"
 
     # 找出 identity expert（最後一個 is_identity=True 的 expert）
+    # 若無明確標記，fallback 為清單中最後一個
     identity_expert = None
     for e in experts:
         if e.get("is_identity", False):
             identity_expert = e
     if identity_expert is None:
-        # fallback：取最後一個
         identity_expert = experts[-1]
     logger.debug("generate_claude_md: identity_expert=%s", identity_expert["name"])
 
-    if len(experts) == 1:
-        # ── 單一 Expert 格式 ──
-        e = experts[0]
-        expert_json_path = get_jarvis_dir(workspace) / e["path"]
-        expert_data  = load_expert_json(expert_json_path)
-        display_name = expert_data.get("display_name", e["name"])
-        # ep = expert 資料夾相對 connsys-jarvis 根目錄的路徑（去掉 /expert.json）
-        ep = Path(e["path"]).parent
+    # identity expert 的資料夾路徑（相對於 connsys-jarvis 根目錄）
+    ep = Path(identity_expert["path"]).parent
 
+    # 嘗試讀取 display_name；expert.json 不可讀時 fallback 為 name
+    try:
+        id_data      = load_expert_json(get_jarvis_dir(workspace) / identity_expert["path"])
+        display_name = id_data.get("display_name", identity_expert["name"])
+    except Exception:
+        display_name = identity_expert["name"]
+
+    if not include_all or len(experts) == 1:
+        # ── 預設格式：只有 identity expert 的四份文件 ──
+        # len(experts) == 1 時強制使用此格式（--with-all-experts 在單 expert 無意義）
         lines = [
             f"# Consys Expert: {display_name}",
             "",
@@ -703,12 +728,11 @@ def generate_claude_md(workspace: Path, installed: dict) -> str:
             "",
         ]
     else:
-        # ── 多 Expert 格式 ──
+        # ── --with-all-experts 格式：Identity + 所有 Expert 的 expert.md ──
         n = len(experts)
         lines = [f"# Consys Experts（{n} Experts 已安裝）", ""]
 
-        # Identity 區段：只放主 Expert 的 soul/rules/duties
-        ep = Path(identity_expert["path"]).parent
+        # Identity 區段：identity Expert 的 soul/rules/duties（角色、規範、職責）
         lines += [
             "## Expert Identity（以最後安裝的 Expert 為主）",
             f"@connsys-jarvis/{ep}/soul.md",
@@ -717,11 +741,12 @@ def generate_claude_md(workspace: Path, installed: dict) -> str:
             "",
         ]
 
-        # Capabilities 區段：所有 Expert 的 expert.md
+        # Capabilities 區段：所有已安裝 Expert 的 expert.md（能力概覽）
+        # 讓 Claude 了解系統中有哪些 Expert 可以被呼叫或切換
         lines.append("## Expert Capabilities")
         for e in experts:
-            ep = Path(e["path"]).parent
-            lines.append(f"@connsys-jarvis/{ep}/expert.md")
+            ep_e = Path(e["path"]).parent
+            lines.append(f"@connsys-jarvis/{ep_e}/expert.md")
         lines += ["", "@CLAUDE.local.md", ""]
 
     content = "\n".join(lines)
@@ -949,7 +974,7 @@ def cmd_init(workspace: Path, expert_json_rel: str) -> None:
     print(f"\n完成！Expert '{expert_data['name']}' 已安裝。")
 
 
-def cmd_add(workspace: Path, expert_json_rel: str) -> None:
+def cmd_add(workspace: Path, expert_json_rel: str, include_all: bool = False) -> None:
     """--add：疊加安裝，在既有 Expert 基礎上加入新的 Expert。
 
     **與 --init 的差異**：
@@ -962,13 +987,21 @@ def cmd_add(workspace: Path, expert_json_rel: str) -> None:
     **Identity 更新**：每次 --add 後，最後加入的 Expert 成為新的 identity，
     其 soul/rules/duties 會出現在 CLAUDE.md 的 Identity 區段。
 
+    **CLAUDE.md 生成模式**（由 include_all 決定）：
+      - include_all=False（預設）：CLAUDE.md 只包含 identity Expert 的四份文件
+      - include_all=True（--with-all-experts）：加入所有 Expert 的 expert.md
+
     Args:
         workspace:       workspace 根目錄
-        expert_json_rel: expert.json 路徑
+        expert_json_rel: expert.json 路徑（相對於 workspace 或 connsys-jarvis 目錄）
+        include_all:     True = 啟用 --with-all-experts 模式，CLAUDE.md 包含所有 expert.md
     """
     print(f"\n=== Connsys Jarvis Add ===")
     print(f"Expert: {expert_json_rel}")
-    logger.info("cmd_add: workspace=%s, expert=%s", workspace, expert_json_rel)
+    if include_all:
+        print("模式: --with-all-experts（CLAUDE.md 將包含所有 Expert 的 expert.md）")
+    logger.info("cmd_add: workspace=%s, expert=%s, include_all=%s",
+                workspace, expert_json_rel, include_all)
 
     expert_json_path = workspace / expert_json_rel
     if not expert_json_path.exists():
@@ -1027,12 +1060,16 @@ def cmd_add(workspace: Path, expert_json_rel: str) -> None:
         declared_symlinks=symlinks
     )
     installed["experts"].append(entry)
+    # 儲存 include_all_experts 旗標，讓後續 write_claude_md 使用相同模式
+    # 這也讓 --remove 後重建 CLAUDE.md 時維持一致的格式
+    installed["include_all_experts"] = include_all
     save_installed_experts(workspace, installed)
 
     write_claude_md(workspace, installed)
     write_env_file(workspace, expert_data["name"])
 
-    logger.info("cmd_add: completed successfully for %s", expert_data["name"])
+    logger.info("cmd_add: completed successfully for %s (include_all=%s)",
+                expert_data["name"], include_all)
     print(f"\n完成！Expert '{expert_data['name']}' 已加入。")
 
 
@@ -1327,24 +1364,29 @@ def cmd_doctor(workspace: Path) -> None:
 def print_usage() -> None:
     """印出使用說明（--help 或不帶參數時呼叫）。"""
     print("""
-Connsys Jarvis Install Script
+Connsys Jarvis Setup Script
 
 用法（從 workspace 根目錄執行）：
-  python connsys-jarvis/scripts/install.py --init   <expert.json>   初始化並安裝 Expert
-  python connsys-jarvis/scripts/install.py --add    <expert.json>   新增 Expert
-  python connsys-jarvis/scripts/install.py --remove <expert-name>   移除 Expert
-  python connsys-jarvis/scripts/install.py --uninstall              卸載所有
-  python connsys-jarvis/scripts/install.py --list                   列出已安裝
-  python connsys-jarvis/scripts/install.py --doctor                 健康檢查
+  python connsys-jarvis/scripts/setup.py --init   <expert.json>   初始化並安裝 Expert
+  python connsys-jarvis/scripts/setup.py --add    <expert.json>   新增 Expert
+  python connsys-jarvis/scripts/setup.py --remove <expert-name>   移除 Expert
+  python connsys-jarvis/scripts/setup.py --uninstall              卸載所有
+  python connsys-jarvis/scripts/setup.py --list                   列出已安裝
+  python connsys-jarvis/scripts/setup.py --doctor                 健康檢查
+
+CLAUDE.md 模式選項（搭配 --add 使用）：
+  --with-all-experts  在 CLAUDE.md 中加入所有已安裝 Expert 的 expert.md
+                      （預設只包含最後安裝的 Expert 的四份文件）
 
 Debug 選項（可放在任何位置）：
-  --debug   顯示 DEBUG 層級日誌（console），同時寫入 .connsys-jarvis/log/install.log
+  --debug   顯示 DEBUG 層級日誌（console），同時寫入 .connsys-jarvis/log/setup.log
 
 範例：
-  python connsys-jarvis/scripts/install.py --init wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json
-  python connsys-jarvis/scripts/install.py --add  sys-bora/experts/sys-bora-preflight-expert/expert.json
-  python connsys-jarvis/scripts/install.py --remove framework-base-expert
-  python connsys-jarvis/scripts/install.py --debug --doctor
+  python connsys-jarvis/scripts/setup.py --init wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json
+  python connsys-jarvis/scripts/setup.py --add  sys-bora/experts/sys-bora-preflight-expert/expert.json
+  python connsys-jarvis/scripts/setup.py --add  sys-bora/experts/sys-bora-preflight-expert/expert.json --with-all-experts
+  python connsys-jarvis/scripts/setup.py --remove framework-base-expert
+  python connsys-jarvis/scripts/setup.py --debug --doctor
 
 注意：expert.json 路徑可以是相對於 workspace 或相對於 connsys-jarvis/ 目錄。
 """)
@@ -1360,25 +1402,27 @@ def main() -> None:
       2. 剩餘 args 的第一個元素作為 command
       3. 第二個元素（若有）作為 expert.json 路徑參數
 
-    **--debug 旗標設計**：
-      允許放在 command 前或後，方便快速加入除錯模式：
-        --debug --init ...     ← 放前面
-        --init ... --debug     ← 放後面（不影響解析）
+    **全域旗標設計**：
+      所有旗標允許放在任何位置，方便靈活組合：
+        --debug --init ...                ← debug 放前面
+        --add expert.json --with-all-experts --debug  ← 旗標放後面
     """
     script_path = Path(sys.argv[0])
     # 先取得 workspace 才能設定 log file 路徑
     workspace = find_workspace(script_path)
 
-    # ── 步驟 1：擷取 --debug 旗標 ──
-    raw_args = sys.argv[1:]
-    debug    = "--debug" in raw_args
-    # 移除 --debug 後，剩餘的才是 command 和參數
-    args     = [a for a in raw_args if a != "--debug"]
+    # ── 步驟 1：擷取全域旗標（可放任意位置）──
+    raw_args     = sys.argv[1:]
+    debug        = "--debug" in raw_args
+    include_all  = "--with-all-experts" in raw_args
+    # 移除旗標後，剩餘的才是 command 和其參數
+    GLOBAL_FLAGS = {"--debug", "--with-all-experts"}
+    args         = [a for a in raw_args if a not in GLOBAL_FLAGS]
 
     # ── 步驟 2：設定 logging（需要 workspace 才能確定 log 檔位置）──
-    log_file = get_dot_dir(workspace) / "log" / "install.log"
+    log_file = get_dot_dir(workspace) / "log" / "setup.log"
     setup_logging(debug=debug, log_file=log_file)
-    logger.info("=== install.py started: args=%r, debug=%s ===", args, debug)
+    logger.info("=== setup.py started: args=%r, debug=%s ===", args, debug)
 
     if not args:
         print_usage()
@@ -1400,7 +1444,7 @@ def main() -> None:
             logger.error("--add requires expert.json path")
             print("ERROR: --add 需要指定 expert.json 路徑", file=sys.stderr)
             sys.exit(1)
-        cmd_add(workspace, args[1])
+        cmd_add(workspace, args[1], include_all=include_all)
 
     elif cmd == "--remove":
         if len(args) < 2:
@@ -1427,7 +1471,7 @@ def main() -> None:
         print_usage()
         sys.exit(1)
 
-    logger.info("=== install.py completed ===")
+    logger.info("=== setup.py completed ===")
 
 
 if __name__ == "__main__":

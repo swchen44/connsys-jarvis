@@ -1,6 +1,6 @@
-# scripts/install.py — 開發者指南
+# scripts/setup.py — 開發者指南
 
-本文件幫助你快速理解 `install.py` 的設計、開發流程與驗證方法。
+本文件幫助你快速理解 `setup.py` 的設計、開發流程與驗證方法。
 閱讀時間：約 15 分鐘。
 
 ---
@@ -22,7 +22,7 @@
 
 ### 需求
 
-- Python 3.8+（install.py 本身）
+- Python 3.8+（setup.py 本身）
 - `uv` 或 `uvx`（執行 PEP 723 inline script 與測試）
 - macOS / Linux（Windows 在 symlink 受限環境下自動降級為 copy 模式）
 
@@ -36,14 +36,14 @@ cd /path/to/workspace
 ln -s /path/to/connsys-jarvis ./connsys-jarvis   # 若尚未建立
 
 # 安裝一個 Expert
-python ./connsys-jarvis/scripts/install.py \
+python ./connsys-jarvis/scripts/setup.py \
     --init framework/experts/framework-base-expert/expert.json
 
 # 讓環境變數生效（每次安裝後需要）
 source .connsys-jarvis/.env
 
 # 確認安裝健康
-python ./connsys-jarvis/scripts/install.py --doctor
+python ./connsys-jarvis/scripts/setup.py --doctor
 ```
 
 ### 所有指令一覽
@@ -51,7 +51,8 @@ python ./connsys-jarvis/scripts/install.py --doctor
 | 指令 | 說明 |
 |------|------|
 | `--init <expert.json>` | 全新安裝（清除既有，重建） |
-| `--add <expert.json>` | 疊加安裝（保留既有，新增） |
+| `--add <expert.json>` | 疊加安裝（預設：CLAUDE.md 只含最後 Expert） |
+| `--add <expert.json> --with-all-experts` | 疊加安裝（CLAUDE.md 包含所有 Expert 的 expert.md） |
 | `--remove <name or path>` | 移除指定 Expert |
 | `--uninstall` | 完全卸載（保留 memory/） |
 | `--list` | 列出安裝狀態 |
@@ -65,7 +66,7 @@ python ./connsys-jarvis/scripts/install.py --doctor
 ### 核心職責
 
 ```
-install.py
+setup.py
     │
     ├─ 讀取 expert.json（宣告此 expert 需要哪些 skills/hooks/commands）
     ├─ 在 workspace/.claude/ 建立 symlinks（指向 connsys-jarvis repo 中的實際資料夾）
@@ -80,10 +81,10 @@ install.py
 workspace/                          ← cwd（使用者執行指令的地方）
 ├── connsys-jarvis/                 ← git repo（或 symlink 指向 repo）
 │   ├── scripts/
-│   │   ├── install.py              ← 本程式
-│   │   └── test/test_install.py   ← pytest 單元測試
+│   │   ├── setup.py              ← 本程式
+│   │   └── test/test_setup.py   ← pytest 單元測試
 │   ├── framework/experts/framework-base-expert/
-│   │   ├── expert.json            ← Expert 宣告（被 install.py 讀取）
+│   │   ├── expert.json            ← Expert 宣告（被 setup.py 讀取）
 │   │   ├── skills/                ← skill 子目錄
 │   │   └── hooks/                 ← hook 腳本（.sh / .py）
 │   └── registry.json              ← 所有 Expert 目錄
@@ -112,7 +113,7 @@ workspace/                          ← cwd（使用者執行指令的地方）
 | **cwd = workspace** | workspace 定義為執行指令時的 cwd，不跟隨 symlink |
 | **冪等性** | 重複執行相同指令結果相同，`[=]` 代表跳過已存在的 symlink |
 | **保護記憶** | `--uninstall` 不刪 memory/，避免使用者知識損失 |
-| **分離設定** | install.py 不修改 settings.json（由 setup-claude.sh 負責）|
+| **分離設定** | setup.py 不修改 settings.json（由 setup-claude.sh 負責）|
 
 ---
 
@@ -339,7 +340,7 @@ if post_script:
 所有環境變數在 `write_env_file()` 中定義。
 **重要**：新增變數時必須：
 1. 使用 `CONNSYS_JARVIS_` 前綴
-2. 在 `test_install.py` 的 `TestWriteEnvFile` 加入對應測試
+2. 在 `test_setup.py` 的 `TestWriteEnvFile` 加入對應測試
 
 ### 5.5 本地快速開發迴圈
 
@@ -348,15 +349,15 @@ if post_script:
 mkdir /tmp/cj-dev && cd /tmp/cj-dev
 ln -s /path/to/connsys-jarvis ./connsys-jarvis
 
-# 修改 install.py 後立即測試
-python ./connsys-jarvis/scripts/install.py --debug --init \
+# 修改 setup.py 後立即測試
+python ./connsys-jarvis/scripts/setup.py --debug --init \
     framework/experts/framework-base-expert/expert.json
 
 # 查看 debug log
 cat .connsys-jarvis/log/install.log
 
 # 清理後重試
-python ./connsys-jarvis/scripts/install.py --uninstall
+python ./connsys-jarvis/scripts/setup.py --uninstall
 ```
 
 ---
@@ -367,13 +368,13 @@ python ./connsys-jarvis/scripts/install.py --uninstall
 
 ```bash
 # --debug 可放在任何位置
-python ./connsys-jarvis/scripts/install.py --debug --init expert.json
-python ./connsys-jarvis/scripts/install.py --init expert.json --debug
+python ./connsys-jarvis/scripts/setup.py --debug --init expert.json
+python ./connsys-jarvis/scripts/setup.py --init expert.json --debug
 ```
 
 **Debug 模式效果**：
 - Console（stderr）輸出 DEBUG 層級訊息，顯示每個步驟的詳細狀態
-- 同時寫入 `.connsys-jarvis/log/install.log`
+- 同時寫入 `.connsys-jarvis/log/setup.log`
 
 ### 6.2 日誌格式說明
 
@@ -430,14 +431,14 @@ grep 'cmd_remove' .connsys-jarvis/log/install.log
 ```bash
 # 從 connsys-jarvis 目錄執行
 cd /path/to/connsys-jarvis
-uvx pytest scripts/test/test_install.py -v
+uvx pytest scripts/test/test_setup.py -v
 
 # 執行特定測試類
-uvx pytest scripts/test/test_install.py::TestWriteEnvFile -v
-uvx pytest scripts/test/test_install.py::TestIntegrationInit -v
+uvx pytest scripts/test/test_setup.py::TestWriteEnvFile -v
+uvx pytest scripts/test/test_setup.py::TestIntegrationInit -v
 
 # 若無 uvx，用 uv run
-uv run --with pytest pytest scripts/test/test_install.py -v
+uv run --with pytest pytest scripts/test/test_setup.py -v
 ```
 
 **測試涵蓋的函式與場景**：
@@ -468,28 +469,28 @@ ln -s /path/to/connsys-jarvis /tmp/cj-test/connsys-jarvis
 cd /tmp/cj-test
 
 # TC-01: --init
-python ./connsys-jarvis/scripts/install.py \
+python ./connsys-jarvis/scripts/setup.py \
     --init framework/experts/framework-base-expert/expert.json
 ls .claude/skills/ | wc -l   # 預期: 3
 ls .claude/hooks/  | wc -l   # 預期: 5
 ls .claude/commands/ | wc -l  # 預期: 2
 
 # TC-02: --add
-python ./connsys-jarvis/scripts/install.py \
+python ./connsys-jarvis/scripts/setup.py \
     --add wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json
 ls .claude/skills/ | wc -l   # 預期: 13
 
 # TC-03: --doctor
-python ./connsys-jarvis/scripts/install.py --doctor
+python ./connsys-jarvis/scripts/setup.py --doctor
 # 預期最後一行: 總體狀態：✅ 健康
 
 # TC-05: --remove
-python ./connsys-jarvis/scripts/install.py \
+python ./connsys-jarvis/scripts/setup.py \
     --remove wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json
 ls .claude/skills/ | wc -l   # 預期: 3
 
 # TC-07: --uninstall
-python ./connsys-jarvis/scripts/install.py --uninstall
+python ./connsys-jarvis/scripts/setup.py --uninstall
 ls CLAUDE.md 2>/dev/null || echo "GONE"   # 預期: GONE
 ls .claude/skills/ | wc -l                # 預期: 0
 ```
@@ -500,12 +501,12 @@ ls .claude/skills/ | wc -l                # 預期: 0
 cd /tmp/cj-test
 
 # 開啟 debug 看詳細流程
-python ./connsys-jarvis/scripts/install.py --debug \
+python ./connsys-jarvis/scripts/setup.py --debug \
     --init framework/experts/framework-base-expert/expert.json 2>&1 | head -30
 
 # 確認 log 檔寫入
-ls -la .connsys-jarvis/log/install.log
-tail -20 .connsys-jarvis/log/install.log
+ls -la .connsys-jarvis/log/setup.log
+tail -20 .connsys-jarvis/log/setup.log
 ```
 
 ### 7.4 Skill test-basic.sh 驗證
@@ -532,7 +533,7 @@ done
 ### Q: `ERROR: expert.json not found`
 
 ```bash
-# install.py 的搜尋順序:
+# setup.py 的搜尋順序:
 # 1. workspace/expert_json_rel
 # 2. workspace/connsys-jarvis/expert_json_rel
 
@@ -548,7 +549,7 @@ pwd  # 應顯示 workspace root
 ```bash
 # 通常因為 connsys-jarvis 路徑改變（例如重新 clone）
 # 重新執行 --init 重建所有 symlinks
-python ./connsys-jarvis/scripts/install.py \
+python ./connsys-jarvis/scripts/setup.py \
     --init <your-expert.json>
 ```
 
@@ -567,13 +568,13 @@ ls $CONNSYS_JARVIS_PATH/registry.json  # 應存在
 
 ```bash
 # 確認安裝狀態
-python ./connsys-jarvis/scripts/install.py --list
+python ./connsys-jarvis/scripts/setup.py --list
 
 # --remove 接受兩種格式：
 # 1. Expert 名稱（建議）
-python ./connsys-jarvis/scripts/install.py --remove wifi-bora-memory-slim-expert
+python ./connsys-jarvis/scripts/setup.py --remove wifi-bora-memory-slim-expert
 # 2. expert.json 路徑
-python ./connsys-jarvis/scripts/install.py \
+python ./connsys-jarvis/scripts/setup.py \
     --remove wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json
 ```
 
@@ -581,13 +582,13 @@ python ./connsys-jarvis/scripts/install.py \
 
 ```bash
 # 開啟 pytest 的詳細輸出
-uvx pytest scripts/test/test_install.py -v -s
+uvx pytest scripts/test/test_setup.py -v -s
 
 # 只執行失敗的測試
-uvx pytest scripts/test/test_install.py -v --last-failed
+uvx pytest scripts/test/test_setup.py -v --last-failed
 
 # 查看詳細 log（測試使用 tmp_path，不影響真實 workspace）
-uvx pytest scripts/test/test_install.py -v --tb=long
+uvx pytest scripts/test/test_setup.py -v --tb=long
 ```
 
 ---
@@ -596,9 +597,9 @@ uvx pytest scripts/test/test_install.py -v --tb=long
 
 | 文件 | 說明 |
 |------|------|
-| `agents-requirements.md` | 功能需求（FR-02 系列） |
-| `agents-design.md` | 系統設計（§5 install.py 設計） |
-| `test_plan.md` | 測試計畫（TC-01~TC-12） |
-| `test_report.md` | 測試報告（測試結果記錄） |
-| `scripts/test/test_install.py` | pytest 單元測試（57 tests） |
+| `doc/agents-requirements.md` | 功能需求（FR-02 系列） |
+| `doc/agents-design.md` | 系統設計（§5 setup.py 設計） |
+| `doc/test_plan.md` | 測試計畫（TC-01~TC-12） |
+| `doc/test_report.md` | 測試報告（測試結果記錄） |
+| `scripts/test/test_setup.py` | pytest 單元測試（57 tests） |
 | `registry.json` | 所有可用 Expert 目錄 |
