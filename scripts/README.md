@@ -115,7 +115,7 @@ workspace/                          ← cwd（使用者執行指令的地方）
 | **Pure stdlib** | 無第三方依賴，`python3 script.py` 即可執行 |
 | **cwd = workspace** | workspace 定義為執行指令時的 cwd，不跟隨 symlink |
 | **冪等性** | 重複執行相同指令結果相同，`[=]` 代表跳過已存在的 symlink；`--add` 重複 = 重新安裝 |
-| **不依賴 registry.json** | Expert 探索（`--list`/`--query`）每次即時掃描 `*/*/expert.json` |
+| **不依賴 registry.json** | Expert 探索（`--list`/`--query`）每次即時掃描 `*/*-expert/expert.json` |
 | **保護記憶** | `--uninstall` 不刪 memory/，避免使用者知識損失 |
 | **分離設定** | setup.py 不修改 settings.json（由 setup-claude.sh 負責）|
 
@@ -268,10 +268,10 @@ cmd_doctor(workspace)
     │     └─ skill link SKILL.md：.claude/skills/*/SKILL.md 存在性
     ├─ D. CLAUDE.md      generate_claude_md() 預期 vs 實際 @include 行
     ├─ E. 環境工具        shutil.which("uv") / shutil.which("uvx")
-    └─ F. Expert 結構     掃描 jarvis_dir.glob("*/*")（有 expert.json 者）
+    └─ F. Expert 結構     glob("*/*-expert")（folder 名字以 -expert 結尾即為 expert）
           ├─ F1 必要檔案：expert.json, expert.md, rules.md, duties.md, soul.md
           ├─ F2 必要欄位：name, domain, owner, internal.skills（collect via json.loads）
-          ├─ F3 Skill SKILL.md：glob("*/*/skills/*/") 各 folder 有 SKILL.md
+          ├─ F3 Skill SKILL.md：glob("*/*-expert/skills/*/") 各 folder 有 SKILL.md
           └─ F4 Orphan skill：collect_skill_references() 計算未被引用的 skill folder
 ```
 

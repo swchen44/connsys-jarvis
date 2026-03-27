@@ -293,7 +293,8 @@ def scan_available_experts(workspace: Path) -> list:
     """即時掃描 connsys-jarvis 目錄下所有可用的 Expert。
 
     每次都從磁碟即時讀取 expert.json，不依賴 registry.json 或任何快取。
-    掃描路徑模式：connsys-jarvis/{domain}/{expert-name}/expert.json
+    掃描路徑模式：connsys-jarvis/{domain}/*-expert/expert.json
+    識別方式：folder 名字以 -expert 結尾（命名規範），不依賴 expert.json 存在性
 
     Args:
         workspace: workspace 根目錄
@@ -304,7 +305,7 @@ def scan_available_experts(workspace: Path) -> list:
     """
     jarvis_dir = get_jarvis_dir(workspace)
     experts = []
-    for expert_json in sorted(jarvis_dir.glob("*/*/expert.json")):
+    for expert_json in sorted(jarvis_dir.glob("*/*-expert/expert.json")):
         try:
             data = load_expert_json(expert_json)
             rel_path = str(expert_json.relative_to(jarvis_dir))
@@ -1447,7 +1448,7 @@ def collect_skill_references(jarvis_dir: Path) -> tuple:
     named_skills: set = set()
     all_skills_experts: set = set()
 
-    for expert_json in sorted(jarvis_dir.glob("*/*/expert.json")):
+    for expert_json in sorted(jarvis_dir.glob("*/*-expert/expert.json")):
         try:
             data = json.loads(expert_json.read_text())
         except Exception:
@@ -1697,7 +1698,7 @@ def cmd_doctor(workspace: Path) -> None:
     # ── F. Expert 結構完整性（掃描 connsys-jarvis repo）──
     print("\nF. Expert 結構完整性（掃描 connsys-jarvis repo）：")
 
-    expert_dirs = sorted(d for d in jarvis_dir.glob("*/*") if d.is_dir() and (d / "expert.json").exists())
+    expert_dirs = sorted(d for d in jarvis_dir.glob("*/*-expert") if d.is_dir())
 
     if not expert_dirs:
         print("  （未找到任何 expert folder）")
@@ -1753,7 +1754,7 @@ def cmd_doctor(workspace: Path) -> None:
 
         # F3: skill SKILL.md 完整性
         print(f"\n  F3 Skill SKILL.md：")
-        skill_dirs_all = sorted(d for d in jarvis_dir.glob("*/*/skills/*") if d.is_dir())
+        skill_dirs_all = sorted(d for d in jarvis_dir.glob("*/*-expert/skills/*") if d.is_dir())
         if not skill_dirs_all:
             print("    （未找到任何 skill folder）")
         else:
