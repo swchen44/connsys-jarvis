@@ -97,7 +97,7 @@
 | `framework-learn-expert` | 分析 connsys-memory 自動萃取 pattern，產生 PR | Phase 4 |
 | Hook 效能監控 | 追蹤 session-start/end 的執行時間，避免 hook 過重 | — |
 | OpenClaw 遷移 | hooks TypeScript 重寫（Phase 2 遷移路線）| 依 Project Lead 時間表 |
-| Security hooks | `pre-install-check.sh` 掃描 external-experts | Phase 4 |
+| Security hooks | `pre-install-check.sh` 掃描 external-expert | Phase 4 |
 
 ---
 
@@ -390,7 +390,7 @@ gantt
 | 候選 Expert | 說明 |
 |------------|------|
 | `framework-learn-expert` | 分析 `connsys-memory` 自動萃取 pattern，產生 skill PR（AI 自我強化）|
-| `framework-security-expert` | `pre-install-check.sh` 掃描 external-experts 安全性 |
+| `framework-security-expert` | `pre-install-check.sh` 掃描 external-expert 安全性 |
 
 #### WiFi Bora 應用強化 Expert
 

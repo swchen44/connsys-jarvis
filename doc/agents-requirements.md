@@ -376,26 +376,26 @@ connsys-jarvis/ (git)
 │   │   └── commands/                ← framework-experts-tool/, framework-handoff-tool/
 │   ├── framework-skill-create-expert/
 │   ├── framework-learn-expert/
-│   └── framework-external-experts/  ← skill-creator/, claude-memory-engine/（git submodule）
+│   └── framework-external-expert/  ← skill-creator/, claude-memory-engine/（git submodule）
 │
 ├── wifi/                            ← Layer 1：wifi domain【示例】
 │   ├── wifi-bora-base-expert/       ← wifi domain 共用（is_common: true）
 │   ├── wifi-bora-memory-slim-expert/
 │   ├── wifi-debug-expert/
 │   ├── wifi-bora-cr-robot-expert/
-│   └── wifi-external-experts/
+│   └── wifi-external-expert/
 │
 ├── bt/                              ← Layer 1：bt domain【示例】
 │   ├── bt-bora-base-expert/
 │   ├── bt-build-expert/
 │   ├── bt-debug-expert/
-│   └── bt-external-experts/
+│   └── bt-external-expert/
 │
 └── system/                          ← Layer 1：system domain（含跨 domain 共用工具）【示例】
     ├── sys-bora-base-expert/        ← sys-bora-gerrit-tool, sys-bora-repo-tool 等
     ├── system-cicd-expert/
     ├── system-device-expert/
-    └── system-external-experts/
+    └── system-external-expert/
 ```
 
 **每個 Expert 資料夾標準結構**（Layer 4）：
@@ -893,14 +893,14 @@ AI Agent 生態系統的安全威脅已有實際案例：
 - CVSS 8.8 的 CVE 暴露了 **17,500+ 個面向網路的實例**
 - Moltbook 漏洞跨 770,000 個 Agent 洩露了 **150 萬個 API token**
 
-目前同仁在安裝 external-experts、連接 MCP 伺服器、設定 hooks 時，沒有任何自動化安全審計機制。
+目前同仁在安裝 external-expert、連接 MCP 伺服器、設定 hooks 時，沒有任何自動化安全審計機制。
 
 **需求**：
 
 | 編號 | 需求 | 優先級 |
 |------|------|--------|
 | FW-01-1 | 建立 `framework-security-expert`，提供自動化安全審計能力 | Future |
-| FW-01-2 | 提供 pre-install hook，在安裝 external-experts 前自動掃描 | Future |
+| FW-01-2 | 提供 pre-install hook，在安裝 external-expert 前自動掃描 | Future |
 | FW-01-3 | 靜態分析 SKILL.md / COMMAND.md，偵測 prompt injection 與資料外洩指令 | Future |
 | FW-01-4 | 掃描 hooks（.sh / .py）是否有可疑網路呼叫或非預期檔案讀寫 | Future |
 | FW-01-5 | 產生安全掃描報告，更新至 `report/execution-report.md` | Future |

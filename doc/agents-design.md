@@ -92,8 +92,8 @@ connsys-jarvis/
 │   │   ├── rules.md
 │   │   ├── duties.md
 │   │   └── README.md
-│   └── {domain}-external-experts/        Layer 2：external（命名含 domain prefix）
-│       └── {original-tool-name}/         Layer 3：原始名稱
+│   └── {domain}-external-expert/        Layer 2：external expert（名字含 external 識別）
+│       └── {original-tool-name}/         Layer 3：原始名稱（照 git submodule 命名）
 ```
 
 ### 2.2 Layer 1：Domain 定義
@@ -107,18 +107,22 @@ connsys-jarvis/
 
 ### 2.3 Layer 2：Internal vs External
 
-每個 domain 下的 Expert 與 External 直接並列：
+所有 Expert（internal + external）統一放在 domain 下，命名均以 `-expert` 結尾：
 
 ```
 {domain}/
 ├── {domain}-{name}-expert/          ← 內部 Expert（team 自行維護）
-└── {domain}-external-experts/       ← 外部工具（命名含 domain prefix，git submodule）
-    （可進一步用工具名：{domain}-{tool}-external-experts/）
+└── {domain}-external-expert/        ← 外部工具 Expert（git submodule，名字含 external 識別）
+    （可加入工具名：{domain}-{tool}-external-expert/，通常用 {domain}-external-expert/ 即可）
 ```
 
+**統一命名的好處**：
+- `setup.py` 的 `*/*-expert` glob 一次掃描所有 Expert（internal + external）
+- 名字本身標示身份：`{domain}-external-expert` 含 `external` 即為外部工具
+
 **External expert 的歸屬原則**：
-- 討論後，各 domain 代表同意 → 放 `framework/framework-external-experts/`（共用）
-- 各 domain 自行維護 → 放各自的 `{domain}-external-experts/`（命名不能衝突）
+- 討論後，各 domain 代表同意 → 放 `framework/framework-external-expert/`（共用）
+- 各 domain 自行維護 → 放各自的 `{domain}-external-expert/`（命名不能衝突）
 
 ### 2.4 Layer 3：Expert 命名規則
 
@@ -418,7 +422,7 @@ connsys-jarvis/
 │   │   │   └── wifi-bora-risk-report-flow/
 │   │   ├── agents/ ├── hooks/ ├── commands/ ├── test/ └── report/
 │   │
-│   └── wifi-bora-external-experts/   ← 外部工具（git submodule）
+│   └── wifi-bora-external-expert/   ← 外部工具（git submodule）
 │
 ├── bt-bora/                        ← Bluetooth Bora firmware domain
 │   ├── bt-bora-base-expert/        ← bt-bora 共用知識容器
@@ -440,8 +444,8 @@ connsys-jarvis/
 │   │   │   └── bt-bora-lsp-tool/
 │   │   ├── agents/ ├── hooks/ ├── commands/ ├── test/ └── report/
 │   │
-│   └── bt-external-experts/          ← 外部工具（通用命名）
-│       （可細化：bt-xxx-external-experts/）
+│   └── bt-external-expert/          ← 外部工具（通用命名）
+│       （可細化：bt-xxx-external-expert/）
 │
 ├── lrwpan-bora/                    ← LR-WPAN (802.15.4) Bora firmware domain
 │   └── lrwpan-bora-base-expert/
@@ -1657,7 +1661,7 @@ employee_id: john.doe
 | **權限管理** | 依 domain 分資料夾，方便對不同 domain 設定不同的 git access control |
 | **安全掃描** | domain 層級的清楚分隔，方便對 wifi / bt / system 各自執行 secret scan |
 | **命名不衝突** | Layer 1-5 的命名規則確保全域唯一（domain prefix + type postfix）|
-| **External 隔離** | 外部工具放 `{domain}-external-experts/`，與 internal 清楚分開，方便掃描外部依賴 |
+| **External 隔離** | 外部工具放 `{domain}-external-expert/`，與 internal 清楚分開，方便掃描外部依賴 |
 
 ---
 
@@ -1763,7 +1767,7 @@ AI Agent 生態系統的成長速度遠超其安全工具：
 
 **現況問題**：
 
-同仁在安裝社區技能（external-experts）、連接 MCP 伺服器、配置 hooks 時，沒有任何自動化方式來審計設定的安全性。
+同仁在安裝社區技能（external-expert）、連接 MCP 伺服器、配置 hooks 時，沒有任何自動化方式來審計設定的安全性。
 
 **目標**：
 
@@ -1796,7 +1800,7 @@ framework/
 |------|------|
 | 靜態分析 | 掃描 SKILL.md / COMMAND.md 是否有 prompt injection、資料外洩指令 |
 | Hook 掃描 | 檢查 `.sh` / `.py` hooks 是否有可疑的網路呼叫、檔案讀寫 |
-| External 審計 | 安裝 external-experts 前，比對已知惡意 skill fingerprint |
+| External 審計 | 安裝 external-expert 前，比對已知惡意 skill fingerprint |
 | Pre-install hook | 在 install.sh 執行前觸發安全檢查，阻止高風險安裝 |
 | 報告產生 | 自動更新 `report/execution-report.md`，記錄安全掃描結果 |
 
