@@ -34,7 +34,7 @@
 |---|------|---------|
 | 1 | `rm -rf /tmp/cj-test && mkdir /tmp/cj-test` | 建立空 workspace |
 | 2 | `ln -s <jarvis> /tmp/cj-test/connsys-jarvis` | connsys-jarvis 可用 |
-| 3 | `cd /tmp/cj-test && python3 ./connsys-jarvis/scripts/setup.py --init framework/experts/framework-base-expert/expert.json` | 輸出「完成！Expert 'framework-base-expert' 已安裝」 |
+| 3 | `cd /tmp/cj-test && python3 ./connsys-jarvis/scripts/setup.py --init framework/framework-base-expert/expert.json` | 輸出「完成！Expert 'framework-base-expert' 已安裝」 |
 | 4 | `ls .claude/skills/` | 3 個 skills symlinks |
 | 5 | `ls .claude/hooks/` | 5 個 hooks symlinks |
 | 6 | `ls .claude/commands/` | 2 個 commands symlinks |
@@ -54,7 +54,7 @@
 | # | 步驟 | 預期結果 |
 |---|------|---------|
 | 1 | 前置：TC-01 完成後 | workspace 已有 framework-base-expert |
-| 2 | `python3 ./connsys-jarvis/scripts/setup.py --add wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json` | 輸出「完成！Expert 'wifi-bora-memory-slim-expert' 已加入」 |
+| 2 | `python3 ./connsys-jarvis/scripts/setup.py --add wifi-bora/wifi-bora-memory-slim-expert/expert.json` | 輸出「完成！Expert 'wifi-bora-memory-slim-expert' 已加入」 |
 | 3 | 確認輸出含 `[=]`（既有跳過）| framework 的 3 skills + 5 hooks + 2 commands 顯示 `[=]` |
 | 4 | 確認輸出含 `[+]`（新建） | wifi-bora 5 skills + sys-bora 2 skills + internal 3 skills |
 | 5 | `ls .claude/skills/ \| wc -l` | 13 |
@@ -112,7 +112,7 @@
 | # | 步驟 | 預期結果 |
 |---|------|---------|
 | 1 | 前置：TC-02 完成後（13 skills） | |
-| 2 | `python3 ./connsys-jarvis/scripts/setup.py --remove wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json` | 輸出「完成！Expert 'wifi-bora-memory-slim-expert' 已移除」 |
+| 2 | `python3 ./connsys-jarvis/scripts/setup.py --remove wifi-bora/wifi-bora-memory-slim-expert/expert.json` | 輸出「完成！Expert 'wifi-bora-memory-slim-expert' 已移除」 |
 | 3 | 確認輸出：所有既有 symlinks 先清除，再依剩餘 Expert 重建 | 移除 wifi-bora-memslim-flow 等 10 個，重建 framework 的 3 個 |
 | 4 | `ls .claude/skills/ \| wc -l` | 3（framework-base-expert 的 3 個被重建） |
 | 5 | `ls .claude/skills/` | framework-expert-discovery-knowhow, framework-handoff-flow, framework-memory-tool |
@@ -132,7 +132,7 @@
 |---|------|---------|
 | 1 | `rm -rf /tmp/cj-legacy && mkdir -p /tmp/cj-legacy/.repo` | 建立 legacy workspace |
 | 2 | `ln -s <jarvis> /tmp/cj-legacy/connsys-jarvis` | |
-| 3 | `cd /tmp/cj-legacy && python3 ./connsys-jarvis/scripts/setup.py --init framework/experts/framework-base-expert/expert.json` | 安裝成功 |
+| 3 | `cd /tmp/cj-legacy && python3 ./connsys-jarvis/scripts/setup.py --init framework/framework-base-expert/expert.json` | 安裝成功 |
 | 4 | `grep CODE_SPACE .connsys-jarvis/.env` | = /private/tmp/cj-legacy（同 workspace root，無 codespace/） |
 | 5 | 確認原有 .repo 未被破壞 | `ls .repo` 仍存在 |
 
@@ -202,7 +202,7 @@
 | # | 步驟 | 預期結果 |
 |---|------|---------|
 | 1 | 暫時修改 wifi-bora-memory-slim-expert 的 expert.json，加入 `"exclude_symlink": {"patterns": [".*-lsp-.*"]}` | |
-| 2 | `python3 ./connsys-jarvis/scripts/setup.py --init wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json` | 安裝成功 |
+| 2 | `python3 ./connsys-jarvis/scripts/setup.py --init wifi-bora/wifi-bora-memory-slim-expert/expert.json` | 安裝成功 |
 | 3 | `ls .claude/skills/ \| grep lsp` | 無結果（wifi-bora-lsp-tool 被過濾） |
 | 4 | `ls .claude/skills/ \| grep memslim` | wifi-bora-memslim-flow 存在（未被過濾） |
 | 5 | 還原 expert.json | `"exclude_symlink": {"patterns": []}` |
@@ -260,7 +260,7 @@
 | # | 步驟 | 預期結果 |
 |---|------|---------|
 | 1 | 前置：TC-01 完成後（framework-base-expert 已安裝）| |
-| 2 | `python3 ./connsys-jarvis/scripts/setup.py --add --with-all-experts wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json` | 輸出「完成！Expert 'wifi-bora-memory-slim-expert' 已加入」 |
+| 2 | `python3 ./connsys-jarvis/scripts/setup.py --add --with-all-experts wifi-bora/wifi-bora-memory-slim-expert/expert.json` | 輸出「完成！Expert 'wifi-bora-memory-slim-expert' 已加入」 |
 | 3 | `cat CLAUDE.md \| grep "2 Experts"` | 含「2 Experts 已安裝」count header |
 | 4 | `cat CLAUDE.md \| grep "framework-base-expert/expert.md"` | 含 framework-base-expert/expert.md（Capabilities 區段）|
 | 5 | `cat CLAUDE.md \| grep "wifi-bora-memory-slim-expert/soul.md"` | 含 wifi-bora-memory-slim-expert/soul.md（Identity 區段）|
@@ -280,10 +280,10 @@
 | # | 步驟 | 預期結果 |
 |---|------|---------|
 | 1 | 前置：TC-01 完成後（workspace 已建立）| |
-| 2 | `python3 ./connsys-jarvis/scripts/setup.py --debug --init framework/experts/framework-base-expert/expert.json 2>&1 \| grep -c DEBUG` | console 輸出包含多行 DEBUG 訊息（> 0）|
+| 2 | `python3 ./connsys-jarvis/scripts/setup.py --debug --init framework/framework-base-expert/expert.json 2>&1 \| grep -c DEBUG` | console 輸出包含多行 DEBUG 訊息（> 0）|
 | 3 | `ls .connsys-jarvis/log/setup.log` | 日誌檔案存在 |
 | 4 | `grep -c DEBUG .connsys-jarvis/log/setup.log` | 日誌檔含多行 DEBUG 記錄（> 0）|
-| 5 | `python3 ./connsys-jarvis/scripts/setup.py --init framework/experts/framework-base-expert/expert.json 2>&1 \| grep -c DEBUG \|\| echo 0` | console 無 DEBUG 輸出（輸出 0）|
+| 5 | `python3 ./connsys-jarvis/scripts/setup.py --init framework/framework-base-expert/expert.json 2>&1 \| grep -c DEBUG \|\| echo 0` | console 無 DEBUG 輸出（輸出 0）|
 | 6 | `ls .connsys-jarvis/log/setup.log` | 日誌檔仍存在（file handler 不受 --debug 影響）|
 
 ---

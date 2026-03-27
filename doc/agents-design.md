@@ -72,29 +72,28 @@ Consys Expert = Agent 核心能力 + Workflow（hooks）+ Tool（commands）+ Kn
 connsys-jarvis/
 │
 ├── {domain}/                              Layer 1：domain
-│   ├── experts/                           Layer 2：internal experts
-│   │   └── {domain}-{name}-expert/        Layer 3：expert（命名含 domain prefix）
-│   │       ├── skills/                    Layer 4：工具資料夾
-│   │       │   └── {domain}-{name}-{type}/  Layer 5：skill（命名含 domain + type）
-│   │       │       └── SKILL.md
-│   │       ├── hooks/
-│   │       ├── commands/
-│   │       │   └── {domain}-{name}-tool/
-│   │       │       └── COMMAND.md
-│   │       ├── agents/
-│   │       │   └── {agent-name}.md
-│   │       ├── test/
-│   │       ├── report/
-│   │       │   ├── execution-report.md    ← 人工維護
-│   │       │   └── test-report.md     ← 人工維護
-│   │       ├── expert.json
-│   │       ├── expert.md
-│   │       ├── soul.md
-│   │       ├── rules.md
-│   │       ├── duties.md
-│   │       └── README.md
-│   └── external-experts/                  Layer 2：external（照原名）
-│       └── {original-tool-name}/          Layer 3：原始名稱
+│   ├── {domain}-{name}-expert/            Layer 2：internal expert（命名含 domain prefix）
+│   │   ├── skills/                        Layer 3：工具資料夾
+│   │   │   └── {domain}-{name}-{type}/    Layer 4：skill（命名含 domain + type）
+│   │   │       └── SKILL.md
+│   │   ├── hooks/
+│   │   ├── commands/
+│   │   │   └── {domain}-{name}-tool/
+│   │   │       └── COMMAND.md
+│   │   ├── agents/
+│   │   │   └── {agent-name}.md
+│   │   ├── test/
+│   │   ├── report/
+│   │   │   ├── execution-report.md    ← 人工維護
+│   │   │   └── test-report.md     ← 人工維護
+│   │   ├── expert.json
+│   │   ├── expert.md
+│   │   ├── soul.md
+│   │   ├── rules.md
+│   │   ├── duties.md
+│   │   └── README.md
+│   └── {domain}-external-experts/        Layer 2：external（命名含 domain prefix）
+│       └── {original-tool-name}/         Layer 3：原始名稱
 ```
 
 ### 2.2 Layer 1：Domain 定義
@@ -108,17 +107,18 @@ connsys-jarvis/
 
 ### 2.3 Layer 2：Internal vs External
 
-每個 domain 下固定有兩個子資料夾：
+每個 domain 下的 Expert 與 External 直接並列：
 
 ```
 {domain}/
-├── experts/            ← 內部 Expert（team 自行維護）
-└── external-experts/   ← 外部工具（照原名，git submodule）
+├── {domain}-{name}-expert/          ← 內部 Expert（team 自行維護）
+└── {domain}-external-experts/       ← 外部工具（命名含 domain prefix，git submodule）
+    （可進一步用工具名：{domain}-{tool}-external-experts/）
 ```
 
 **External expert 的歸屬原則**：
-- 討論後，各 domain 代表同意 → 放 `framework/external-experts/`（共用）
-- 各 domain 自行維護 → 放各自的 `external-experts/`（命名不能衝突）
+- 討論後，各 domain 代表同意 → 放 `framework/framework-external-experts/`（共用）
+- 各 domain 自行維護 → 放各自的 `{domain}-external-experts/`（命名不能衝突）
 
 ### 2.4 Layer 3：Expert 命名規則
 
@@ -328,152 +328,150 @@ connsys-jarvis/
 ├── README.md
 │
 ├── framework/                      ← 框架 domain（跨所有 domain 共用）
-│   └── experts/
-│       └── framework-base-expert/  ← 共用 skill/hook/agent 容器
-│           ├── expert.json
-│           ├── expert.md
-│           ├── soul.md
-│           ├── rules.md
-│           ├── duties.md
-│           ├── skills/
-│           │   ├── framework-expert-discovery-knowhow/
-│           │   ├── framework-handoff-flow/
-│           │   ├── framework-memory-tool/
-│           │   ├── framework-skill-create-flow/
-│           │   └── framework-expert-create-flow/
-│           ├── hooks/
-│           │   ├── session-start.sh
-│           │   ├── session-end.sh
-│           │   ├── pre-compact.sh
-│           │   └── mid-session-checkpoint.sh
-│           ├── agents/
-│           ├── commands/
-│           │   ├── framework-experts-tool/
-│           │   └── framework-handoff-tool/
-│           ├── test/ └── report/ └── README.md
+│   └── framework-base-expert/      ← 共用 skill/hook/agent 容器
+│       ├── expert.json
+│       ├── expert.md
+│       ├── soul.md
+│       ├── rules.md
+│       ├── duties.md
+│       ├── skills/
+│       │   ├── framework-expert-discovery-knowhow/
+│       │   ├── framework-handoff-flow/
+│       │   ├── framework-memory-tool/
+│       │   ├── framework-skill-create-flow/
+│       │   └── framework-expert-create-flow/
+│       ├── hooks/
+│       │   ├── session-start.sh
+│       │   ├── session-end.sh
+│       │   ├── pre-compact.sh
+│       │   └── mid-session-checkpoint.sh
+│       ├── agents/
+│       ├── commands/
+│       │   ├── framework-experts-tool/
+│       │   └── framework-handoff-tool/
+│       ├── test/ └── report/ └── README.md
 │
 ├── sys-bora/                       ← System / SoC platform domain
-│   └── experts/
-│       ├── sys-bora-base-expert/   ← sys domain 共用知識容器
-│       │   ├── expert.json
-│       │   ├── skills/
-│       │   │   ├── sys-bora-gerrit-tool/
-│       │   │   ├── sys-bora-repo-tool/
-│       │   │   ├── sys-bora-build-knowhow/
-│       │   │   ├── sys-bora-arch-knowhow/
-│       │   │   ├── sys-bora-ld-knowhow/
-│       │   │   ├── sys-bora-config-knowhow/
-│       │   │   └── sys-bora-manifest-build-knowhow/
-│       │   ├── hooks/ ├── agents/ ├── commands/ ├── test/ └── report/
-│       │
-│       └── sys-bora-preflight-expert/   ← 跨 domain 共用工具（非 base）
-│           ├── expert.json              ← depends on sys-bora-base-expert
-│           ├── skills/
-│           │   ├── sys-bora-preflight-flow/
-│           │   ├── sys-bora-preflight-result-tool/
-│           │   ├── sys-bora-gerrit-commit-flow/
-│           │   └── sys-bora-ci-label-knowhow/
-│           ├── agents/
-│           │   └── preflight-monitor.md
-│           ├── hooks/ ├── commands/ ├── test/ └── report/
+│   ├── sys-bora-base-expert/       ← sys domain 共用知識容器
+│   │   ├── expert.json
+│   │   ├── skills/
+│   │   │   ├── sys-bora-gerrit-tool/
+│   │   │   ├── sys-bora-repo-tool/
+│   │   │   ├── sys-bora-build-knowhow/
+│   │   │   ├── sys-bora-arch-knowhow/
+│   │   │   ├── sys-bora-ld-knowhow/
+│   │   │   ├── sys-bora-config-knowhow/
+│   │   │   └── sys-bora-manifest-build-knowhow/
+│   │   ├── hooks/ ├── agents/ ├── commands/ ├── test/ └── report/
+│   │
+│   └── sys-bora-preflight-expert/  ← 跨 domain 共用工具（非 base）
+│       ├── expert.json             ← depends on sys-bora-base-expert
+│       ├── skills/
+│       │   ├── sys-bora-preflight-flow/
+│       │   ├── sys-bora-preflight-result-tool/
+│       │   ├── sys-bora-gerrit-commit-flow/
+│       │   └── sys-bora-ci-label-knowhow/
+│       ├── agents/
+│       │   └── preflight-monitor.md
+│       ├── hooks/ ├── commands/ ├── test/ └── report/
 │
 ├── wifi-bora/                      ← WiFi Bora firmware domain
-│   └── experts/
-│       ├── wifi-bora-base-expert/  ← wifi-bora 共用知識容器
-│       │   ├── expert.json
-│       │   ├── skills/
-│       │   │   ├── wifi-bora-protocol-knowhow/
-│       │   │   ├── wifi-bora-arch-knowhow/
-│       │   │   ├── wifi-bora-coderule-knowhow/
-│       │   │   ├── wifi-bora-build-flow/
-│       │   │   ├── wifi-bora-rompatch-knowhow/
-│       │   │   ├── wifi-bora-linkerscript-knowhow/
-│       │   │   ├── wifi-bora-symbolmap-knowhow/
-│       │   │   ├── wifi-bora-memory-knowhow/
-│       │   │   └── wifi-bora-sds-knowhow/
-│       │   ├── hooks/ ├── agents/ ├── commands/ ├── test/ └── report/
-│       │
-│       ├── wifi-bora-memory-slim-expert/
-│       │   ├── expert.json   ← depends: wifi-bora-base, sys-bora-preflight
-│       │   ├── skills/
-│       │   │   ├── wifi-bora-memslim-flow/
-│       │   │   ├── wifi-bora-ast-tool/
-│       │   │   ├── wifi-bora-lsp-tool/
-│       │   │   └── wifi-bora-wut-tool/
-│       │   ├── agents/ ├── hooks/ ├── commands/ ├── test/ └── report/
-│       │
-│       ├── wifi-bora-cr-robot-expert/
-│       │   ├── expert.json   ← depends: wifi-bora-base, sys-bora-preflight
-│       │   ├── skills/
-│       │   │   ├── wifi-bora-debug-sop-flow/
-│       │   │   ├── wifi-bora-coredump-knowhow/
-│       │   │   ├── wifi-bora-ast-tool/
-│       │   │   ├── wifi-bora-lsp-tool/
-│       │   │   ├── wifi-bora-wut-tool/
-│       │   │   └── wifi-bora-risk-report-flow/
-│       │   ├── agents/ ├── hooks/ ├── commands/ ├── test/ └── report/
-│       │
-│       └── wifi-bora-coverity-expert/
-│           ├── expert.json   ← depends: wifi-bora-base, sys-bora-preflight
-│           ├── skills/
-│           │   ├── wifi-bora-coverity-flow/
-│           │   ├── wifi-bora-coverity-cr-tool/
-│           │   └── wifi-bora-risk-report-flow/
-│           ├── agents/ ├── hooks/ ├── commands/ ├── test/ └── report/
+│   ├── wifi-bora-base-expert/      ← wifi-bora 共用知識容器
+│   │   ├── expert.json
+│   │   ├── skills/
+│   │   │   ├── wifi-bora-protocol-knowhow/
+│   │   │   ├── wifi-bora-arch-knowhow/
+│   │   │   ├── wifi-bora-coderule-knowhow/
+│   │   │   ├── wifi-bora-build-flow/
+│   │   │   ├── wifi-bora-rompatch-knowhow/
+│   │   │   ├── wifi-bora-linkerscript-knowhow/
+│   │   │   ├── wifi-bora-symbolmap-knowhow/
+│   │   │   ├── wifi-bora-memory-knowhow/
+│   │   │   └── wifi-bora-sds-knowhow/
+│   │   ├── hooks/ ├── agents/ ├── commands/ ├── test/ └── report/
+│   │
+│   ├── wifi-bora-memory-slim-expert/
+│   │   ├── expert.json   ← depends: wifi-bora-base, sys-bora-preflight
+│   │   ├── skills/
+│   │   │   ├── wifi-bora-memslim-flow/
+│   │   │   ├── wifi-bora-ast-tool/
+│   │   │   ├── wifi-bora-lsp-tool/
+│   │   │   └── wifi-bora-wut-tool/
+│   │   ├── agents/ ├── hooks/ ├── commands/ ├── test/ └── report/
+│   │
+│   ├── wifi-bora-cr-robot-expert/
+│   │   ├── expert.json   ← depends: wifi-bora-base, sys-bora-preflight
+│   │   ├── skills/
+│   │   │   ├── wifi-bora-debug-sop-flow/
+│   │   │   ├── wifi-bora-coredump-knowhow/
+│   │   │   ├── wifi-bora-ast-tool/
+│   │   │   ├── wifi-bora-lsp-tool/
+│   │   │   ├── wifi-bora-wut-tool/
+│   │   │   └── wifi-bora-risk-report-flow/
+│   │   ├── agents/ ├── hooks/ ├── commands/ ├── test/ └── report/
+│   │
+│   ├── wifi-bora-coverity-expert/
+│   │   ├── expert.json   ← depends: wifi-bora-base, sys-bora-preflight
+│   │   ├── skills/
+│   │   │   ├── wifi-bora-coverity-flow/
+│   │   │   ├── wifi-bora-coverity-cr-tool/
+│   │   │   └── wifi-bora-risk-report-flow/
+│   │   ├── agents/ ├── hooks/ ├── commands/ ├── test/ └── report/
+│   │
+│   └── wifi-bora-external-experts/   ← 外部工具（git submodule）
 │
 ├── bt-bora/                        ← Bluetooth Bora firmware domain
-│   └── experts/
-│       ├── bt-bora-base-expert/    ← bt-bora 共用知識容器
-│       │   ├── expert.json
-│       │   ├── skills/
-│       │   │   ├── bt-bora-protocol-knowhow/
-│       │   │   ├── bt-bora-arch-knowhow/
-│       │   │   ├── bt-bora-coderule-knowhow/
-│       │   │   ├── bt-bora-build-flow/
-│       │   │   └── bt-bora-sds-knowhow/
-│       │   ├── hooks/ ├── agents/ ├── commands/ ├── test/ └── report/
-│       │
-│       └── bt-bora-security-expert/
-│           ├── expert.json   ← depends: bt-bora-base, sys-bora-preflight
-│           ├── skills/
-│           │   ├── bt-bora-security-rule-knowhow/
-│           │   ├── bt-bora-security-analysis-flow/
-│           │   ├── bt-bora-ast-tool/
-│           │   └── bt-bora-lsp-tool/
-│           ├── agents/ ├── hooks/ ├── commands/ ├── test/ └── report/
+│   ├── bt-bora-base-expert/        ← bt-bora 共用知識容器
+│   │   ├── expert.json
+│   │   ├── skills/
+│   │   │   ├── bt-bora-protocol-knowhow/
+│   │   │   ├── bt-bora-arch-knowhow/
+│   │   │   ├── bt-bora-coderule-knowhow/
+│   │   │   ├── bt-bora-build-flow/
+│   │   │   └── bt-bora-sds-knowhow/
+│   │   ├── hooks/ ├── agents/ ├── commands/ ├── test/ └── report/
+│   │
+│   ├── bt-bora-security-expert/
+│   │   ├── expert.json   ← depends: bt-bora-base, sys-bora-preflight
+│   │   ├── skills/
+│   │   │   ├── bt-bora-security-rule-knowhow/
+│   │   │   ├── bt-bora-security-analysis-flow/
+│   │   │   ├── bt-bora-ast-tool/
+│   │   │   └── bt-bora-lsp-tool/
+│   │   ├── agents/ ├── hooks/ ├── commands/ ├── test/ └── report/
+│   │
+│   └── bt-external-experts/          ← 外部工具（通用命名）
+│       （可細化：bt-xxx-external-experts/）
 │
 ├── lrwpan-bora/                    ← LR-WPAN (802.15.4) Bora firmware domain
-│   └── experts/
-│       └── lrwpan-bora-base-expert/
-│           ├── expert.json
-│           ├── skills/
-│           │   ├── lrwpan-bora-protocol-knowhow/
-│           │   ├── lrwpan-bora-arch-knowhow/
-│           │   ├── lrwpan-bora-build-flow/
-│           │   └── lrwpan-bora-sds-knowhow/
-│           ├── hooks/ ├── agents/ ├── commands/ ├── test/ └── report/
+│   └── lrwpan-bora-base-expert/
+│       ├── expert.json
+│       ├── skills/
+│       │   ├── lrwpan-bora-protocol-knowhow/
+│       │   ├── lrwpan-bora-arch-knowhow/
+│       │   ├── lrwpan-bora-build-flow/
+│       │   └── lrwpan-bora-sds-knowhow/
+│       ├── hooks/ ├── agents/ ├── commands/ ├── test/ └── report/
 │
 ├── wifi-gen4m/                     ← WiFi Gen4M driver domain
-│   └── experts/
-│       └── wifi-gen4m-base-expert/
-│           ├── expert.json
-│           ├── skills/
-│           │   ├── wifi-gen4m-protocol-knowhow/
-│           │   ├── wifi-gen4m-arch-knowhow/
-│           │   ├── wifi-gen4m-build-flow/
-│           │   └── wifi-gen4m-sds-knowhow/
-│           ├── hooks/ ├── agents/ ├── commands/ ├── test/ └── report/
+│   └── wifi-gen4m-base-expert/
+│       ├── expert.json
+│       ├── skills/
+│       │   ├── wifi-gen4m-protocol-knowhow/
+│       │   ├── wifi-gen4m-arch-knowhow/
+│       │   ├── wifi-gen4m-build-flow/
+│       │   └── wifi-gen4m-sds-knowhow/
+│       ├── hooks/ ├── agents/ ├── commands/ ├── test/ └── report/
 │
 └── wifi-logan/                     ← WiFi Logan driver domain
-    └── experts/
-        └── wifi-logan-base-expert/
-            ├── expert.json
-            ├── skills/
-            │   ├── wifi-logan-protocol-knowhow/
-            │   ├── wifi-logan-arch-knowhow/
-            │   ├── wifi-logan-build-flow/
-            │   └── wifi-logan-sds-knowhow/
-            ├── hooks/ ├── agents/ ├── commands/ ├── test/ └── report/
+    └── wifi-logan-base-expert/
+        ├── expert.json
+        ├── skills/
+        │   ├── wifi-logan-protocol-knowhow/
+        │   ├── wifi-logan-arch-knowhow/
+        │   ├── wifi-logan-build-flow/
+        │   └── wifi-logan-sds-knowhow/
+        ├── hooks/ ├── agents/ ├── commands/ ├── test/ └── report/
 
 ```
 
@@ -500,14 +498,14 @@ connsys-jarvis/
   },
   "dependencies": [
     {
-      "expert": "framework/experts/framework-base-expert",
+      "expert": "framework/framework-base-expert",
       "skills": ["framework-expert-discovery-knowhow", "framework-handoff-flow", "framework-memory-tool"],
       "hooks": ["all"],
       "agents": [],
       "commands": ["framework-experts-tool", "framework-handoff-tool"]
     },
     {
-      "expert": "wifi-bora/experts/wifi-bora-base-expert",
+      "expert": "wifi-bora/wifi-bora-base-expert",
       "skills": ["wifi-bora-arch-knowhow", "wifi-bora-memory-knowhow",
                  "wifi-bora-linkerscript-knowhow", "wifi-bora-symbolmap-knowhow",
                  "wifi-bora-build-flow"],
@@ -516,7 +514,7 @@ connsys-jarvis/
       "commands": []
     },
     {
-      "expert": "sys-bora/experts/sys-bora-preflight-expert",
+      "expert": "sys-bora/sys-bora-preflight-expert",
       "skills": ["sys-bora-gerrit-commit-flow", "sys-bora-preflight-flow"],
       "hooks": [],
       "agents": [],
@@ -609,9 +607,9 @@ Step 3：套用 exclude_symlink.patterns，移除名稱符合任一 regex 的 li
 
 ```bash
 # 安裝指令（所有指令後都需 source .env）
-uv run ./connsys-jarvis/scripts/setup.py --init   framework/experts/framework-base-expert/expert.json
-uv run ./connsys-jarvis/scripts/setup.py --add    wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json
-uv run ./connsys-jarvis/scripts/setup.py --remove wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json
+uv run ./connsys-jarvis/scripts/setup.py --init   framework/framework-base-expert/expert.json
+uv run ./connsys-jarvis/scripts/setup.py --add    wifi-bora/wifi-bora-memory-slim-expert/expert.json
+uv run ./connsys-jarvis/scripts/setup.py --remove wifi-bora/wifi-bora-memory-slim-expert/expert.json
 uv run ./connsys-jarvis/scripts/setup.py --uninstall
 
 # 查詢 / 診斷
@@ -649,23 +647,23 @@ setup.py 讀取 `expert.json` 的 `dependencies` + `internal`，依序在 worksp
 
 .claude/
 ├── skills/
-│   ├── framework-expert-discovery-knowhow → $CONNSYS_JARVIS_PATH/framework/experts/framework-base-expert/skills/framework-expert-discovery-knowhow/
-│   ├── framework-handoff-flow             → $CONNSYS_JARVIS_PATH/framework/experts/framework-base-expert/skills/framework-handoff-flow/
-│   ├── framework-memory-tool              → $CONNSYS_JARVIS_PATH/framework/experts/framework-base-expert/skills/framework-memory-tool/
-│   ├── wifi-bora-arch-knowhow             → $CONNSYS_JARVIS_PATH/wifi-bora/experts/wifi-bora-base-expert/skills/wifi-bora-arch-knowhow/
-│   ├── wifi-bora-memory-knowhow           → $CONNSYS_JARVIS_PATH/wifi-bora/experts/wifi-bora-base-expert/skills/wifi-bora-memory-knowhow/
-│   ├── wifi-bora-linkerscript-knowhow     → $CONNSYS_JARVIS_PATH/wifi-bora/experts/wifi-bora-base-expert/skills/wifi-bora-linkerscript-knowhow/
-│   ├── wifi-bora-symbolmap-knowhow        → $CONNSYS_JARVIS_PATH/wifi-bora/experts/wifi-bora-base-expert/skills/wifi-bora-symbolmap-knowhow/
-│   ├── wifi-bora-build-flow               → $CONNSYS_JARVIS_PATH/wifi-bora/experts/wifi-bora-base-expert/skills/wifi-bora-build-flow/
-│   ├── sys-bora-gerrit-commit-flow        → $CONNSYS_JARVIS_PATH/sys-bora/experts/sys-bora-preflight-expert/skills/sys-bora-gerrit-commit-flow/
-│   ├── sys-bora-preflight-flow            → $CONNSYS_JARVIS_PATH/sys-bora/experts/sys-bora-preflight-expert/skills/sys-bora-preflight-flow/
-│   ├── wifi-bora-memslim-flow             → $CONNSYS_JARVIS_PATH/wifi-bora/experts/wifi-bora-memory-slim-expert/skills/wifi-bora-memslim-flow/
-│   ├── wifi-bora-ast-tool                 → $CONNSYS_JARVIS_PATH/wifi-bora/experts/wifi-bora-memory-slim-expert/skills/wifi-bora-ast-tool/
-│   ├── wifi-bora-lsp-tool                 → $CONNSYS_JARVIS_PATH/wifi-bora/experts/wifi-bora-memory-slim-expert/skills/wifi-bora-lsp-tool/
-│   └── wifi-bora-wut-tool                 → $CONNSYS_JARVIS_PATH/wifi-bora/experts/wifi-bora-memory-slim-expert/skills/wifi-bora-wut-tool/
+│   ├── framework-expert-discovery-knowhow → $CONNSYS_JARVIS_PATH/framework/framework-base-expert/skills/framework-expert-discovery-knowhow/
+│   ├── framework-handoff-flow             → $CONNSYS_JARVIS_PATH/framework/framework-base-expert/skills/framework-handoff-flow/
+│   ├── framework-memory-tool              → $CONNSYS_JARVIS_PATH/framework/framework-base-expert/skills/framework-memory-tool/
+│   ├── wifi-bora-arch-knowhow             → $CONNSYS_JARVIS_PATH/wifi-bora/wifi-bora-base-expert/skills/wifi-bora-arch-knowhow/
+│   ├── wifi-bora-memory-knowhow           → $CONNSYS_JARVIS_PATH/wifi-bora/wifi-bora-base-expert/skills/wifi-bora-memory-knowhow/
+│   ├── wifi-bora-linkerscript-knowhow     → $CONNSYS_JARVIS_PATH/wifi-bora/wifi-bora-base-expert/skills/wifi-bora-linkerscript-knowhow/
+│   ├── wifi-bora-symbolmap-knowhow        → $CONNSYS_JARVIS_PATH/wifi-bora/wifi-bora-base-expert/skills/wifi-bora-symbolmap-knowhow/
+│   ├── wifi-bora-build-flow               → $CONNSYS_JARVIS_PATH/wifi-bora/wifi-bora-base-expert/skills/wifi-bora-build-flow/
+│   ├── sys-bora-gerrit-commit-flow        → $CONNSYS_JARVIS_PATH/sys-bora/sys-bora-preflight-expert/skills/sys-bora-gerrit-commit-flow/
+│   ├── sys-bora-preflight-flow            → $CONNSYS_JARVIS_PATH/sys-bora/sys-bora-preflight-expert/skills/sys-bora-preflight-flow/
+│   ├── wifi-bora-memslim-flow             → $CONNSYS_JARVIS_PATH/wifi-bora/wifi-bora-memory-slim-expert/skills/wifi-bora-memslim-flow/
+│   ├── wifi-bora-ast-tool                 → $CONNSYS_JARVIS_PATH/wifi-bora/wifi-bora-memory-slim-expert/skills/wifi-bora-ast-tool/
+│   ├── wifi-bora-lsp-tool                 → $CONNSYS_JARVIS_PATH/wifi-bora/wifi-bora-memory-slim-expert/skills/wifi-bora-lsp-tool/
+│   └── wifi-bora-wut-tool                 → $CONNSYS_JARVIS_PATH/wifi-bora/wifi-bora-memory-slim-expert/skills/wifi-bora-wut-tool/
 │
 ├── hooks/                                  ← 來自 framework-base-expert（Shell 優先）
-│   ├── session-start.sh          → $CONNSYS_JARVIS_PATH/framework/experts/framework-base-expert/hooks/session-start.sh
+│   ├── session-start.sh          → $CONNSYS_JARVIS_PATH/framework/framework-base-expert/hooks/session-start.sh
 │   ├── session-end.sh            → .../framework-base-expert/hooks/session-end.sh
 │   ├── pre-compact.sh            → .../framework-base-expert/hooks/pre-compact.sh
 │   ├── mid-session-checkpoint.sh → .../framework-base-expert/hooks/mid-session-checkpoint.sh
@@ -732,7 +730,7 @@ setup.py 在每次 `--init` / `--add` / `--remove` 後更新此檔，記錄完�
       "name": "framework-base-expert",
       "domain": "framework",
       "version": "1.0.0",
-      "path": "framework/experts/framework-base-expert/expert.json",
+      "path": "framework/framework-base-expert/expert.json",
       "installed_at": "2026-03-26T09:00:00Z",
       "install_order": 1,
       "is_identity": false,
@@ -747,7 +745,7 @@ setup.py 在每次 `--init` / `--add` / `--remove` 後更新此檔，記錄完�
       "name": "wifi-bora-memory-slim-expert",
       "domain": "wifi-bora",
       "version": "1.0.0",
-      "path": "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json",
+      "path": "wifi-bora/wifi-bora-memory-slim-expert/expert.json",
       "installed_at": "2026-03-26T10:30:00Z",
       "install_order": 2,
       "is_identity": true,
@@ -800,7 +798,7 @@ source .connsys-jarvis/.env
 **依賴解析流程**：
 
 ```
-setup.py --add wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json
+setup.py --add wifi-bora/wifi-bora-memory-slim-expert/expert.json
 
 Step 1：讀取 expert.json，取得 dependencies 與 internal
 
@@ -839,11 +837,11 @@ Step 8：印出變更清單（新增/移除/保留）+ source 提示
 
 ```bash
 # 全新安裝（第一次）
-uv run ./connsys-jarvis/scripts/setup.py --init framework/experts/framework-base-expert/expert.json
+uv run ./connsys-jarvis/scripts/setup.py --init framework/framework-base-expert/expert.json
 source .connsys-jarvis/.env
 
 # 加入 wifi-bora-memory-slim-expert（自動帶入 dependencies）
-uv run ./connsys-jarvis/scripts/setup.py --add wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json
+uv run ./connsys-jarvis/scripts/setup.py --add wifi-bora/wifi-bora-memory-slim-expert/expert.json
 source .connsys-jarvis/.env
 
 # 查看安裝結果
@@ -858,8 +856,8 @@ $ uv run ./connsys-jarvis/scripts/setup.py --doctor
 === Connsys Jarvis Doctor ===
 
 已安裝的 Experts：
-  [1] framework-base-expert          (framework/experts/framework-base-expert)
-  [2] wifi-bora-memory-slim-expert   (wifi-bora/experts/wifi-bora-memory-slim-expert)
+  [1] framework-base-expert          (framework/framework-base-expert)
+  [2] wifi-bora-memory-slim-expert   (wifi-bora/wifi-bora-memory-slim-expert)
 
 Symlinks 健康狀態：
   Skills：
@@ -1072,7 +1070,7 @@ tags: [internal]
    - internal skills/hooks 空白，待工程師填入
 
 7. 建立資料夾骨架
-   {domain}/experts/{expert-name}/
+   {domain}/{expert-name}/
    ├── expert.json    ← 初稿
    ├── soul.md        ← 完整填寫
    ├── rules.md       ← 完整填寫
@@ -1276,10 +1274,10 @@ setup.py 在 `$CONNSYS_JARVIS_WORKSPACE_ROOT_PATH`（workspace 根目錄）生�
 ```markdown
 # Consys Expert: WiFi Build Expert
 
-@connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/expert.md
-@connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/soul.md
-@connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/rules.md
-@connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/duties.md
+@connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/expert.md
+@connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/soul.md
+@connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/rules.md
+@connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/duties.md
 @CLAUDE.local.md
 ```
 
@@ -1296,10 +1294,10 @@ setup.py 在 `$CONNSYS_JARVIS_WORKSPACE_ROOT_PATH`（workspace 根目錄）生�
 ```markdown
 # Consys Expert: Wifi Bora Memory Slim Expert
 
-@connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/soul.md
-@connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/rules.md
-@connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/duties.md
-@connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/expert.md
+@connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/soul.md
+@connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/rules.md
+@connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/duties.md
+@connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/expert.md
 
 @CLAUDE.local.md
 ```
@@ -1312,13 +1310,13 @@ setup.py 在 `$CONNSYS_JARVIS_WORKSPACE_ROOT_PATH`（workspace 根目錄）生�
 # Consys Experts（2 Experts 已安裝）
 
 ## Expert Identity（以最後安裝的 Expert 為主）
-@connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/soul.md
-@connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/rules.md
-@connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/duties.md
+@connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/soul.md
+@connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/rules.md
+@connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/duties.md
 
 ## Expert Capabilities
-@connsys-jarvis/framework/experts/framework-base-expert/expert.md
-@connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/expert.md
+@connsys-jarvis/framework/framework-base-expert/expert.md
+@connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/expert.md
 
 @CLAUDE.local.md
 ```
@@ -1596,7 +1594,7 @@ if [[ -f "${SHARED_DIR}/conventions.md" ]]; then
 fi
 
 # 4. 複雜邏輯交給 Python helper（例如：解析 handoff YAML frontmatter、更新已讀標記）
-HELPER="${CONNSYS_JARVIS_PATH}/framework/experts/framework-base-expert/hooks/memory-helper.py"
+HELPER="${CONNSYS_JARVIS_PATH}/framework/framework-base-expert/hooks/memory-helper.py"
 if [[ -f "${HELPER}" ]]; then
   python3 "${HELPER}" mark-handoff-read "${latest_handoff}" 2>/dev/null || true
 fi
@@ -1659,7 +1657,7 @@ employee_id: john.doe
 | **權限管理** | 依 domain 分資料夾，方便對不同 domain 設定不同的 git access control |
 | **安全掃描** | domain 層級的清楚分隔，方便對 wifi / bt / system 各自執行 secret scan |
 | **命名不衝突** | Layer 1-5 的命名規則確保全域唯一（domain prefix + type postfix）|
-| **External 隔離** | 外部工具放 `external-experts/`，與 internal 清楚分開，方便掃描外部依賴 |
+| **External 隔離** | 外部工具放 `{domain}-external-experts/`，與 internal 清楚分開，方便掃描外部依賴 |
 
 ---
 
@@ -1772,7 +1770,7 @@ AI Agent 生態系統的成長速度遠超其安全工具：
 建立 `framework-security-expert`，提供以下能力：
 
 ```
-framework/experts/
+framework/
 └── framework-security-expert/
     ├── skills/
     │   ├── framework-security-audit-flow/     ← 審計流程 SOP
@@ -1837,7 +1835,7 @@ PR 給人工 review → merge → 所有人受益
 **`framework-learn-expert` 強化方向**：
 
 ```
-framework/experts/framework-learn-expert/skills/
+framework/framework-learn-expert/skills/
 ├── framework-learn-flow/           ← 分析記憶→找 pattern 的 SOP
 │   └── SKILL.md
 ├── framework-feedback-knowhow/     ← 如何從錯誤記錄中萃取知識
@@ -1887,7 +1885,7 @@ framework/experts/framework-learn-expert/skills/
 
 **v3.3 更新**：`registry.json` 已廢棄並移除。所有 Expert 探索功能改由 `setup.py` 即時掃描實作：
 
-- `setup.py --list [--format json]`：掃描 `connsys-jarvis/*/experts/*/expert.json`，回傳所有 Expert（已安裝 + 可用）
+- `setup.py --list [--format json]`：掃描 `connsys-jarvis/*/*/expert.json`，回傳所有 Expert（已安裝 + 可用）
 - `setup.py --query <name> [--format json]`：讀取指定 Expert 的完整 metadata
 
 `framework-expert-discovery-knowhow` skill 可直接 `subprocess` 呼叫上述指令取得 JSON 資料。

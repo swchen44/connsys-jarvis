@@ -51,12 +51,12 @@ def legacy_workspace(tmp_path: Path) -> Path:
 
 @pytest.fixture()
 def framework_expert_json(workspace: Path) -> Path:
-    return workspace / "connsys-jarvis/framework/experts/framework-base-expert/expert.json"
+    return workspace / "connsys-jarvis/framework/framework-base-expert/expert.json"
 
 
 @pytest.fixture()
 def slim_expert_json(workspace: Path) -> Path:
-    return workspace / "connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json"
+    return workspace / "connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/expert.json"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -175,19 +175,19 @@ class TestGenerateClaudeMdSingle:
 
     def test_single_expert_has_soul_rules_duties_expert(self, workspace, framework_expert_json):
         installed = self._installed(
-            "framework/experts/framework-base-expert/expert.json",
+            "framework/framework-base-expert/expert.json",
             "framework-base-expert",
             "Framework Base Expert",
         )
         content = inst.generate_claude_md(workspace, installed)
-        assert "@connsys-jarvis/framework/experts/framework-base-expert/soul.md" in content
-        assert "@connsys-jarvis/framework/experts/framework-base-expert/rules.md" in content
-        assert "@connsys-jarvis/framework/experts/framework-base-expert/duties.md" in content
-        assert "@connsys-jarvis/framework/experts/framework-base-expert/expert.md" in content
+        assert "@connsys-jarvis/framework/framework-base-expert/soul.md" in content
+        assert "@connsys-jarvis/framework/framework-base-expert/rules.md" in content
+        assert "@connsys-jarvis/framework/framework-base-expert/duties.md" in content
+        assert "@connsys-jarvis/framework/framework-base-expert/expert.md" in content
 
     def test_single_expert_ends_with_claude_local(self, workspace):
         installed = self._installed(
-            "framework/experts/framework-base-expert/expert.json",
+            "framework/framework-base-expert/expert.json",
             "framework-base-expert",
             "Framework Base Expert",
         )
@@ -196,7 +196,7 @@ class TestGenerateClaudeMdSingle:
 
     def test_single_expert_header_contains_display_name(self, workspace, framework_expert_json):
         installed = self._installed(
-            "framework/experts/framework-base-expert/expert.json",
+            "framework/framework-base-expert/expert.json",
             "framework-base-expert",
             "Framework Base Expert",
         )
@@ -221,13 +221,13 @@ class TestGenerateClaudeMdMulti:
             "experts": [
                 {
                     "name": "framework-base-expert",
-                    "path": "framework/experts/framework-base-expert/expert.json",
+                    "path": "framework/framework-base-expert/expert.json",
                     "is_identity": False,
                     "install_order": 1,
                 },
                 {
                     "name": "wifi-bora-memory-slim-expert",
-                    "path": "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json",
+                    "path": "wifi-bora/wifi-bora-memory-slim-expert/expert.json",
                     "is_identity": True,
                     "install_order": 2,
                 },
@@ -239,15 +239,15 @@ class TestGenerateClaudeMdMulti:
     def test_default_uses_identity_expert_only(self, workspace):
         """預設：只包含 identity expert（最後安裝）的四份文件。"""
         content = inst.generate_claude_md(workspace, self._two_experts(include_all=False))
-        assert "@connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/soul.md" in content
-        assert "@connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/rules.md" in content
-        assert "@connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/duties.md" in content
-        assert "@connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/expert.md" in content
+        assert "@connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/soul.md" in content
+        assert "@connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/rules.md" in content
+        assert "@connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/duties.md" in content
+        assert "@connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/expert.md" in content
 
     def test_default_excludes_other_expert_md(self, workspace):
         """預設：其他 Expert 的 expert.md 不應出現。"""
         content = inst.generate_claude_md(workspace, self._two_experts(include_all=False))
-        assert "@connsys-jarvis/framework/experts/framework-base-expert/expert.md" not in content
+        assert "@connsys-jarvis/framework/framework-base-expert/expert.md" not in content
 
     def test_default_no_expert_count_header(self, workspace):
         """預設：不顯示「N Experts 已安裝」count header（與單 Expert 格式相同）。"""
@@ -268,13 +268,13 @@ class TestGenerateClaudeMdMulti:
     def test_with_all_experts_identity_soul_present(self, workspace):
         """--with-all-experts：identity expert 的 soul/rules/duties 存在。"""
         content = inst.generate_claude_md(workspace, self._two_experts(include_all=True))
-        assert "@connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/soul.md" in content
+        assert "@connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/soul.md" in content
 
     def test_with_all_experts_all_expert_mds_present(self, workspace):
         """--with-all-experts：所有 Expert 的 expert.md 都存在。"""
         content = inst.generate_claude_md(workspace, self._two_experts(include_all=True))
-        assert "@connsys-jarvis/framework/experts/framework-base-expert/expert.md" in content
-        assert "@connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/expert.md" in content
+        assert "@connsys-jarvis/framework/framework-base-expert/expert.md" in content
+        assert "@connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/expert.md" in content
 
     def test_with_all_experts_section_headers(self, workspace):
         """--with-all-experts：包含 Identity 和 Capabilities 區段。"""
@@ -404,44 +404,44 @@ class TestIntegrationInit:
             inst.cmd_init(workspace, expert_json)
 
     def test_skills_symlinks_created(self, workspace, framework_expert_json):
-        self._run_init(workspace, "framework/experts/framework-base-expert/expert.json")
+        self._run_init(workspace, "framework/framework-base-expert/expert.json")
         skills = list((workspace / ".claude" / "skills").iterdir())
         assert len(skills) == 3
 
     def test_hooks_symlinks_created(self, workspace):
-        self._run_init(workspace, "framework/experts/framework-base-expert/expert.json")
+        self._run_init(workspace, "framework/framework-base-expert/expert.json")
         hooks = list((workspace / ".claude" / "hooks").iterdir())
         assert len(hooks) == 5
 
     def test_commands_symlinks_created(self, workspace):
-        self._run_init(workspace, "framework/experts/framework-base-expert/expert.json")
+        self._run_init(workspace, "framework/framework-base-expert/expert.json")
         cmds = list((workspace / ".claude" / "commands").iterdir())
         assert len(cmds) == 2
 
     def test_claude_md_is_generated(self, workspace):
-        self._run_init(workspace, "framework/experts/framework-base-expert/expert.json")
+        self._run_init(workspace, "framework/framework-base-expert/expert.json")
         assert (workspace / "CLAUDE.md").exists()
 
     def test_env_file_is_generated(self, workspace):
-        self._run_init(workspace, "framework/experts/framework-base-expert/expert.json")
+        self._run_init(workspace, "framework/framework-base-expert/expert.json")
         assert (workspace / ".connsys-jarvis" / ".env").exists()
 
     def test_installed_json_has_one_expert(self, workspace):
-        self._run_init(workspace, "framework/experts/framework-base-expert/expert.json")
+        self._run_init(workspace, "framework/framework-base-expert/expert.json")
         data = inst.load_installed_experts(workspace)
         assert len(data["experts"]) == 1
         assert data["experts"][0]["name"] == "framework-base-expert"
 
     def test_symlinks_point_to_real_targets(self, workspace):
-        self._run_init(workspace, "framework/experts/framework-base-expert/expert.json")
+        self._run_init(workspace, "framework/framework-base-expert/expert.json")
         for link in (workspace / ".claude" / "skills").iterdir():
             assert link.is_symlink()
             assert link.resolve().exists(), f"Dangling symlink: {link}"
 
     def test_init_clears_previous_symlinks(self, workspace):
         # Install twice; second should not double-up
-        self._run_init(workspace, "framework/experts/framework-base-expert/expert.json")
-        self._run_init(workspace, "framework/experts/framework-base-expert/expert.json")
+        self._run_init(workspace, "framework/framework-base-expert/expert.json")
+        self._run_init(workspace, "framework/framework-base-expert/expert.json")
         skills = list((workspace / ".claude" / "skills").iterdir())
         assert len(skills) == 3
 
@@ -460,34 +460,34 @@ class TestIntegrationAdd:
         inst.cmd_add(workspace, expert_json)
 
     def test_add_increases_skill_count(self, workspace):
-        self._run_init(workspace, "framework/experts/framework-base-expert/expert.json")
+        self._run_init(workspace, "framework/framework-base-expert/expert.json")
         before = len(list((workspace / ".claude" / "skills").iterdir()))
-        self._run_add(workspace, "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
+        self._run_add(workspace, "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
         after = len(list((workspace / ".claude" / "skills").iterdir()))
         assert after > before
 
     def test_add_total_skills_is_13(self, workspace):
-        self._run_init(workspace, "framework/experts/framework-base-expert/expert.json")
-        self._run_add(workspace, "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
+        self._run_init(workspace, "framework/framework-base-expert/expert.json")
+        self._run_add(workspace, "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
         count = len(list((workspace / ".claude" / "skills").iterdir()))
         assert count == 13
 
     def test_add_idempotent_second_call_no_error(self, workspace):
-        self._run_init(workspace, "framework/experts/framework-base-expert/expert.json")
-        self._run_add(workspace, "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
-        self._run_add(workspace, "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
+        self._run_init(workspace, "framework/framework-base-expert/expert.json")
+        self._run_add(workspace, "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
+        self._run_add(workspace, "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
         count = len(list((workspace / ".claude" / "skills").iterdir()))
         assert count == 13
 
     def test_add_installs_experts_json_has_two(self, workspace):
-        self._run_init(workspace, "framework/experts/framework-base-expert/expert.json")
-        self._run_add(workspace, "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
+        self._run_init(workspace, "framework/framework-base-expert/expert.json")
+        self._run_add(workspace, "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
         data = inst.load_installed_experts(workspace)
         assert len(data["experts"]) == 2
 
     def test_add_last_expert_is_identity(self, workspace):
-        self._run_init(workspace, "framework/experts/framework-base-expert/expert.json")
-        self._run_add(workspace, "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
+        self._run_init(workspace, "framework/framework-base-expert/expert.json")
+        self._run_add(workspace, "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
         data = inst.load_installed_experts(workspace)
         identity = next(e for e in data["experts"] if e.get("is_identity"))
         assert identity["name"] == "wifi-bora-memory-slim-expert"
@@ -499,18 +499,18 @@ class TestIntegrationAdd:
 
 class TestIntegrationRemove:
     def _setup(self, workspace):
-        inst.cmd_init(workspace, workspace / "connsys-jarvis/framework/experts/framework-base-expert/expert.json")
-        inst.cmd_add(workspace, workspace / "connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
+        inst.cmd_init(workspace, workspace / "connsys-jarvis/framework/framework-base-expert/expert.json")
+        inst.cmd_add(workspace, workspace / "connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/expert.json")
 
     def test_remove_reduces_skills(self, workspace):
         self._setup(workspace)
-        inst.cmd_remove(workspace, "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
+        inst.cmd_remove(workspace, "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
         count = len(list((workspace / ".claude" / "skills").iterdir()))
         assert count == 3
 
     def test_shared_skills_preserved(self, workspace):
         self._setup(workspace)
-        inst.cmd_remove(workspace, "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
+        inst.cmd_remove(workspace, "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
         skills = [p.name for p in (workspace / ".claude" / "skills").iterdir()]
         assert "framework-expert-discovery-knowhow" in skills
         assert "framework-handoff-flow" in skills
@@ -518,21 +518,21 @@ class TestIntegrationRemove:
 
     def test_private_skills_removed(self, workspace):
         self._setup(workspace)
-        inst.cmd_remove(workspace, "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
+        inst.cmd_remove(workspace, "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
         skills = [p.name for p in (workspace / ".claude" / "skills").iterdir()]
         assert "wifi-bora-memslim-flow" not in skills
         assert "wifi-bora-lsp-tool" not in skills
 
     def test_installed_json_has_one_after_remove(self, workspace):
         self._setup(workspace)
-        inst.cmd_remove(workspace, "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
+        inst.cmd_remove(workspace, "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
         data = inst.load_installed_experts(workspace)
         assert len(data["experts"]) == 1
         assert data["experts"][0]["name"] == "framework-base-expert"
 
     def test_claude_md_reverts_to_single(self, workspace):
         self._setup(workspace)
-        inst.cmd_remove(workspace, "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
+        inst.cmd_remove(workspace, "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
         content = (workspace / "CLAUDE.md").read_text()
         # 移除後只剩單一 Expert，CLAUDE.md 應回到單 Expert 格式
         assert "framework-base-expert" in content
@@ -546,7 +546,7 @@ class TestIntegrationRemove:
 
 class TestIntegrationUninstall:
     def _setup(self, workspace):
-        inst.cmd_init(workspace, workspace / "connsys-jarvis/framework/experts/framework-base-expert/expert.json")
+        inst.cmd_init(workspace, workspace / "connsys-jarvis/framework/framework-base-expert/expert.json")
         memory_note = workspace / ".connsys-jarvis/memory/test/note.md"
         memory_note.parent.mkdir(parents=True, exist_ok=True)
         memory_note.write_text("memory")
@@ -618,7 +618,7 @@ class TestCmdQuery:
     def _init_framework(self, workspace):
         inst.cmd_init(
             workspace,
-            workspace / "connsys-jarvis/framework/experts/framework-base-expert/expert.json",
+            workspace / "connsys-jarvis/framework/framework-base-expert/expert.json",
         )
 
     def test_query_table_contains_name(self, workspace, capsys):
@@ -682,7 +682,7 @@ class TestCmdListUpdated:
     def _init_framework(self, workspace):
         inst.cmd_init(
             workspace,
-            workspace / "connsys-jarvis/framework/experts/framework-base-expert/expert.json",
+            workspace / "connsys-jarvis/framework/framework-base-expert/expert.json",
         )
 
     def test_list_shows_installed_expert(self, workspace, capsys):
@@ -744,7 +744,7 @@ def _build_mini_jarvis(root: Path) -> Path:
 
     結構：
       root/connsys-jarvis/
-        framework/experts/mini-expert/
+        framework/mini-expert/
           expert.json  (完整欄位：name, domain, owner, internal.skills)
           expert.md, rules.md, duties.md, soul.md
           skills/mini-skill-a/  (含 SKILL.md)
@@ -753,7 +753,7 @@ def _build_mini_jarvis(root: Path) -> Path:
         root (workspace path)
     """
     jarvis  = root / "connsys-jarvis"
-    exp_dir = jarvis / "framework" / "experts" / "mini-expert"
+    exp_dir = jarvis / "framework" / "mini-expert"
     exp_dir.mkdir(parents=True)
     (exp_dir / "expert.json").write_text(json.dumps({
         "name": "mini-expert",
@@ -785,7 +785,7 @@ class TestDoctorSystemInfo:
     """TC-U16: --doctor 區段 A — 系統資訊顯示"""
 
     def _init_and_doctor(self, workspace, capsys):
-        fw = workspace / "connsys-jarvis/framework/experts/framework-base-expert/expert.json"
+        fw = workspace / "connsys-jarvis/framework/framework-base-expert/expert.json"
         inst.cmd_init(workspace, fw)
         capsys.readouterr()
         inst.cmd_doctor(workspace)
@@ -814,7 +814,7 @@ class TestDoctorEnvVars:
     """TC-U17: --doctor 區段 B — 環境變數驗證"""
 
     def _fw_json(self, workspace):
-        return workspace / "connsys-jarvis/framework/experts/framework-base-expert/expert.json"
+        return workspace / "connsys-jarvis/framework/framework-base-expert/expert.json"
 
     def test_all_vars_ok_after_init(self, workspace, capsys):
         inst.cmd_init(workspace, self._fw_json(workspace))
@@ -863,7 +863,7 @@ class TestDoctorSymlinkIntegrity:
     """TC-U18: --doctor 區段 C — Symlink 完整性"""
 
     def _fw_json(self, workspace):
-        return workspace / "connsys-jarvis/framework/experts/framework-base-expert/expert.json"
+        return workspace / "connsys-jarvis/framework/framework-base-expert/expert.json"
 
     def test_clean_install_no_symlink_errors(self, workspace, capsys):
         inst.cmd_init(workspace, self._fw_json(workspace))
@@ -898,9 +898,9 @@ class TestDoctorSymlinkIntegrity:
     def test_installed_skill_link_without_skill_md_shows_warning(self, workspace, capsys):
         """已建 skill link 指向的 folder 缺少 SKILL.md → ⚠️"""
         root = _build_mini_jarvis(workspace.parent / "mini_ws")
-        inst.cmd_init(root, root / "connsys-jarvis/framework/experts/mini-expert/expert.json")
+        inst.cmd_init(root, root / "connsys-jarvis/framework/mini-expert/expert.json")
         # 刪除 skill folder 下的 SKILL.md
-        skill_md = root / "connsys-jarvis/framework/experts/mini-expert/skills/mini-skill-a/SKILL.md"
+        skill_md = root / "connsys-jarvis/framework/mini-expert/skills/mini-skill-a/SKILL.md"
         skill_md.unlink()
         capsys.readouterr()
         inst.cmd_doctor(root)
@@ -917,7 +917,7 @@ class TestDoctorClaudeMd:
     """TC-U19: --doctor 區段 D — CLAUDE.md 內容驗證"""
 
     def _fw_json(self, workspace):
-        return workspace / "connsys-jarvis/framework/experts/framework-base-expert/expert.json"
+        return workspace / "connsys-jarvis/framework/framework-base-expert/expert.json"
 
     def test_correct_claude_md_shows_ok(self, workspace, capsys):
         inst.cmd_init(workspace, self._fw_json(workspace))
@@ -1003,14 +1003,14 @@ class TestDoctorExpertStructure:
 
     def test_missing_required_file_shows_error(self, tmp_path, capsys):
         root = _build_mini_jarvis(tmp_path)
-        (root / "connsys-jarvis/framework/experts/mini-expert/soul.md").unlink()
+        (root / "connsys-jarvis/framework/mini-expert/soul.md").unlink()
         out  = self._run_doctor(root, capsys)
         assert "soul.md" in out
         assert "缺少" in out
 
     def test_missing_owner_field_shows_error(self, tmp_path, capsys):
         root     = _build_mini_jarvis(tmp_path)
-        exp_json = root / "connsys-jarvis/framework/experts/mini-expert/expert.json"
+        exp_json = root / "connsys-jarvis/framework/mini-expert/expert.json"
         data     = json.loads(exp_json.read_text())
         del data["owner"]
         exp_json.write_text(json.dumps(data))
@@ -1019,7 +1019,7 @@ class TestDoctorExpertStructure:
 
     def test_missing_internal_skills_field_shows_error(self, tmp_path, capsys):
         root     = _build_mini_jarvis(tmp_path)
-        exp_json = root / "connsys-jarvis/framework/experts/mini-expert/expert.json"
+        exp_json = root / "connsys-jarvis/framework/mini-expert/expert.json"
         data     = json.loads(exp_json.read_text())
         del data["internal"]["skills"]
         exp_json.write_text(json.dumps(data))
@@ -1028,14 +1028,14 @@ class TestDoctorExpertStructure:
 
     def test_skill_without_skill_md_shows_warning(self, tmp_path, capsys):
         root = _build_mini_jarvis(tmp_path)
-        (root / "connsys-jarvis/framework/experts/mini-expert/skills/mini-skill-a/SKILL.md").unlink()
+        (root / "connsys-jarvis/framework/mini-expert/skills/mini-skill-a/SKILL.md").unlink()
         out  = self._run_doctor(root, capsys)
         assert "SKILL.md" in out
 
     def test_orphan_skill_shows_warning(self, tmp_path, capsys):
         root = _build_mini_jarvis(tmp_path)
         # 新增一個不在 expert.json internal.skills 也沒有被任何 dep 引用的 skill folder
-        orphan = root / "connsys-jarvis/framework/experts/mini-expert/skills/orphan-skill"
+        orphan = root / "connsys-jarvis/framework/mini-expert/skills/orphan-skill"
         orphan.mkdir(parents=True)
         (orphan / "SKILL.md").write_text("# orphan\n")
         out = self._run_doctor(root, capsys)

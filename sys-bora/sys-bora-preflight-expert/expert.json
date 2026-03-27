@@ -10,7 +10,7 @@
   "transitions": {},
   "dependencies": [
     {
-      "expert": "sys-bora/experts/sys-bora-base-expert",
+      "expert": "sys-bora/sys-bora-base-expert",
       "skills": "all"
     }
   ],

@@ -37,7 +37,7 @@ ln -s /path/to/connsys-jarvis ./connsys-jarvis   # 若尚未建立
 
 # 安裝一個 Expert
 python ./connsys-jarvis/scripts/setup.py \
-    --init framework/experts/framework-base-expert/expert.json
+    --init framework/framework-base-expert/expert.json
 
 # 讓環境變數生效（每次安裝後需要）
 source .connsys-jarvis/.env
@@ -86,7 +86,7 @@ workspace/                          ← cwd（使用者執行指令的地方）
 │   ├── scripts/
 │   │   ├── setup.py              ← 本程式
 │   │   └── test/test_setup.py   ← pytest 單元測試
-│   ├── framework/experts/framework-base-expert/
+│   ├── framework/framework-base-expert/
 │   │   ├── expert.json            ← Expert 宣告（被 setup.py 讀取）
 │   │   ├── skills/                ← skill 子目錄
 │   │   └── hooks/                 ← hook 腳本（.sh / .py）
@@ -115,7 +115,7 @@ workspace/                          ← cwd（使用者執行指令的地方）
 | **Pure stdlib** | 無第三方依賴，`python3 script.py` 即可執行 |
 | **cwd = workspace** | workspace 定義為執行指令時的 cwd，不跟隨 symlink |
 | **冪等性** | 重複執行相同指令結果相同，`[=]` 代表跳過已存在的 symlink；`--add` 重複 = 重新安裝 |
-| **不依賴 registry.json** | Expert 探索（`--list`/`--query`）每次即時掃描 `*/experts/*/expert.json` |
+| **不依賴 registry.json** | Expert 探索（`--list`/`--query`）每次即時掃描 `*/*/expert.json` |
 | **保護記憶** | `--uninstall` 不刪 memory/，避免使用者知識損失 |
 | **分離設定** | setup.py 不修改 settings.json（由 setup-claude.sh 負責）|
 
@@ -134,13 +134,13 @@ workspace/                          ← cwd（使用者執行指令的地方）
   "version": "1.0.0",
   "dependencies": [
     {
-      "expert": "framework/experts/framework-base-expert",
+      "expert": "framework/framework-base-expert",
       "skills": "all",
       "hooks": "all",
       "commands": ["framework-experts-tool"]
     },
     {
-      "expert": "wifi-bora/experts/wifi-bora-base-expert",
+      "expert": "wifi-bora/wifi-bora-base-expert",
       "skills": ["wifi-bora-build-flow", "wifi-bora-arch-knowhow"]
     }
   ],
@@ -228,10 +228,10 @@ get_codespace_path(workspace):
 ```markdown
 # Consys Expert: WiFi Bora Memory Slim Expert
 
-@connsys-jarvis/wifi-bora/experts/.../soul.md
-@connsys-jarvis/wifi-bora/experts/.../rules.md
-@connsys-jarvis/wifi-bora/experts/.../duties.md
-@connsys-jarvis/wifi-bora/experts/.../expert.md
+@connsys-jarvis/wifi-bora/.../soul.md
+@connsys-jarvis/wifi-bora/.../rules.md
+@connsys-jarvis/wifi-bora/.../duties.md
+@connsys-jarvis/wifi-bora/.../expert.md
 
 @CLAUDE.local.md
 ```
@@ -268,10 +268,10 @@ cmd_doctor(workspace)
     │     └─ skill link SKILL.md：.claude/skills/*/SKILL.md 存在性
     ├─ D. CLAUDE.md      generate_claude_md() 預期 vs 實際 @include 行
     ├─ E. 環境工具        shutil.which("uv") / shutil.which("uvx")
-    └─ F. Expert 結構     掃描 jarvis_dir.glob("*/experts/*/")
+    └─ F. Expert 結構     掃描 jarvis_dir.glob("*/*")（有 expert.json 者）
           ├─ F1 必要檔案：expert.json, expert.md, rules.md, duties.md, soul.md
           ├─ F2 必要欄位：name, domain, owner, internal.skills（collect via json.loads）
-          ├─ F3 Skill SKILL.md：glob("*/experts/*/skills/*/") 各 folder 有 SKILL.md
+          ├─ F3 Skill SKILL.md：glob("*/*/skills/*/") 各 folder 有 SKILL.md
           └─ F4 Orphan skill：collect_skill_references() 計算未被引用的 skill folder
 ```
 
@@ -411,7 +411,7 @@ ln -s /path/to/connsys-jarvis ./connsys-jarvis
 
 # 修改 setup.py 後立即測試
 python ./connsys-jarvis/scripts/setup.py --debug --init \
-    framework/experts/framework-base-expert/expert.json
+    framework/framework-base-expert/expert.json
 
 # 查看 debug log
 cat .connsys-jarvis/log/install.log
@@ -538,14 +538,14 @@ cd /tmp/cj-test
 
 # TC-01: --init
 python ./connsys-jarvis/scripts/setup.py \
-    --init framework/experts/framework-base-expert/expert.json
+    --init framework/framework-base-expert/expert.json
 ls .claude/skills/ | wc -l   # 預期: 3
 ls .claude/hooks/  | wc -l   # 預期: 5
 ls .claude/commands/ | wc -l  # 預期: 2
 
 # TC-02: --add
 python ./connsys-jarvis/scripts/setup.py \
-    --add wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json
+    --add wifi-bora/wifi-bora-memory-slim-expert/expert.json
 ls .claude/skills/ | wc -l   # 預期: 13
 
 # TC-03: --doctor
@@ -554,7 +554,7 @@ python ./connsys-jarvis/scripts/setup.py --doctor
 
 # TC-05: --remove
 python ./connsys-jarvis/scripts/setup.py \
-    --remove wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json
+    --remove wifi-bora/wifi-bora-memory-slim-expert/expert.json
 ls .claude/skills/ | wc -l   # 預期: 3
 
 # TC-07: --uninstall
@@ -570,7 +570,7 @@ cd /tmp/cj-test
 
 # 開啟 debug 看詳細流程
 python ./connsys-jarvis/scripts/setup.py --debug \
-    --init framework/experts/framework-base-expert/expert.json 2>&1 | head -30
+    --init framework/framework-base-expert/expert.json 2>&1 | head -30
 
 # 確認 log 檔寫入
 ls -la .connsys-jarvis/log/setup.log
@@ -583,7 +583,7 @@ tail -20 .connsys-jarvis/log/setup.log
 
 ```bash
 # 執行單一 skill 測試
-bash connsys-jarvis/framework/experts/framework-base-expert/skills/\
+bash connsys-jarvis/framework/framework-base-expert/skills/\
 framework-expert-discovery-knowhow/test/test-basic.sh
 
 # 執行所有 skill 測試
@@ -606,7 +606,7 @@ done
 # 2. workspace/connsys-jarvis/expert_json_rel
 
 # 確認路徑存在
-ls ./connsys-jarvis/framework/experts/framework-base-expert/expert.json
+ls ./connsys-jarvis/framework/framework-base-expert/expert.json
 
 # 確認 cwd 是 workspace root（不是 connsys-jarvis 子目錄）
 pwd  # 應顯示 workspace root
@@ -643,7 +643,7 @@ python ./connsys-jarvis/scripts/setup.py --list
 python ./connsys-jarvis/scripts/setup.py --remove wifi-bora-memory-slim-expert
 # 2. expert.json 路徑
 python ./connsys-jarvis/scripts/setup.py \
-    --remove wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json
+    --remove wifi-bora/wifi-bora-memory-slim-expert/expert.json
 ```
 
 ### Q: 測試失敗（pytest）

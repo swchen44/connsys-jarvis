@@ -18,7 +18,7 @@
   },
   "dependencies": [
     {
-      "expert": "framework/experts/framework-base-expert",
+      "expert": "framework/framework-base-expert",
       "skills": [
         "framework-expert-discovery-knowhow",
         "framework-handoff-flow",
@@ -32,7 +32,7 @@
       ]
     },
     {
-      "expert": "wifi-bora/experts/wifi-bora-base-expert",
+      "expert": "wifi-bora/wifi-bora-base-expert",
       "skills": [
         "wifi-bora-arch-knowhow",
         "wifi-bora-memory-knowhow",
@@ -42,7 +42,7 @@
       ]
     },
     {
-      "expert": "sys-bora/experts/sys-bora-preflight-expert",
+      "expert": "sys-bora/sys-bora-preflight-expert",
       "skills": [
         "sys-bora-gerrit-commit-flow",
         "sys-bora-preflight-flow"

@@ -18,7 +18,7 @@
 | 失敗 | 0 |
 | Skill 測試腳本 | 16/16 pass |
 | Skill 測試 checks | 41/41 pass |
-| pytest 單元測試 | 102/102 pass |
+| pytest 單元測試 | 104/104 pass |
 
 **整體結論：16/16 歷史案例通過，TC-17 待手動測試（pytest 21 新測試全部通過）**
 
@@ -44,10 +44,10 @@
 ```
 # Consys Expert: Framework Base Expert
 
-@connsys-jarvis/framework/experts/framework-base-expert/soul.md
-@connsys-jarvis/framework/experts/framework-base-expert/rules.md
-@connsys-jarvis/framework/experts/framework-base-expert/duties.md
-@connsys-jarvis/framework/experts/framework-base-expert/expert.md
+@connsys-jarvis/framework/framework-base-expert/soul.md
+@connsys-jarvis/framework/framework-base-expert/rules.md
+@connsys-jarvis/framework/framework-base-expert/duties.md
+@connsys-jarvis/framework/framework-base-expert/expert.md
 
 @CLAUDE.local.md
 ```
@@ -270,7 +270,7 @@ $ cd connsys-jarvis && python3 -m pytest scripts/test/test_setup.py -v
 **執行指令**：
 ```bash
 python3 ./connsys-jarvis/scripts/setup.py --add --with-all-experts \
-  wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json
+  wifi-bora/wifi-bora-memory-slim-expert/expert.json
 ```
 
 | Step | 驗收條件 | 實際結果 | 狀態 |
@@ -288,13 +288,13 @@ python3 ./connsys-jarvis/scripts/setup.py --add --with-all-experts \
 # Consys Experts（2 Experts 已安裝）
 
 ## Expert Identity（以最後安裝的 Expert 為主）
-@connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/soul.md
-@connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/rules.md
-@connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/duties.md
+@connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/soul.md
+@connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/rules.md
+@connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/duties.md
 
 ## Expert Capabilities
-@connsys-jarvis/framework/experts/framework-base-expert/expert.md
-@connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/expert.md
+@connsys-jarvis/framework/framework-base-expert/expert.md
+@connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/expert.md
 
 @CLAUDE.local.md
 ```
@@ -308,7 +308,7 @@ python3 ./connsys-jarvis/scripts/setup.py --add --with-all-experts \
 **執行指令**：
 ```bash
 python3 ./connsys-jarvis/scripts/setup.py --debug --init \
-  framework/experts/framework-base-expert/expert.json
+  framework/framework-base-expert/expert.json
 ```
 
 | Step | 驗收條件 | 實際結果 | 狀態 |
@@ -446,17 +446,17 @@ tmux send-keys -t connsys-verify \
 
 # 執行各 TC
 tmux send-keys -t connsys-verify \
-  "python3 ./connsys-jarvis/scripts/setup.py --init framework/experts/framework-base-expert/expert.json" Enter
+  "python3 ./connsys-jarvis/scripts/setup.py --init framework/framework-base-expert/expert.json" Enter
 tmux send-keys -t connsys-verify \
-  "python3 ./connsys-jarvis/scripts/setup.py --add wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json" Enter
+  "python3 ./connsys-jarvis/scripts/setup.py --add wifi-bora/wifi-bora-memory-slim-expert/expert.json" Enter
 tmux send-keys -t connsys-verify \
-  "python3 ./connsys-jarvis/scripts/setup.py --add --with-all-experts wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json" Enter
+  "python3 ./connsys-jarvis/scripts/setup.py --add --with-all-experts wifi-bora/wifi-bora-memory-slim-expert/expert.json" Enter
 tmux send-keys -t connsys-verify \
-  "python3 ./connsys-jarvis/scripts/setup.py --debug --init framework/experts/framework-base-expert/expert.json" Enter
+  "python3 ./connsys-jarvis/scripts/setup.py --debug --init framework/framework-base-expert/expert.json" Enter
 tmux send-keys -t connsys-verify \
   "python3 ./connsys-jarvis/scripts/setup.py --doctor" Enter
 tmux send-keys -t connsys-verify \
-  "python3 ./connsys-jarvis/scripts/setup.py --remove wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json" Enter
+  "python3 ./connsys-jarvis/scripts/setup.py --remove wifi-bora/wifi-bora-memory-slim-expert/expert.json" Enter
 tmux send-keys -t connsys-verify \
   "python3 ./connsys-jarvis/scripts/setup.py --list" Enter
 tmux send-keys -t connsys-verify \

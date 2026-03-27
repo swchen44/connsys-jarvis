@@ -22,7 +22,7 @@ connsys-jarvis/
 
 ```bash
 # 從 workspace 根目錄執行
-python connsys-jarvis/setup.py --init wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json
+python connsys-jarvis/setup.py --init wifi-bora/wifi-bora-memory-slim-expert/expert.json
 
 # 載入環境變數
 source .connsys-jarvis/.env
@@ -31,7 +31,7 @@ source .connsys-jarvis/.env
 ### 新增 Expert
 
 ```bash
-python connsys-jarvis/setup.py --add sys-bora/experts/sys-bora-preflight-expert/expert.json
+python connsys-jarvis/setup.py --add sys-bora/sys-bora-preflight-expert/expert.json
 ```
 
 ### 移除 Expert

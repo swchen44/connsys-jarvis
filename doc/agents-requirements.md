@@ -82,7 +82,7 @@
 │  │（工作流程）   │  │  （工具）    │  │    （知識）       │  │
 │  │              │  │              │  │                  │  │
 │  │ common/      │  │ common/      │  │ common/          │  │
-│  │ experts/{n}/ │  │ experts/{n}/ │  │ experts/{n}/     │  │
+│  │ {domain}/{n}/│  │ {domain}/{n}/│  │ {domain}/{n}/    │  │
 │  └──────────────┘  └──────────────┘  └──────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -183,19 +183,19 @@
 0. 初始狀態：~/workspace/ 為空目錄
 1. 在 ~/workspace/ 執行：git clone {connsys-jarvis-url}
    → 出現 ~/workspace/connsys-jarvis/
-2. 瀏覽 connsys-jarvis/ 資料夾，找到所需 Expert（如 wifi-bora/experts/wifi-bora-memory-slim-expert/）
-3. 執行：uv run ./connsys-jarvis/scripts/setup.py --init wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json && source .connsys-jarvis/.env
+2. 瀏覽 connsys-jarvis/ 資料夾，找到所需 Expert（如 wifi-bora/wifi-bora-memory-slim-expert/）
+3. 執行：uv run ./connsys-jarvis/scripts/setup.py --init wifi-bora/wifi-bora-memory-slim-expert/expert.json && source .connsys-jarvis/.env
    → 建立 .claude/ symlinks、生成 CLAUDE.md、設定環境變數
 4. 開啟 Claude Code → 已具備 wifi-bora-memory-slim-expert 的 Skills/Hooks/Commands
 5. 與 Claude 互動，Claude 協助用 repo tool 下載 fw 到 codespace/fw/
 6. 需要切換到 wifi-bora-cr-robot-expert 時：
-   uv run ./connsys-jarvis/scripts/setup.py --init wifi-bora/experts/wifi-bora-cr-robot-expert/expert.json && source .connsys-jarvis/.env
+   uv run ./connsys-jarvis/scripts/setup.py --init wifi-bora/wifi-bora-cr-robot-expert/expert.json && source .connsys-jarvis/.env
    確認變更清單後，重新開啟 Claude Code
 ```
 
 **驗收條件**：
 - setup.py 執行後，`.claude/skills/`、`.claude/hooks/`、`.claude/commands/` 均正確建立 symlink
-- `CLAUDE.md` 被生成，內容以 `@connsys-jarvis/{domain}/experts/{expert}/` 路徑 @include `expert.md`、`soul.md`、`rules.md`、`duties.md`，末尾附加 `@CLAUDE.local.md`
+- `CLAUDE.md` 被生成，內容以 `@connsys-jarvis/{domain}/{expert}/` 路徑 @include `expert.md`、`soul.md`、`rules.md`、`duties.md`，末尾附加 `@CLAUDE.local.md`
 - 環境變數正確設定（見 FR-03）
 - `connsys-memory/` repo 被自動 clone，員工資料夾以 git username 命名
 
@@ -211,7 +211,7 @@
    ~/workspace/.repo
    ~/workspace/bora/wifi, bt, mcu, build, coexistence (各為獨立 git repo)
 2. 在 ~/workspace/ clone connsys-jarvis
-3. 執行 uv run ./connsys-jarvis/scripts/setup.py --init wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json && source .connsys-jarvis/.env
+3. 執行 uv run ./connsys-jarvis/scripts/setup.py --init wifi-bora/wifi-bora-memory-slim-expert/expert.json && source .connsys-jarvis/.env
 4. setup.py 自動偵測到 .repo 存在，判斷為 legacy 場景
 5. 建立 .claude/ symlinks，生成 CLAUDE.md
 6. 開啟 Claude Code，既有 code 與新安裝的 Expert 技能整合運作
@@ -230,7 +230,7 @@
 
 **流程**：
 ```
-1. 執行 uv run ./connsys-jarvis/scripts/setup.py --init wifi-bora/experts/wifi-bora-cr-robot-expert/expert.json && source .connsys-jarvis/.env
+1. 執行 uv run ./connsys-jarvis/scripts/setup.py --init wifi-bora/wifi-bora-cr-robot-expert/expert.json && source .connsys-jarvis/.env
 2. 系統先觸發 hand-off，儲存當前 session 狀態
 3. 移除舊 Expert 的所有 symlinks（common + internal 全部替換）
 4. 建立新 Expert 的 symlinks
@@ -257,16 +257,16 @@
    .claude/ 已有 wifi-bora-base-expert 的 symlinks
    CLAUDE.md 已包含 wifi-bora-base-expert 的 @include 內容
 2. 執行 --add 追加：
-   uv run ./connsys-jarvis/scripts/setup.py --add wifi-bora/experts/wifi-bora-coverity-expert/expert.json && source .connsys-jarvis/.env
+   uv run ./connsys-jarvis/scripts/setup.py --add wifi-bora/wifi-bora-coverity-expert/expert.json && source .connsys-jarvis/.env
 3. setup.py 讀取 wifi-bora-coverity-expert 的 dependencies + internal：
    - 補建 wifi-bora-coverity-expert 自己的 internal skills 的 symlink
      (wifi-bora-coverity-flow, wifi-bora-coverity-cr-tool, wifi-bora-risk-report-flow)
    - 跳過已存在的 symlinks（wifi-bora-base-expert 已建好的不重複建立）
 4. 重新生成 CLAUDE.md（預設 identity-only 格式，以最後安裝的 Expert 為主）：
-   @connsys-jarvis/wifi-bora/experts/wifi-bora-coverity-expert/soul.md
-   @connsys-jarvis/wifi-bora/experts/wifi-bora-coverity-expert/rules.md
-   @connsys-jarvis/wifi-bora/experts/wifi-bora-coverity-expert/duties.md
-   @connsys-jarvis/wifi-bora/experts/wifi-bora-coverity-expert/expert.md
+   @connsys-jarvis/wifi-bora/wifi-bora-coverity-expert/soul.md
+   @connsys-jarvis/wifi-bora/wifi-bora-coverity-expert/rules.md
+   @connsys-jarvis/wifi-bora/wifi-bora-coverity-expert/duties.md
+   @connsys-jarvis/wifi-bora/wifi-bora-coverity-expert/expert.md
    @CLAUDE.local.md
    （若加 --with-all-experts 參數，則同時加入所有 Expert 的 expert.md）
 5. 印出變更清單：
@@ -294,7 +294,7 @@
    .claude/ 同時有兩個 Expert 的 symlinks
    CLAUDE.md 包含兩個 Expert 的 @include
 2. 執行 --remove 移除：
-   uv run ./connsys-jarvis/scripts/setup.py --remove wifi-bora/experts/wifi-bora-coverity-expert/expert.json
+   uv run ./connsys-jarvis/scripts/setup.py --remove wifi-bora/wifi-bora-coverity-expert/expert.json
 3. setup.py 執行移除邏輯：
    - 找出 wifi-bora-coverity-expert 的 internal skills（coverity-flow, coverity-cr-tool, risk-report-flow）
    - 若這些 skill 的 symlink 沒有被其他已安裝 Expert 引用 → 刪除
@@ -369,37 +369,33 @@ connsys-jarvis/ (git)
 │       └── test_setup.py          ← pytest 單元測試（uv run / uvx pytest）
 │
 ├── framework/                       ← Layer 1：framework domain
-│   ├── experts/
-│   │   ├── framework-base-expert/ ← 跨所有 domain 共用（is_common: true）
-│   │   │   ├── skills/              ← framework-expert-discovery-knowhow, framework-handoff-flow, framework-memory-tool
-│   │   │   ├── hooks/               ← session-start.sh, session-end.sh, pre-compact.sh（Shell 優先）
-│   │   │   │   └── memory-helper.py ← 複雜記憶操作（Python helper）
-│   │   │   └── commands/            ← framework-experts-tool/, framework-handoff-tool/
-│   │   ├── framework-skill-create-expert/
-│   │   └── framework-learn-expert/
-│   └── external-experts/            ← skill-creator/, claude-memory-engine/（git submodule）
+│   ├── framework-base-expert/     ← 跨所有 domain 共用（is_common: true）
+│   │   ├── skills/                  ← framework-expert-discovery-knowhow, framework-handoff-flow, framework-memory-tool
+│   │   ├── hooks/                   ← session-start.sh, session-end.sh, pre-compact.sh（Shell 優先）
+│   │   │   └── memory-helper.py     ← 複雜記憶操作（Python helper）
+│   │   └── commands/                ← framework-experts-tool/, framework-handoff-tool/
+│   ├── framework-skill-create-expert/
+│   ├── framework-learn-expert/
+│   └── framework-external-experts/  ← skill-creator/, claude-memory-engine/（git submodule）
 │
 ├── wifi/                            ← Layer 1：wifi domain【示例】
-│   ├── experts/
-│   │   ├── wifi-bora-base-expert/      ← wifi domain 共用（is_common: true）
-│   │   ├── wifi-bora-memory-slim-expert/
-│   │   ├── wifi-debug-expert/
-│   │   └── wifi-bora-cr-robot-expert/
-│   └── external-experts/
+│   ├── wifi-bora-base-expert/       ← wifi domain 共用（is_common: true）
+│   ├── wifi-bora-memory-slim-expert/
+│   ├── wifi-debug-expert/
+│   ├── wifi-bora-cr-robot-expert/
+│   └── wifi-external-experts/
 │
 ├── bt/                              ← Layer 1：bt domain【示例】
-│   ├── experts/
-│   │   ├── bt-bora-base-expert/
-│   │   ├── bt-build-expert/
-│   │   └── bt-debug-expert/
-│   └── external-experts/
+│   ├── bt-bora-base-expert/
+│   ├── bt-build-expert/
+│   ├── bt-debug-expert/
+│   └── bt-external-experts/
 │
 └── system/                          ← Layer 1：system domain（含跨 domain 共用工具）【示例】
-    ├── experts/
-    │   ├── sys-bora-base-expert/    ← sys-bora-gerrit-tool, sys-bora-repo-tool 等
-    │   ├── system-cicd-expert/
-    │   └── system-device-expert/
-    └── external-experts/
+    ├── sys-bora-base-expert/        ← sys-bora-gerrit-tool, sys-bora-repo-tool 等
+    ├── system-cicd-expert/
+    ├── system-device-expert/
+    └── system-external-experts/
 ```
 
 **每個 Expert 資料夾標準結構**（Layer 4）：
@@ -432,7 +428,7 @@ workspace/
 └── connsys-jarvis/ (git)
 ```
 
-**Step 2 — `uv run ./connsys-jarvis/scripts/setup.py --init wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json`**
+**Step 2 — `uv run ./connsys-jarvis/scripts/setup.py --init wifi-bora/wifi-bora-memory-slim-expert/expert.json`**
 ```
 workspace/                                       ← $CONNSYS_JARVIS_WORKSPACE_ROOT_PATH
 ├── connsys-jarvis/ (git)
@@ -445,10 +441,10 @@ workspace/                                       ← $CONNSYS_JARVIS_WORKSPACE_R
 │           └── summary.md
 │
 ├── CLAUDE.md                                    ← setup.py 生成（非 symlink）
-│   # @connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/expert.md
-│   # @connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/soul.md
-│   # @connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/rules.md
-│   # @connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/duties.md
+│   # @connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/expert.md
+│   # @connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/soul.md
+│   # @connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/rules.md
+│   # @connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/duties.md
 │   # @CLAUDE.local.md
 │
 ├── .connsys-jarvis/                             ← setup.py 建立（.gitignore 排除）
@@ -462,13 +458,13 @@ workspace/                                       ← $CONNSYS_JARVIS_WORKSPACE_R
 │
 └── .claude/
     ├── skills/                                  ← Knowledge symlinks
-    │   ├── framework-expert-discovery-knowhow → $CONNSYS_JARVIS_PATH/framework/experts/framework-base-expert/skills/framework-expert-discovery-knowhow/
+    │   ├── framework-expert-discovery-knowhow → $CONNSYS_JARVIS_PATH/framework/framework-base-expert/skills/framework-expert-discovery-knowhow/
     │   ├── framework-handoff-flow             → .../framework-base-expert/skills/framework-handoff-flow/
-    │   ├── wifi-bora-arch-knowhow             → $CONNSYS_JARVIS_PATH/wifi-bora/experts/wifi-bora-base-expert/skills/wifi-bora-arch-knowhow/
-    │   ├── sys-bora-gerrit-commit-flow        → $CONNSYS_JARVIS_PATH/sys-bora/experts/sys-bora-preflight-expert/skills/sys-bora-gerrit-commit-flow/
-    │   └── wifi-bora-memslim-flow             → $CONNSYS_JARVIS_PATH/wifi-bora/experts/wifi-bora-memory-slim-expert/skills/wifi-bora-memslim-flow/
+    │   ├── wifi-bora-arch-knowhow             → $CONNSYS_JARVIS_PATH/wifi-bora/wifi-bora-base-expert/skills/wifi-bora-arch-knowhow/
+    │   ├── sys-bora-gerrit-commit-flow        → $CONNSYS_JARVIS_PATH/sys-bora/sys-bora-preflight-expert/skills/sys-bora-gerrit-commit-flow/
+    │   └── wifi-bora-memslim-flow             → $CONNSYS_JARVIS_PATH/wifi-bora/wifi-bora-memory-slim-expert/skills/wifi-bora-memslim-flow/
     ├── hooks/                                   ← Workflow symlinks（來自 framework-base-expert）
-    │   ├── session-start.sh          → $CONNSYS_JARVIS_PATH/framework/experts/framework-base-expert/hooks/session-start.sh
+    │   ├── session-start.sh          → $CONNSYS_JARVIS_PATH/framework/framework-base-expert/hooks/session-start.sh
     │   ├── session-end.sh            → .../framework-base-expert/hooks/session-end.sh
     │   ├── pre-compact.sh            → .../framework-base-expert/hooks/pre-compact.sh
     │   ├── mid-session-checkpoint.sh → .../framework-base-expert/hooks/mid-session-checkpoint.sh
@@ -553,7 +549,7 @@ workspace/
 └── connsys-jarvis/ (git)
 ```
 
-**Step 2 — `uv run ./connsys-jarvis/scripts/setup.py --init wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json`**
+**Step 2 — `uv run ./connsys-jarvis/scripts/setup.py --init wifi-bora/wifi-bora-memory-slim-expert/expert.json`**
 （setup.py 偵測到根目錄有 `.repo`，自動判斷 legacy 場景）
 ```
 workspace/                                       ← $CONNSYS_JARVIS_WORKSPACE_ROOT_PATH
@@ -568,10 +564,10 @@ workspace/                                       ← $CONNSYS_JARVIS_WORKSPACE_R
 ├── connsys-jarvis/ (git)
 ├── connsys-memory/ (git)
 ├── CLAUDE.md                                    ← setup.py 生成（非 symlink）
-│   # @connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/expert.md
-│   # @connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/soul.md
-│   # @connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/rules.md
-│   # @connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/duties.md
+│   # @connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/expert.md
+│   # @connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/soul.md
+│   # @connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/rules.md
+│   # @connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/duties.md
 │   # @CLAUDE.local.md
 │
 ├── .connsys-jarvis/                             ← setup.py 建立（.gitignore 排除）
@@ -585,13 +581,13 @@ workspace/                                       ← $CONNSYS_JARVIS_WORKSPACE_R
 │
 └── .claude/
     ├── skills/
-    │   ├── framework-expert-discovery-knowhow → $CONNSYS_JARVIS_PATH/framework/experts/framework-base-expert/skills/framework-expert-discovery-knowhow/
+    │   ├── framework-expert-discovery-knowhow → $CONNSYS_JARVIS_PATH/framework/framework-base-expert/skills/framework-expert-discovery-knowhow/
     │   ├── framework-handoff-flow             → .../framework-base-expert/skills/framework-handoff-flow/
-    │   ├── wifi-bora-arch-knowhow             → $CONNSYS_JARVIS_PATH/wifi-bora/experts/wifi-bora-base-expert/skills/wifi-bora-arch-knowhow/
-    │   ├── sys-bora-gerrit-commit-flow        → $CONNSYS_JARVIS_PATH/sys-bora/experts/sys-bora-preflight-expert/skills/sys-bora-gerrit-commit-flow/
-    │   └── wifi-bora-memslim-flow             → $CONNSYS_JARVIS_PATH/wifi-bora/experts/wifi-bora-memory-slim-expert/skills/wifi-bora-memslim-flow/
+    │   ├── wifi-bora-arch-knowhow             → $CONNSYS_JARVIS_PATH/wifi-bora/wifi-bora-base-expert/skills/wifi-bora-arch-knowhow/
+    │   ├── sys-bora-gerrit-commit-flow        → $CONNSYS_JARVIS_PATH/sys-bora/sys-bora-preflight-expert/skills/sys-bora-gerrit-commit-flow/
+    │   └── wifi-bora-memslim-flow             → $CONNSYS_JARVIS_PATH/wifi-bora/wifi-bora-memory-slim-expert/skills/wifi-bora-memslim-flow/
     ├── hooks/
-    │   ├── session-start.sh          → $CONNSYS_JARVIS_PATH/framework/experts/framework-base-expert/hooks/session-start.sh
+    │   ├── session-start.sh          → $CONNSYS_JARVIS_PATH/framework/framework-base-expert/hooks/session-start.sh
     │   ├── session-end.sh            → .../framework-base-expert/hooks/session-end.sh
     │   ├── pre-compact.sh            → .../framework-base-expert/hooks/pre-compact.sh
     │   ├── mid-session-checkpoint.sh → .../framework-base-expert/hooks/mid-session-checkpoint.sh
@@ -619,7 +615,7 @@ workspace/                                       ← $CONNSYS_JARVIS_WORKSPACE_R
 
 | 編號 | 需求 | 優先級 | 理由 |
 |------|------|--------|------|
-| FR-01-1 | repo 命名為 `connsys-jarvis`，Expert 資料夾命名為 `experts/` | Must | 避免與 AI 的「agent」概念混淆，名稱更 general |
+| FR-01-1 | repo 命名為 `connsys-jarvis`，Expert 直接放在 `{domain}/` 下（無 `experts/` 中間層） | Must | 減少目錄層數，Expert 命名已含 domain prefix 可自識別 |
 | FR-01-2 | 每個 Expert 資料夾含 `expert.json`、`expert.md`、`soul.md`、`rules.md`、`duties.md`、`skills/`、`hooks/`、`agents/`、`commands/`（相容層）、`test/`、`report/`、`README.md`；**不含 `install.sh` 和 `CLAUDE.md`**（由頂層 `setup.py` 統一管理） | Must | 標準化結構，Expert 資料夾只含內容；安裝管理集中在根目錄；新增 agents/ 支援 subagent 功能 |
 | FR-01-3 | `expert.json` 含名稱、描述、觸發詞、skills、transitions、dependencies | Must | 資訊越完整，expert-discovery 越有用 |
 | FR-01-4 | `framework-base-expert` 存放跨所有 domain 共用的 skills / hooks / commands；各 domain 的 `{domain}-base-expert` 存放該 domain 共用內容 | Must | 三層依賴（framework → domain → internal）對應 Expert 定義的三個組件 |
@@ -830,7 +826,7 @@ git -C "$CONNSYS_JARVIS_MEMORY_PATH" push origin main
 | FR-07-4 | **`framework-expert-create-flow`**：互動式引導工程師建立符合規範的 Expert 資料夾結構。接收使用者對 Expert 角色、職責、適用場景的描述，輸出高品質的 `soul.md`、`rules.md`、`duties.md`、`expert.md`、`expert.json` 初稿，並建立標準資料夾骨架 | Must | 降低建立 Expert 的門檻；確保四個核心文件（soul/rules/duties/expert）結構完整、語意清晰，避免 Expert 定義模糊導致 AI 行為不一致 |
 | FR-07-5 | `framework-expert-create-flow` 輸出的四個核心文件須符合：**soul.md**（Identity / Values & Principles / Communication Style / Personality）、**rules.md**（Must Always / Must Never / Boundaries / Conflict Resolution）、**duties.md**（Primary Duties / Segregation of Duties / KPIs）、**expert.md**（Overview / Key Behaviors / Tools Available / Skills 表格 / Hooks 表格） | Must | 四個文件各有明確的結構責任；結構一致才能讓 framework-base-expert 的 hand-off 和 discovery 機制正確運作 |
 | FR-07-6 | `framework-expert-create-flow` 產生的 `expert.json` 初稿含正確的 schema 欄位（name/version/description/domain/type/dependencies/internal/exclude_symlink），dependencies 預設包含 `framework-base-expert` | Must | 減少工程師手動填寫 expert.json 的錯誤；新 Expert 預設繼承 framework-base-expert 的 hooks 和 commands |
-| FR-07-7 | 兩個 flow skill 均作為 `framework-base-expert` 的 internal skills，透過 `scripts/setup.py --init framework/experts/framework-base-expert/expert.json` 安裝後即可使用 | Must | 建立工具隨 framework 安裝，不需額外操作 |
+| FR-07-7 | 兩個 flow skill 均作為 `framework-base-expert` 的 internal skills，透過 `scripts/setup.py --init framework/framework-base-expert/expert.json` 安裝後即可使用 | Must | 建立工具隨 framework 安裝，不需額外操作 |
 
 ---
 

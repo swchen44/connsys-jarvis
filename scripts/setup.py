@@ -272,7 +272,7 @@ def load_expert_json(expert_json_path: Path) -> dict:
           "domain": "wifi-bora",
           "version": "1.0.0",
           "dependencies": [
-            {"expert": "framework/experts/framework-base-expert", "skills": "all", "hooks": "all"}
+            {"expert": "framework/framework-base-expert", "skills": "all", "hooks": "all"}
           ],
           "internal": {"skills": ["wifi-bora-memslim-flow"], "hooks": []},
           "exclude_symlink": {"patterns": []}
@@ -293,7 +293,7 @@ def scan_available_experts(workspace: Path) -> list:
     """即時掃描 connsys-jarvis 目錄下所有可用的 Expert。
 
     每次都從磁碟即時讀取 expert.json，不依賴 registry.json 或任何快取。
-    掃描路徑模式：connsys-jarvis/{domain}/experts/{expert-name}/expert.json
+    掃描路徑模式：connsys-jarvis/{domain}/{expert-name}/expert.json
 
     Args:
         workspace: workspace 根目錄
@@ -304,12 +304,12 @@ def scan_available_experts(workspace: Path) -> list:
     """
     jarvis_dir = get_jarvis_dir(workspace)
     experts = []
-    for expert_json in sorted(jarvis_dir.glob("*/experts/*/expert.json")):
+    for expert_json in sorted(jarvis_dir.glob("*/*/expert.json")):
         try:
             data = load_expert_json(expert_json)
             rel_path = str(expert_json.relative_to(jarvis_dir))
             # domain 取自 expert.json 的 domain 欄位，或從路徑第一段推斷
-            domain = data.get("domain") or expert_json.parts[-4] if len(expert_json.parts) >= 4 else ""
+            domain = data.get("domain") or expert_json.parts[-3] if len(expert_json.parts) >= 3 else ""
             experts.append({
                 "name":        data.get("name", expert_json.parent.name),
                 "domain":      domain,
@@ -705,10 +705,10 @@ def generate_claude_md(workspace: Path, installed: dict) -> str:
 
     **預設格式**（不論 1 或 N 個 Expert，只呈現最後安裝的 Expert）：
         # Consys Expert: WiFi Bora Memory Slim Expert
-        @connsys-jarvis/wifi-bora/experts/.../soul.md
-        @connsys-jarvis/wifi-bora/experts/.../rules.md
-        @connsys-jarvis/wifi-bora/experts/.../duties.md
-        @connsys-jarvis/wifi-bora/experts/.../expert.md
+        @connsys-jarvis/wifi-bora/.../soul.md
+        @connsys-jarvis/wifi-bora/.../rules.md
+        @connsys-jarvis/wifi-bora/.../duties.md
+        @connsys-jarvis/wifi-bora/.../expert.md
         @CLAUDE.local.md
 
     **--with-all-experts 格式**（多 Expert 時才有意義）：
@@ -904,7 +904,7 @@ def make_expert_entry(
     """
     jarvis_dir = get_jarvis_dir(workspace)
     rel_path   = os.path.relpath(expert_json_path, jarvis_dir)
-    # domain 從路徑的第一層取得（例如 "wifi-bora/experts/..." → "wifi-bora"）
+    # domain 從路徑的第一層取得（例如 "wifi-bora/..." → "wifi-bora"）
     domain_parts = Path(rel_path).parts
     domain = domain_parts[0] if domain_parts else "unknown"
 
@@ -1134,7 +1134,7 @@ def cmd_remove(workspace: Path, expert_arg: str) -> None:
 
     **參數格式**：接受兩種輸入：
       - Expert 名稱：framework-base-expert
-      - expert.json 路徑：framework/experts/framework-base-expert/expert.json
+      - expert.json 路徑：framework/framework-base-expert/expert.json
 
     Args:
         workspace:  workspace 根目錄
@@ -1442,12 +1442,12 @@ def collect_skill_references(jarvis_dir: Path) -> tuple:
         (named_skills, all_skills_experts)
         named_skills:      set of str — 所有被明確點名的 skill 名稱
         all_skills_experts: set of str — 被某 dep 以 "skills":"all" 引用的 expert 相對路徑
-                            (相對於 jarvis_dir，例如 "framework/experts/framework-base-expert")
+                            (相對於 jarvis_dir，例如 "framework/framework-base-expert")
     """
     named_skills: set = set()
     all_skills_experts: set = set()
 
-    for expert_json in sorted(jarvis_dir.glob("*/experts/*/expert.json")):
+    for expert_json in sorted(jarvis_dir.glob("*/*/expert.json")):
         try:
             data = json.loads(expert_json.read_text())
         except Exception:
@@ -1697,7 +1697,7 @@ def cmd_doctor(workspace: Path) -> None:
     # ── F. Expert 結構完整性（掃描 connsys-jarvis repo）──
     print("\nF. Expert 結構完整性（掃描 connsys-jarvis repo）：")
 
-    expert_dirs = sorted(d for d in jarvis_dir.glob("*/experts/*") if d.is_dir())
+    expert_dirs = sorted(d for d in jarvis_dir.glob("*/*") if d.is_dir() and (d / "expert.json").exists())
 
     if not expert_dirs:
         print("  （未找到任何 expert folder）")
@@ -1753,7 +1753,7 @@ def cmd_doctor(workspace: Path) -> None:
 
         # F3: skill SKILL.md 完整性
         print(f"\n  F3 Skill SKILL.md：")
-        skill_dirs_all = sorted(d for d in jarvis_dir.glob("*/experts/*/skills/*") if d.is_dir())
+        skill_dirs_all = sorted(d for d in jarvis_dir.glob("*/*/skills/*") if d.is_dir())
         if not skill_dirs_all:
             print("    （未找到任何 skill folder）")
         else:
@@ -1775,9 +1775,9 @@ def cmd_doctor(workspace: Path) -> None:
         f4_ok = True
         for skill_dir in skill_dirs_all:
             skill_name = skill_dir.name
-            # parent expert 相對於 jarvis_dir：domain/experts/expert-name
+            # parent expert 相對於 jarvis_dir：domain/expert-name
             parts = skill_dir.relative_to(jarvis_dir).parts
-            parent_expert_rel = str(Path(*parts[:3]))   # e.g. "wifi-bora/experts/wifi-bora-base-expert"
+            parent_expert_rel = str(Path(*parts[:2]))   # e.g. "wifi-bora/wifi-bora-base-expert"
             if skill_name not in named_skills and parent_expert_rel not in all_skills_experts:
                 rel = str(skill_dir.relative_to(jarvis_dir))
                 print(f"    ⚠️  {rel}（未被任何 expert.json 引用）")
@@ -1828,9 +1828,9 @@ Debug 選項（可放在任何位置）：
   --debug   顯示 DEBUG 層級日誌（console），同時寫入 .connsys-jarvis/log/setup.log
 
 範例：
-  python connsys-jarvis/scripts/setup.py --init wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json
-  python connsys-jarvis/scripts/setup.py --add  sys-bora/experts/sys-bora-preflight-expert/expert.json
-  python connsys-jarvis/scripts/setup.py --add  sys-bora/experts/sys-bora-preflight-expert/expert.json --with-all-experts
+  python connsys-jarvis/scripts/setup.py --init wifi-bora/wifi-bora-memory-slim-expert/expert.json
+  python connsys-jarvis/scripts/setup.py --add  sys-bora/sys-bora-preflight-expert/expert.json
+  python connsys-jarvis/scripts/setup.py --add  sys-bora/sys-bora-preflight-expert/expert.json --with-all-experts
   python connsys-jarvis/scripts/setup.py --remove framework-base-expert
   python connsys-jarvis/scripts/setup.py --list --format json
   python connsys-jarvis/scripts/setup.py --query wifi-bora-memory-slim-expert
