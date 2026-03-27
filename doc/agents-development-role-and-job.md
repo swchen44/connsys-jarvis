@@ -1,12 +1,12 @@
 # Connsys Experts — 開發角色與任務分工
 
-**文件版本**：v1.1
+**文件版本**：v1.2
 **日期**：2026-03-27
 **狀態**：Draft
 **目標讀者**：Project Lead、各 Domain Owner、Framework Engineer
 
-> 本文件定義 `connsys-experts` 系統的開發角色、職責範圍、短期任務與長期任務。
-> 短期 = Phase 0–2（基礎建設 + 第一批 Expert 上線）；長期 = Phase 3–4（擴充 + 自我進化）。
+> 本文件定義 `connsys-jarvis` 系統的開發角色、職責範圍、短期任務與長期任務。
+> 短期 = Phase 0–2（3/1–5/30，基礎建設 + 第一批 Expert 上線）；長期 = Phase 3–5（6/1 起，擴充 + PDCA + 自我強化）。
 
 ---
 
@@ -249,9 +249,86 @@
 
 ---
 
-## 9. 交付里程碑
+## 9. 交付里程碑與時間表
 
-### Phase 0：地基（所有人開工前必須完成）
+### 9.1 總覽時間表
+
+#### ASCII 甘特圖
+
+```
+Connsys Experts 開發時間表（2026）
+
+         MAR               APR               MAY               JUN               JUL
+         W1  W2  W3  W4    W1  W2  W3  W4    W1  W2  W3  W4    W1  W2  W3  W4    W1  W2  W3  W4
+         3/1          3/28 4/1          4/28 5/1          5/28 6/1          6/28 7/1          7/28
+         ──────────────────────────────────────────────────────────────────────────────────────────
+Phase 0  [══════════════════════════════════]
+(3/1~4/15) Framework 設計 & Domain Expert KPI
+
+Phase 1                     [══════════════]
+(4/1~4/24)                  Framework 基礎設施實作 + 測試（含 memory-slim 示範組）
+
+Phase 2                               [═════════════════════]
+(4/27~5/30)                           Domain Base Experts 設計・實作・測試
+
+Phase 3                                                       [═════════════════════]
+(6/1~6/30)                                                    應用 Experts 設計・實作・測試
+
+Phase 4                                                                             [═════════════]
+(7/1~7/31)                                                                          PDCA・KPI・未來規劃
+
+Phase 5  TBD ───────────────────────────── 依 Phase 4 KPI 結果排期 ────────────────────────────────
+         ──────────────────────────────────────────────────────────────────────────────────────────
+         ▲ P0/P1 重疊（4/1~4/15）：Framework 設計定稿同時，基礎設施開始實作
+         ▲ P1/P2 重疊（4/24~4/27）：Framework 收尾，Domain 開始進場
+```
+
+#### Mermaid 甘特圖
+
+```mermaid
+gantt
+    title Connsys Experts 開發時間表（2026）
+    dateFormat YYYY-MM-DD
+    axisFormat %m/%d
+
+    section Phase 0：Framework 設計（3/1~4/15）
+    expert.json schema & SKILL.md 模板          :p0a, 2026-03-01, 2026-04-15
+    五層命名規則 & QA 標準文件                   :p0b, 2026-03-01, 2026-04-15
+    Domain Expert KPI 設計                      :p0c, 2026-03-01, 2026-04-15
+
+    section Phase 1：Framework 基礎設施（4/1~4/24）
+    scripts/setup.py + Hooks 實作               :p1a, 2026-04-01, 2026-04-24
+    framework-base-expert（5 skills）           :p1b, 2026-04-01, 2026-04-24
+    wifi-bora-memory-slim-expert（示範組）       :p1c, 2026-04-01, 2026-04-24
+
+    section Phase 2：Domain Base Experts（4/27~5/30）
+    sys-bora-base-expert（最高優先）             :crit, p2a, 2026-04-27, 2026-05-30
+    sys-bora-preflight-expert                   :p2b, 2026-04-27, 2026-05-30
+    wifi-bora-base-expert                       :p2c, 2026-04-27, 2026-05-30
+    bt-bora-base-expert                         :p2d, 2026-04-27, 2026-05-30
+    lrwpan-bora-base-expert                     :p2e, 2026-04-27, 2026-05-30
+    wifi-gen4m-base-expert                      :p2f, 2026-04-27, 2026-05-30
+    wifi-logan-base-expert                      :p2g, 2026-04-27, 2026-05-30
+
+    section Phase 3：應用 Experts（6/1~6/30）
+    wifi-bora-memory-slim（示範→正式）           :p3a, 2026-06-01, 2026-06-30
+    wifi-bora-cr-robot-expert                   :p3b, 2026-06-01, 2026-06-30
+    wifi-bora-coverity-expert                   :p3c, 2026-06-01, 2026-06-30
+    bt-bora-security-expert                     :p3d, 2026-06-01, 2026-06-30
+
+    section Phase 4：PDCA（7/1~7/31）
+    收集反饋・KPI 觀察・調整                     :p4a, 2026-07-01, 2026-07-31
+    未來 Expert 優先序規劃                       :p4b, 2026-07-01, 2026-07-31
+
+    section Phase 5：加強 Expert（TBD）
+    規劃中（依 Phase 4 結果排期）                :active, p5a, 2026-08-01, 2026-08-31
+```
+
+---
+
+### 9.2 各 Phase 詳細交付項目
+
+### Phase 0（3/1–4/15）：地基（所有人開工前必須完成）
 
 | # | 任務 | Owner | 產出 |
 |---|------|-------|------|
@@ -262,7 +339,7 @@
 | 0-5 | `connsys-memory` remote repo 建立 | Sys Bora Domain Owner | git remote 可寫入 |
 | 0-6 | Phase 1–2 詳細時間表 | Project Lead | Sprint 計畫表 |
 
-### Phase 1：Framework 基礎設施（其他人的 blocker）
+### Phase 1（4/1–4/24）：Framework 基礎設施（其他人的 blocker）
 
 | # | 任務 | Owner | 產出 |
 |---|------|-------|------|
@@ -272,7 +349,7 @@
 | 1-4 | `framework-base-expert` | Framework Eng | handoff-flow / discovery / memory-tool |
 | 1-5 | `registry.json` 初版 | Framework Eng | 所有 expert 目錄 |
 
-### Phase 2：Domain 層（平行進行，sys-bora-base 最先）
+### Phase 2（4/27–5/30）：Domain 層（平行進行，sys-bora-base 最先）
 
 | # | 任務 | Owner | 產出 | 前置 |
 |---|------|-------|------|------|
@@ -283,7 +360,7 @@
 | 2-5 | `bt-bora-build-expert` | BT Bora Domain Owner | bt-bora-build-flow / bt-bora-fw-build-flow | 2-3 |
 | 2-6 | 第一次全系統 eval | QA | baseline-eval-report.md | 2-4, 2-5 |
 
-### Phase 3：擴充 Expert 陣容
+### Phase 3（6/1–6/30）：擴充 Expert 陣容（應用 Experts）
 
 | # | 任務 | Owner | 產出 |
 |---|------|-------|------|
@@ -294,13 +371,56 @@
 | 3-5 | `sys-bora-device-expert` | Sys Bora Domain Owner | sys-bora-device-tool |
 | 3-6 | CI 自動測試整合 | Sys Bora Domain Owner + QA | test/ 納入 CI pipeline |
 
-### Phase 4：Meta-framework（成熟後）
+### Phase 4（7/1–7/31）：PDCA（收集反饋・KPI 觀察・未來規劃）
 
 | # | 任務 | Owner | 產出 |
 |---|------|-------|------|
-| 4-1 | `framework-skill-create-expert` | Framework Eng | AI 輔助建立 SKILL.md |
-| 4-2 | `framework-learn-expert` | Framework Eng | 分析 connsys-memory → 產生 skill PR |
-| 4-3 | `framework-security-expert` | Framework Eng + QA | pre-install-check.sh 掃描 |
+| 4-1 | 收集工程師反饋，評估 Expert 實用性 | Project Lead + 各 Domain Owner | 反饋報告 |
+| 4-2 | KPI 量測：Hand-off 完整性、Expert 推薦準確率、token 用量趨勢 | QA | KPI 儀表板 |
+| 4-3 | 調整優先序：決定哪些 Expert 需強化，哪些可降優先 | Project Lead | 更新後 Roadmap |
+| 4-4 | `framework-learn-expert` 初步設計 | Framework Eng | 分析 connsys-memory → 產生 skill PR |
+| 4-5 | 規劃 Phase 5 範圍與資源 | Project Lead | Phase 5 計畫書 |
+
+### Phase 5（TBD）：加強 Expert（Expert 總覽表未涵蓋的 Expert）
+
+> Phase 5 的排期與範圍將依 Phase 4 的 KPI 結果和工程師反饋決定。以下為**候選清單**，尚未確定優先序。
+
+#### 框架層（Framework）強化 Expert
+
+| 候選 Expert | 說明 |
+|------------|------|
+| `framework-learn-expert` | 分析 `connsys-memory` 自動萃取 pattern，產生 skill PR（AI 自我強化）|
+| `framework-security-expert` | `pre-install-check.sh` 掃描 external-experts 安全性 |
+
+#### WiFi Bora 應用強化 Expert
+
+| 候選 Expert | 說明 |
+|------------|------|
+| `wifi-bora-debug-expert` | WiFi coredump 分析、symbol map 解讀、UART/ADB 工具整合 |
+| `wifi-bora-cicd-expert` | WiFi CI/CD 自動測試流程、autotest 工具 |
+| `wifi-bora-coverity-expert` | Coverity 靜態分析 + CR report 生成（已在 Phase 3，Phase 5 強化）|
+
+#### BT Bora 強化 Expert
+
+| 候選 Expert | 說明 |
+|------------|------|
+| `bt-bora-debug-expert` | BT coredump 分析與 debug SOP |
+| `bt-bora-build-expert` | BT firmware build 完整流程（含 fw-build-flow）|
+
+#### Sys Bora 強化 Expert
+
+| 候選 Expert | 說明 |
+|------------|------|
+| `sys-bora-cicd-expert` | 系統層 CI/CD pipeline 自動化工具 |
+| `sys-bora-device-expert` | 裝置控制（flash/reboot/串口）相關 skills |
+
+#### 新 Domain Expert（待規劃）
+
+| 候選 Expert | 說明 |
+|------------|------|
+| `lrwpan-bora-*-expert` | LR-WPAN 應用 Expert（協定分析、debug、CI 等，待 Domain Owner 規劃）|
+| `wifi-gen4m-*-expert` | WiFi Gen4M 應用 Expert（build、debug、CI 等，待 Domain Owner 規劃）|
+| `wifi-logan-*-expert` | WiFi Logan 應用 Expert（build、debug、CI 等，待 Domain Owner 規劃）|
 
 ---
 
