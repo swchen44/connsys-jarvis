@@ -298,8 +298,7 @@ class TestWriteEnvFile:
         return result
 
     def test_env_contains_all_six_vars(self, workspace):
-        with patch.object(inst, "run_git_config", return_value="john.doe"):
-            inst.write_env_file(workspace, "framework-base-expert")
+        inst.write_env_file(workspace, "framework-base-expert")
         env = self._read_env(workspace)
         for key in [
             "CONNSYS_JARVIS_PATH",
@@ -312,26 +311,22 @@ class TestWriteEnvFile:
             assert key in env, f"Missing env var: {key}"
 
     def test_jarvis_path_points_to_connsys_jarvis(self, workspace):
-        with patch.object(inst, "run_git_config", return_value="john.doe"):
-            inst.write_env_file(workspace, "x")
+        inst.write_env_file(workspace, "x")
         env = self._read_env(workspace)
         assert env["CONNSYS_JARVIS_PATH"].endswith("connsys-jarvis")
 
     def test_workspace_root_equals_workspace(self, workspace):
-        with patch.object(inst, "run_git_config", return_value="john.doe"):
-            inst.write_env_file(workspace, "x")
+        inst.write_env_file(workspace, "x")
         env = self._read_env(workspace)
         assert env["CONNSYS_JARVIS_WORKSPACE_ROOT_PATH"] == str(workspace)
 
     def test_agent_first_codespace_path_has_codespace(self, workspace):
-        with patch.object(inst, "run_git_config", return_value="john.doe"):
-            inst.write_env_file(workspace, "x")
+        inst.write_env_file(workspace, "x")
         env = self._read_env(workspace)
         assert env["CONNSYS_JARVIS_CODE_SPACE_PATH"].endswith("codespace")
 
     def test_legacy_codespace_path_equals_workspace(self, legacy_workspace):
-        with patch.object(inst, "run_git_config", return_value="john.doe"):
-            inst.write_env_file(legacy_workspace, "x")
+        inst.write_env_file(legacy_workspace, "x")
         env_path = legacy_workspace / ".connsys-jarvis" / ".env"
         result = {}
         for line in env_path.read_text().splitlines():
@@ -341,32 +336,28 @@ class TestWriteEnvFile:
         assert result["CONNSYS_JARVIS_CODE_SPACE_PATH"] == str(legacy_workspace)
 
     def test_memory_path_inside_dot_dir(self, workspace):
-        with patch.object(inst, "run_git_config", return_value="john.doe"):
-            inst.write_env_file(workspace, "x")
+        inst.write_env_file(workspace, "x")
         env = self._read_env(workspace)
         assert ".connsys-jarvis/memory" in env["CONNSYS_JARVIS_MEMORY_PATH"]
 
-    def test_employee_id_from_git_config(self, workspace):
-        with patch.object(inst, "run_git_config", return_value="alice.bob"):
-            inst.write_env_file(workspace, "x")
+    def test_employee_id_from_login_name(self, workspace):
+        inst.write_env_file(workspace, "x")
         env = self._read_env(workspace)
-        assert env["CONNSYS_JARVIS_EMPLOYEE_ID"] == "alice.bob"
+        assert env["CONNSYS_JARVIS_EMPLOYEE_ID"] == Path.home().name
 
-    def test_employee_id_fallback_when_git_missing(self, workspace):
-        with patch.object(inst, "run_git_config", return_value=""):
+    def test_employee_id_fallback_when_login_unavailable(self, workspace):
+        with patch.object(inst, "get_login_name", return_value="unknown"):
             inst.write_env_file(workspace, "x")
         env = self._read_env(workspace)
         assert env["CONNSYS_JARVIS_EMPLOYEE_ID"] == "unknown"
 
     def test_active_expert_reflects_argument(self, workspace):
-        with patch.object(inst, "run_git_config", return_value="john.doe"):
-            inst.write_env_file(workspace, "wifi-bora-memory-slim-expert")
+        inst.write_env_file(workspace, "wifi-bora-memory-slim-expert")
         env = self._read_env(workspace)
         assert env["CONNSYS_JARVIS_ACTIVE_EXPERT"] == "wifi-bora-memory-slim-expert"
 
     def test_all_vars_use_connsys_jarvis_prefix(self, workspace):
-        with patch.object(inst, "run_git_config", return_value="john.doe"):
-            inst.write_env_file(workspace, "x")
+        inst.write_env_file(workspace, "x")
         env_path = workspace / ".connsys-jarvis" / ".env"
         for line in env_path.read_text().splitlines():
             if line.startswith("export "):
@@ -409,8 +400,7 @@ class TestIntegrationInit:
     def _run_init(self, workspace, expert_rel):
         expert_json = workspace / "connsys-jarvis" / expert_rel
         with patch("sys.argv", ["setup.py", "--init", expert_rel]), \
-             patch.object(inst, "find_workspace", return_value=workspace), \
-             patch.object(inst, "run_git_config", return_value="john.doe"):
+             patch.object(inst, "find_workspace", return_value=workspace):
             inst.cmd_init(workspace, expert_json)
 
     def test_skills_symlinks_created(self, workspace, framework_expert_json):
@@ -463,13 +453,11 @@ class TestIntegrationInit:
 class TestIntegrationAdd:
     def _run_init(self, workspace, rel):
         expert_json = workspace / "connsys-jarvis" / rel
-        with patch.object(inst, "run_git_config", return_value="john.doe"):
-            inst.cmd_init(workspace, expert_json)
+        inst.cmd_init(workspace, expert_json)
 
     def _run_add(self, workspace, rel):
         expert_json = workspace / "connsys-jarvis" / rel
-        with patch.object(inst, "run_git_config", return_value="john.doe"):
-            inst.cmd_add(workspace, expert_json)
+        inst.cmd_add(workspace, expert_json)
 
     def test_add_increases_skill_count(self, workspace):
         self._run_init(workspace, "framework/experts/framework-base-expert/expert.json")
@@ -511,21 +499,18 @@ class TestIntegrationAdd:
 
 class TestIntegrationRemove:
     def _setup(self, workspace):
-        with patch.object(inst, "run_git_config", return_value="john.doe"):
-            inst.cmd_init(workspace, workspace / "connsys-jarvis/framework/experts/framework-base-expert/expert.json")
-            inst.cmd_add(workspace, workspace / "connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
+        inst.cmd_init(workspace, workspace / "connsys-jarvis/framework/experts/framework-base-expert/expert.json")
+        inst.cmd_add(workspace, workspace / "connsys-jarvis/wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
 
     def test_remove_reduces_skills(self, workspace):
         self._setup(workspace)
-        with patch.object(inst, "run_git_config", return_value="john.doe"):
-            inst.cmd_remove(workspace, "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
+        inst.cmd_remove(workspace, "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
         count = len(list((workspace / ".claude" / "skills").iterdir()))
         assert count == 3
 
     def test_shared_skills_preserved(self, workspace):
         self._setup(workspace)
-        with patch.object(inst, "run_git_config", return_value="john.doe"):
-            inst.cmd_remove(workspace, "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
+        inst.cmd_remove(workspace, "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
         skills = [p.name for p in (workspace / ".claude" / "skills").iterdir()]
         assert "framework-expert-discovery-knowhow" in skills
         assert "framework-handoff-flow" in skills
@@ -533,24 +518,21 @@ class TestIntegrationRemove:
 
     def test_private_skills_removed(self, workspace):
         self._setup(workspace)
-        with patch.object(inst, "run_git_config", return_value="john.doe"):
-            inst.cmd_remove(workspace, "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
+        inst.cmd_remove(workspace, "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
         skills = [p.name for p in (workspace / ".claude" / "skills").iterdir()]
         assert "wifi-bora-memslim-flow" not in skills
         assert "wifi-bora-lsp-tool" not in skills
 
     def test_installed_json_has_one_after_remove(self, workspace):
         self._setup(workspace)
-        with patch.object(inst, "run_git_config", return_value="john.doe"):
-            inst.cmd_remove(workspace, "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
+        inst.cmd_remove(workspace, "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
         data = inst.load_installed_experts(workspace)
         assert len(data["experts"]) == 1
         assert data["experts"][0]["name"] == "framework-base-expert"
 
     def test_claude_md_reverts_to_single(self, workspace):
         self._setup(workspace)
-        with patch.object(inst, "run_git_config", return_value="john.doe"):
-            inst.cmd_remove(workspace, "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
+        inst.cmd_remove(workspace, "wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json")
         content = (workspace / "CLAUDE.md").read_text()
         # 移除後只剩單一 Expert，CLAUDE.md 應回到單 Expert 格式
         assert "framework-base-expert" in content
@@ -564,8 +546,7 @@ class TestIntegrationRemove:
 
 class TestIntegrationUninstall:
     def _setup(self, workspace):
-        with patch.object(inst, "run_git_config", return_value="john.doe"):
-            inst.cmd_init(workspace, workspace / "connsys-jarvis/framework/experts/framework-base-expert/expert.json")
+        inst.cmd_init(workspace, workspace / "connsys-jarvis/framework/experts/framework-base-expert/expert.json")
         memory_note = workspace / ".connsys-jarvis/memory/test/note.md"
         memory_note.parent.mkdir(parents=True, exist_ok=True)
         memory_note.write_text("memory")
@@ -635,11 +616,10 @@ class TestCmdQuery:
     """--query：查詢指定 Expert 的 metadata，支援 table / json 格式。"""
 
     def _init_framework(self, workspace):
-        with patch.object(inst, "run_git_config", return_value="john.doe"):
-            inst.cmd_init(
-                workspace,
-                workspace / "connsys-jarvis/framework/experts/framework-base-expert/expert.json",
-            )
+        inst.cmd_init(
+            workspace,
+            workspace / "connsys-jarvis/framework/experts/framework-base-expert/expert.json",
+        )
 
     def test_query_table_contains_name(self, workspace, capsys):
         self._init_framework(workspace)
@@ -700,11 +680,10 @@ class TestCmdListUpdated:
     """更新後的 --list：即時掃描顯示 installed + available，支援 --format json。"""
 
     def _init_framework(self, workspace):
-        with patch.object(inst, "run_git_config", return_value="john.doe"):
-            inst.cmd_init(
-                workspace,
-                workspace / "connsys-jarvis/framework/experts/framework-base-expert/expert.json",
-            )
+        inst.cmd_init(
+            workspace,
+            workspace / "connsys-jarvis/framework/experts/framework-base-expert/expert.json",
+        )
 
     def test_list_shows_installed_expert(self, workspace, capsys):
         self._init_framework(workspace)

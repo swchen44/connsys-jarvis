@@ -60,7 +60,6 @@ import json
 import re
 import shutil
 import platform
-import subprocess
 from pathlib import Path
 from datetime import datetime, timezone
 
@@ -328,26 +327,32 @@ def scan_available_experts(workspace: Path) -> list:
 
 # ─── Environment Helpers ──────────────────────────────────────────────────────
 
-def run_git_config(key: str) -> str:
-    """從 git config 讀取設定值（通常用來取得 user.name 作為工號）。
+def get_login_name() -> str:
+    """取得 OS 登入帳號名稱（home 目錄名字）。
 
-    Args:
-        key: git config key，例如 "user.name"
+    優先順序：
+      1. Path.home().name  → home 目錄最後一段（e.g. "swchen.tw"）
+      2. os.environ["USER"]
+      3. os.environ["LOGNAME"]
+      4. "unknown"
 
     Returns:
-        設定值字串；失敗（git 未安裝、key 不存在）時回傳空字串
+        OS 登入帳號字串；全部取不到時回傳 "unknown"
     """
     try:
-        result = subprocess.run(
-            ["git", "config", "--get", key],
-            capture_output=True, text=True, check=True
-        )
-        value = result.stdout.strip()
-        logger.debug("run_git_config: %s=%r", key, value)
-        return value
+        name = Path.home().name
+        if name:
+            logger.debug("get_login_name: from Path.home() → %r", name)
+            return name
     except Exception as exc:
-        logger.debug("run_git_config: failed to get %s: %s", key, exc)
-        return ""
+        logger.debug("get_login_name: Path.home() failed: %s", exc)
+    for var in ("USER", "LOGNAME"):
+        name = os.environ.get(var, "")
+        if name:
+            logger.debug("get_login_name: from env %s → %r", var, name)
+            return name
+    logger.debug("get_login_name: all methods failed, returning 'unknown'")
+    return "unknown"
 
 
 def detect_scenario(workspace: Path) -> str:
@@ -828,7 +833,7 @@ def write_env_file(workspace: Path, active_expert_name: str) -> None:
       CONNSYS_JARVIS_CODE_SPACE_PATH  程式碼路徑（agent-first: workspace/codespace/；
                                         legacy: workspace root）
       CONNSYS_JARVIS_MEMORY_PATH      本地 memory 資料夾（.connsys-jarvis/memory/）
-      CONNSYS_JARVIS_EMPLOYEE_ID      員工工號（從 git config user.name 取得）
+      CONNSYS_JARVIS_EMPLOYEE_ID      員工工號（OS 登入帳號，即 home 目錄名稱）
       CONNSYS_JARVIS_ACTIVE_EXPERT    目前啟用的 Expert 名稱
 
     **前綴統一性**：所有變數均以 CONNSYS_JARVIS_ 開頭，方便在 skill/hook
@@ -845,8 +850,8 @@ def write_env_file(workspace: Path, active_expert_name: str) -> None:
     jarvis_path    = get_jarvis_dir(workspace)
     codespace_path = get_codespace_path(workspace)
     memory_path    = dot_dir / "memory"
-    # EMPLOYEE_ID 來自 git config user.name，若取不到則 fallback "unknown"
-    employee_id    = run_git_config("user.name") or "unknown"
+    # EMPLOYEE_ID 來自 OS 登入帳號（home 目錄名稱），若取不到則 fallback "unknown"
+    employee_id    = get_login_name()
 
     logger.debug("write_env_file: jarvis_path=%s, codespace=%s, employee=%s, active=%s",
                  jarvis_path, codespace_path, employee_id, active_expert_name)

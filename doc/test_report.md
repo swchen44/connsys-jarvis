@@ -107,7 +107,7 @@ doctor_ok=26（含環境項）  doctor_fail=0
 | CONNSYS_JARVIS_WORKSPACE_ROOT_PATH | /private/tmp/cj-test | 符合 | ✅ |
 | CONNSYS_JARVIS_CODE_SPACE_PATH | /private/tmp/cj-test/codespace（agent-first）| 符合 | ✅ |
 | CONNSYS_JARVIS_MEMORY_PATH | /private/tmp/cj-test/.connsys-jarvis/memory | 符合 | ✅ |
-| CONNSYS_JARVIS_EMPLOYEE_ID | Shaowei Chen（git config user.name）| 符合 | ✅ |
+| CONNSYS_JARVIS_EMPLOYEE_ID | swchen.tw（OS 登入帳號，Path.home().name）| 符合 | ✅ |
 | CONNSYS_JARVIS_ACTIVE_EXPERT | wifi-bora-memory-slim-expert | 符合 | ✅ |
 
 ---

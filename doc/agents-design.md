@@ -935,7 +935,7 @@ export CONNSYS_JARVIS_PATH="..."                              # connsys-jarvis r
 export CONNSYS_JARVIS_WORKSPACE_ROOT_PATH="$(pwd)"           # workspace 根目錄（.claude/ 所在）
 export CONNSYS_JARVIS_CODE_SPACE_PATH="..."                  # 程式碼路徑（agent-first: codespace/；legacy: workspace root）
 export CONNSYS_JARVIS_MEMORY_PATH="$(pwd)/connsys-memory"     # connsys-memory repo 路徑
-export CONNSYS_JARVIS_EMPLOYEE_ID="$(git config user.name)"  # 員工工號
+export CONNSYS_JARVIS_EMPLOYEE_ID="swchen.tw"                # 員工工號（OS 登入帳號，即 home 目錄名稱）
 ```
 
 | 變數 | Agent First | Legacy |
