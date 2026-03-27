@@ -316,3 +316,32 @@
 | 4 | 解析 JSON，確認未安裝 Expert status="available" | 其他掃描到的 expert status=available |
 | 5 | `python3 ./connsys-jarvis/scripts/setup.py --query framework-base-expert --format json` | 輸出合法 JSON object，含 dependencies、internal |
 
+---
+
+### TC-17：`--doctor` 增強（系統資訊 / 環境變數 / Symlink / CLAUDE.md / Expert 結構）
+
+**測試目標**：驗證 --doctor 的 6 個診斷區段（A~F）均能正確偵測問題並給出修正建議。
+
+**前置條件**：
+- workspace 已安裝 framework-base-expert（TC-01 完成）
+- workspace_mini fixture（pytest 用，可寫的 mini connsys-jarvis 結構）
+
+| Step | 操作 | 驗收條件 |
+|------|------|---------|
+| 1 | `--doctor`（正常狀態） | 輸出 6 個區段標題（A~F）；總體狀態「✅ 健康」 |
+| 2 | 區段 A | 輸出 OS、Python 版本、connsys-jarvis vX.X |
+| 3 | 區段 B — 刪除 .env | 輸出「.env 不存在」+ `--init` 修正提示 |
+| 4 | 區段 B — 路徑無效 | 輸出「路徑不存在」+ 具體路徑 |
+| 5 | 區段 C — 刪除 symlink | 輸出「❌ [缺少]」+ 修正提示 |
+| 6 | 區段 C — 新增 orphan symlink | 輸出「⚠️ [多餘]」+ 修正提示 |
+| 7 | 區段 C — skill link 無 SKILL.md | 輸出「SKILL.md 不存在」|
+| 8 | 區段 D — 刪除 CLAUDE.md | 輸出「CLAUDE.md 不存在」|
+| 9 | 區段 D — 修改 CLAUDE.md（缺 include） | 輸出「缺少 @include」|
+| 10 | 區段 D — 修改 CLAUDE.md（多 include） | 輸出「多餘 @include」|
+| 11 | 區段 F1 — 刪除 soul.md | 輸出「soul.md」+ 缺少提示 |
+| 12 | 區段 F2 — 刪除 owner 欄位 | 輸出「owner」|
+| 13 | 區段 F2 — 刪除 internal.skills | 輸出「internal.skills」|
+| 14 | 區段 F3 — skill 無 SKILL.md | 輸出「SKILL.md」|
+| 15 | 區段 F4 — orphan skill folder | 輸出「未被任何 expert.json 引用」|
+
+**pytest 覆蓋**：TC-U16（3）+ TC-U17（4）+ TC-U18（4）+ TC-U19（4）+ TC-U20（6）= 21 tests

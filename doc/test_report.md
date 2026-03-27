@@ -12,15 +12,15 @@
 
 | 指標 | 數值 |
 |------|------|
-| 測試案例總數 | 16 |
+| 測試案例總數 | 17 |
 | **通過** | **16** |
-| 待測試 | 0 |
+| 待測試 | 1（TC-17）|
 | 失敗 | 0 |
 | Skill 測試腳本 | 16/16 pass |
 | Skill 測試 checks | 41/41 pass |
-| pytest 單元測試 | 81/81 pass |
+| pytest 單元測試 | 102/102 pass |
 
-**整體結論：✅ 全部通過**
+**整體結論：16/16 歷史案例通過，TC-17 待手動測試（pytest 21 新測試全部通過）**
 
 ---
 
@@ -375,6 +375,19 @@ python3 ./connsys-jarvis/scripts/setup.py --debug --init \
 | test_list_json_all_entries_have_status | ✅ |
 | test_list_json_installed_expert_correct_status | ✅ |
 | test_list_json_available_expert_correct_status | ✅ |
+
+---
+
+### TC-17：`--doctor` 增強（系統資訊 / 環境變數 / Symlink / CLAUDE.md / Expert 結構）
+
+**結果：⏳ 待手動測試（pytest TC-U16~TC-U20 自動驗證）**
+
+| Step | 驗收條件 | 實際結果 | 狀態 |
+|------|---------|---------|------|
+| 1 | 正常狀態，總體狀態「✅ 健康」 | — | ⏳ |
+| 2~15 | 各區段異常偵測（詳見 test_plan.md TC-17）| — | ⏳ |
+
+**pytest 結果（TC-U16~TC-U20）**：21 tests — ✅ 21/21 pass
 
 ---
 

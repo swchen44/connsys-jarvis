@@ -15,6 +15,7 @@ Run:
 import json
 import os
 import sys
+import platform as _platform  # used in doctor tests
 from pathlib import Path
 from unittest.mock import patch
 
@@ -753,3 +754,287 @@ class TestCmdListUpdated:
         slim = next((e for e in data if e["name"] == "wifi-bora-memory-slim-expert"), None)
         assert slim is not None
         assert slim["status"] == "available"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Helpers shared by doctor tests
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _build_mini_jarvis(root: Path) -> Path:
+    """在 root/ 建立最小化、完全可寫的 connsys-jarvis 結構供 doctor 結構測試使用。
+
+    結構：
+      root/connsys-jarvis/
+        framework/experts/mini-expert/
+          expert.json  (完整欄位：name, domain, owner, internal.skills)
+          expert.md, rules.md, duties.md, soul.md
+          skills/mini-skill-a/  (含 SKILL.md)
+          hooks/session-start.sh
+    Returns:
+        root (workspace path)
+    """
+    jarvis  = root / "connsys-jarvis"
+    exp_dir = jarvis / "framework" / "experts" / "mini-expert"
+    exp_dir.mkdir(parents=True)
+    (exp_dir / "expert.json").write_text(json.dumps({
+        "name": "mini-expert",
+        "display_name": "Mini Expert",
+        "domain": "framework",
+        "owner": "test-team",
+        "version": "1.0.0",
+        "is_base": True,
+        "dependencies": [],
+        "internal": {"skills": ["mini-skill-a"], "hooks": []},
+        "exclude_symlink": {"patterns": []}
+    }))
+    for f in ["expert.md", "rules.md", "duties.md", "soul.md"]:
+        (exp_dir / f).write_text(f"# {f}\n")
+    skill_dir = exp_dir / "skills" / "mini-skill-a"
+    skill_dir.mkdir(parents=True)
+    (skill_dir / "SKILL.md").write_text("# mini-skill-a\n")
+    hooks_dir = exp_dir / "hooks"
+    hooks_dir.mkdir()
+    (hooks_dir / "session-start.sh").write_text("#!/bin/bash\n")
+    return root
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TC-U16  TestDoctorSystemInfo
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestDoctorSystemInfo:
+    """TC-U16: --doctor 區段 A — 系統資訊顯示"""
+
+    def _init_and_doctor(self, workspace, capsys):
+        fw = workspace / "connsys-jarvis/framework/experts/framework-base-expert/expert.json"
+        inst.cmd_init(workspace, fw)
+        capsys.readouterr()
+        inst.cmd_doctor(workspace)
+        return capsys.readouterr().out
+
+    def test_shows_os(self, workspace, capsys):
+        out = self._init_and_doctor(workspace, capsys)
+        assert "OS:" in out
+
+    def test_shows_python_version(self, workspace, capsys):
+        out = self._init_and_doctor(workspace, capsys)
+        assert "Python:" in out
+        assert _platform.python_version() in out
+
+    def test_shows_jarvis_version(self, workspace, capsys):
+        out = self._init_and_doctor(workspace, capsys)
+        assert "connsys-jarvis:" in out
+        assert inst.SETUP_VERSION in out
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TC-U17  TestDoctorEnvVars
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestDoctorEnvVars:
+    """TC-U17: --doctor 區段 B — 環境變數驗證"""
+
+    def _fw_json(self, workspace):
+        return workspace / "connsys-jarvis/framework/experts/framework-base-expert/expert.json"
+
+    def test_all_vars_ok_after_init(self, workspace, capsys):
+        inst.cmd_init(workspace, self._fw_json(workspace))
+        capsys.readouterr()
+        inst.cmd_doctor(workspace)
+        out = capsys.readouterr().out
+        # 6 個 env vars 全部顯示 ✅
+        for var in inst.REQUIRED_ENV_VARS:
+            assert var in out
+
+    def test_missing_env_file_shows_error(self, workspace, capsys):
+        inst.cmd_init(workspace, self._fw_json(workspace))
+        (workspace / ".connsys-jarvis" / ".env").unlink()
+        capsys.readouterr()
+        inst.cmd_doctor(workspace)
+        out = capsys.readouterr().out
+        assert ".env 不存在" in out
+
+    def test_missing_env_file_shows_fix_hint(self, workspace, capsys):
+        inst.cmd_init(workspace, self._fw_json(workspace))
+        (workspace / ".connsys-jarvis" / ".env").unlink()
+        capsys.readouterr()
+        inst.cmd_doctor(workspace)
+        out = capsys.readouterr().out
+        assert "--init" in out
+
+    def test_path_var_nonexistent_shows_error(self, workspace, capsys):
+        inst.cmd_init(workspace, self._fw_json(workspace))
+        env_path = workspace / ".connsys-jarvis" / ".env"
+        content  = env_path.read_text()
+        # 把 CONNSYS_JARVIS_PATH 的值改成不存在的路徑
+        jarvis_real = str(workspace / "connsys-jarvis")
+        content = content.replace(jarvis_real, "/nonexistent/__test_path__")
+        env_path.write_text(content)
+        capsys.readouterr()
+        inst.cmd_doctor(workspace)
+        out = capsys.readouterr().out
+        assert "路徑不存在" in out
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TC-U18  TestDoctorSymlinkIntegrity
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestDoctorSymlinkIntegrity:
+    """TC-U18: --doctor 區段 C — Symlink 完整性"""
+
+    def _fw_json(self, workspace):
+        return workspace / "connsys-jarvis/framework/experts/framework-base-expert/expert.json"
+
+    def test_clean_install_no_symlink_errors(self, workspace, capsys):
+        inst.cmd_init(workspace, self._fw_json(workspace))
+        capsys.readouterr()
+        inst.cmd_doctor(workspace)
+        out = capsys.readouterr().out
+        # Symlink 區段中不應有 ❌ [缺少] 或 ⚠️ [多餘]
+        assert "缺少]" not in out
+        assert "多餘]" not in out
+
+    def test_missing_symlink_shows_error(self, workspace, capsys):
+        inst.cmd_init(workspace, self._fw_json(workspace))
+        # 刪除一個 skill symlink
+        skills_dir = workspace / ".claude" / "skills"
+        first_skill = sorted(skills_dir.iterdir())[0]
+        first_skill.unlink()
+        capsys.readouterr()
+        inst.cmd_doctor(workspace)
+        out = capsys.readouterr().out
+        assert "缺少]" in out
+
+    def test_orphan_symlink_shows_warning(self, workspace, capsys):
+        inst.cmd_init(workspace, self._fw_json(workspace))
+        # 新增一個不在 declared_symlinks 的 orphan symlink
+        orphan = workspace / ".claude" / "skills" / "orphan-not-declared"
+        orphan.symlink_to("/tmp")
+        capsys.readouterr()
+        inst.cmd_doctor(workspace)
+        out = capsys.readouterr().out
+        assert "多餘]" in out
+
+    def test_installed_skill_link_without_skill_md_shows_warning(self, workspace, capsys):
+        """已建 skill link 指向的 folder 缺少 SKILL.md → ⚠️"""
+        root = _build_mini_jarvis(workspace.parent / "mini_ws")
+        inst.cmd_init(root, root / "connsys-jarvis/framework/experts/mini-expert/expert.json")
+        # 刪除 skill folder 下的 SKILL.md
+        skill_md = root / "connsys-jarvis/framework/experts/mini-expert/skills/mini-skill-a/SKILL.md"
+        skill_md.unlink()
+        capsys.readouterr()
+        inst.cmd_doctor(root)
+        out = capsys.readouterr().out
+        assert "SKILL.md" in out
+        assert "不存在" in out
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TC-U19  TestDoctorClaudeMd
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestDoctorClaudeMd:
+    """TC-U19: --doctor 區段 D — CLAUDE.md 內容驗證"""
+
+    def _fw_json(self, workspace):
+        return workspace / "connsys-jarvis/framework/experts/framework-base-expert/expert.json"
+
+    def test_correct_claude_md_shows_ok(self, workspace, capsys):
+        inst.cmd_init(workspace, self._fw_json(workspace))
+        capsys.readouterr()
+        inst.cmd_doctor(workspace)
+        out = capsys.readouterr().out
+        assert "內容符合預期" in out
+
+    def test_missing_claude_md_shows_error(self, workspace, capsys):
+        inst.cmd_init(workspace, self._fw_json(workspace))
+        (workspace / "CLAUDE.md").unlink()
+        capsys.readouterr()
+        inst.cmd_doctor(workspace)
+        out = capsys.readouterr().out
+        assert "CLAUDE.md 不存在" in out
+
+    def test_missing_include_shows_error(self, workspace, capsys):
+        inst.cmd_init(workspace, self._fw_json(workspace))
+        # 從 CLAUDE.md 刪掉一個 @include 行
+        claude_md = workspace / "CLAUDE.md"
+        lines = [l for l in claude_md.read_text().splitlines()
+                 if not l.strip().startswith("@connsys-jarvis")]
+        claude_md.write_text("\n".join(lines))
+        capsys.readouterr()
+        inst.cmd_doctor(workspace)
+        out = capsys.readouterr().out
+        assert "缺少 @include" in out
+
+    def test_extra_include_shows_warning(self, workspace, capsys):
+        inst.cmd_init(workspace, self._fw_json(workspace))
+        claude_md = workspace / "CLAUDE.md"
+        # 加一行不屬於已安裝 Expert 的 @include
+        claude_md.write_text(
+            claude_md.read_text() + "@connsys-jarvis/fake/expert.md\n"
+        )
+        capsys.readouterr()
+        inst.cmd_doctor(workspace)
+        out = capsys.readouterr().out
+        assert "多餘 @include" in out
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TC-U20  TestDoctorExpertStructure
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestDoctorExpertStructure:
+    """TC-U20: --doctor 區段 F — Expert 結構完整性（使用 workspace_mini）"""
+
+    def _run_doctor(self, root, capsys):
+        capsys.readouterr()
+        inst.cmd_doctor(root)
+        return capsys.readouterr().out
+
+    def test_complete_expert_structure_shows_ok(self, tmp_path, capsys):
+        root = _build_mini_jarvis(tmp_path)
+        out  = self._run_doctor(root, capsys)
+        # F1 ✅
+        assert "mini-expert" in out
+
+    def test_missing_required_file_shows_error(self, tmp_path, capsys):
+        root = _build_mini_jarvis(tmp_path)
+        (root / "connsys-jarvis/framework/experts/mini-expert/soul.md").unlink()
+        out  = self._run_doctor(root, capsys)
+        assert "soul.md" in out
+        assert "缺少" in out
+
+    def test_missing_owner_field_shows_error(self, tmp_path, capsys):
+        root     = _build_mini_jarvis(tmp_path)
+        exp_json = root / "connsys-jarvis/framework/experts/mini-expert/expert.json"
+        data     = json.loads(exp_json.read_text())
+        del data["owner"]
+        exp_json.write_text(json.dumps(data))
+        out = self._run_doctor(root, capsys)
+        assert "owner" in out
+
+    def test_missing_internal_skills_field_shows_error(self, tmp_path, capsys):
+        root     = _build_mini_jarvis(tmp_path)
+        exp_json = root / "connsys-jarvis/framework/experts/mini-expert/expert.json"
+        data     = json.loads(exp_json.read_text())
+        del data["internal"]["skills"]
+        exp_json.write_text(json.dumps(data))
+        out = self._run_doctor(root, capsys)
+        assert "internal.skills" in out
+
+    def test_skill_without_skill_md_shows_warning(self, tmp_path, capsys):
+        root = _build_mini_jarvis(tmp_path)
+        (root / "connsys-jarvis/framework/experts/mini-expert/skills/mini-skill-a/SKILL.md").unlink()
+        out  = self._run_doctor(root, capsys)
+        assert "SKILL.md" in out
+
+    def test_orphan_skill_shows_warning(self, tmp_path, capsys):
+        root = _build_mini_jarvis(tmp_path)
+        # 新增一個不在 expert.json internal.skills 也沒有被任何 dep 引用的 skill folder
+        orphan = root / "connsys-jarvis/framework/experts/mini-expert/skills/orphan-skill"
+        orphan.mkdir(parents=True)
+        (orphan / "SKILL.md").write_text("# orphan\n")
+        out = self._run_doctor(root, capsys)
+        assert "orphan-skill" in out
+        assert "未被任何 expert.json 引用" in out

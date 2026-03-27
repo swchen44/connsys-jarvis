@@ -75,6 +75,23 @@ INSTALLED_EXPERTS_FILE = ".installed-experts.json"  # 安裝狀態持久化檔
 CLAUDE_MD           = "CLAUDE.md"             # Claude Code 啟動時載入的 context 設定
 ENV_FILE            = ".env"                  # 環境變數輸出檔
 SCHEMA_VERSION      = "1.0"                   # .installed-experts.json 的 schema 版本
+SETUP_VERSION       = "1.3"                  # setup.py 版本（用於 --doctor 顯示）
+
+# --doctor 環境變數驗證常數
+REQUIRED_ENV_VARS = [
+    "CONNSYS_JARVIS_PATH",
+    "CONNSYS_JARVIS_WORKSPACE_ROOT_PATH",
+    "CONNSYS_JARVIS_CODE_SPACE_PATH",
+    "CONNSYS_JARVIS_MEMORY_PATH",
+    "CONNSYS_JARVIS_EMPLOYEE_ID",
+    "CONNSYS_JARVIS_ACTIVE_EXPERT",
+]
+PATH_ENV_VARS = {   # 需要驗證路徑存在性的 env var
+    "CONNSYS_JARVIS_PATH",
+    "CONNSYS_JARVIS_WORKSPACE_ROOT_PATH",
+    "CONNSYS_JARVIS_CODE_SPACE_PATH",
+    "CONNSYS_JARVIS_MEMORY_PATH",
+}
 
 # ─── Logger ───────────────────────────────────────────────────────────────────
 # 使用 module-level logger，方便 test_setup.py 等 caller 注入 handler。
@@ -1383,17 +1400,88 @@ def cmd_query(workspace: Path, expert_name: str, output_format: str = "table") -
             print(f"  {k}: {v}")
 
 
+def parse_env_file(env_path: Path) -> dict:
+    """解析 .connsys-jarvis/.env，回傳 {key: value} dict。
+
+    處理兩種格式：
+      export CONNSYS_JARVIS_PATH="/path"   ← setup.py 產生的格式
+      CONNSYS_JARVIS_PATH=/path            ← 無 export 的純 key=value 格式
+
+    Returns:
+        dict，key 為變數名稱，value 為去除引號後的字串；
+        若檔案無法讀取則回傳空 dict。
+    """
+    result = {}
+    try:
+        for line in env_path.read_text().splitlines():
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
+            if line.startswith('export '):
+                line = line[7:].strip()
+            if '=' not in line:
+                continue
+            k, v = line.split('=', 1)
+            result[k.strip()] = v.strip().strip('"').strip("'")
+    except OSError:
+        pass
+    return result
+
+
+def collect_skill_references(jarvis_dir: Path) -> tuple:
+    """收集 connsys-jarvis repo 中所有 expert.json 對 skill 的引用。
+
+    用於 --doctor 的 F4 orphan skill 檢查。
+
+    Returns:
+        (named_skills, all_skills_experts)
+        named_skills:      set of str — 所有被明確點名的 skill 名稱
+        all_skills_experts: set of str — 被某 dep 以 "skills":"all" 引用的 expert 相對路徑
+                            (相對於 jarvis_dir，例如 "framework/experts/framework-base-expert")
+    """
+    named_skills: set = set()
+    all_skills_experts: set = set()
+
+    for expert_json in sorted(jarvis_dir.glob("*/experts/*/expert.json")):
+        try:
+            data = json.loads(expert_json.read_text())
+        except Exception:
+            continue
+
+        # internal skills
+        internal = data.get("internal", {})
+        for s in internal.get("skills", []):
+            if isinstance(s, str):
+                named_skills.add(s)
+
+        # dependency skills
+        for dep in data.get("dependencies", []):
+            dep_path    = dep.get("expert", "")
+            skills_spec = dep.get("skills", None)
+            if skills_spec is None:
+                continue
+            if skills_spec == "all" or (isinstance(skills_spec, list) and "all" in skills_spec):
+                all_skills_experts.add(dep_path)
+            elif isinstance(skills_spec, list):
+                for s in skills_spec:
+                    if isinstance(s, str):
+                        named_skills.add(s)
+
+    return named_skills, all_skills_experts
+
+
 def cmd_doctor(workspace: Path) -> None:
-    """--doctor：健康診斷，檢查 symlinks 是否 dangling 及環境工具是否齊全。
+    """--doctor：健康診斷（僅顯示問題與修正建議，不自動修復）。
 
-    **檢查項目**：
-      1. Symlinks：每個 .claude/ 下的 symlink 是否指向有效目標
-      2. 環境工具：Python 版本、uv、uvx 是否安裝
-      3. 設定檔：.env 和 CLAUDE.md 是否存在
-
-    **dangling symlink**：symlink 存在但目標路徑不存在，通常發生在
-    connsys-jarvis repo 被移動或重新 clone 後 symlink 沒有更新。
-    修復方式：重新執行 --init 或 --add。
+    **6 個診斷區段**：
+      A. 系統資訊     — OS、Python 版本、connsys-jarvis 版本
+      B. 環境變數     — 6 個 CONNSYS_JARVIS_* 變數存在性與路徑合法性
+      C. Symlink 完整性 — expected（依已安裝 Expert 宣告）vs actual（.claude/ 現況）
+                          missing / orphan / dangling；已建 skill link 的 SKILL.md
+      D. CLAUDE.md    — @include 行與已安裝 Expert 的預期內容比對 + target 存在性
+      E. 環境工具     — uv、uvx 是否安裝
+      F. Expert 結構  — 掃描 connsys-jarvis repo 中所有 expert folder：
+                        必要檔案、expert.json 必要欄位、skill SKILL.md、orphan skill
 
     Args:
         workspace: workspace 根目錄
@@ -1401,58 +1489,193 @@ def cmd_doctor(workspace: Path) -> None:
     installed  = load_installed_experts(workspace)
     experts    = installed.get("experts", [])
     claude_dir = get_claude_dir(workspace)
+    env_path   = get_dot_dir(workspace) / ENV_FILE
+    claude_md  = workspace / CLAUDE_MD
+    jarvis_dir = get_jarvis_dir(workspace)
     logger.debug("cmd_doctor: workspace=%s, %d experts", workspace, len(experts))
 
+    all_ok = True
     print("\n=== Connsys Jarvis Doctor ===\n")
 
+    # ── A. 系統資訊 ──
+    print("A. 系統資訊：")
+    os_info = f"{platform.system()} {platform.release()}"
+    print(f"  OS:             {os_info}")
+    py_ver = platform.python_version()
+    py_ok  = tuple(int(x) for x in py_ver.split(".")[:2]) >= (3, 8)
+    py_icon = "✅" if py_ok else "❌"
+    print(f"  Python:         {py_ver} {py_icon}")
+    if not py_ok:
+        print("     → 需要 Python 3.8+")
+        all_ok = False
+    print(f"  connsys-jarvis: v{SETUP_VERSION}")
+    logger.debug("cmd_doctor: OS=%s, Python=%s", os_info, py_ver)
+
     # ── 已安裝的 Experts ──
-    print("已安裝的 Experts：")
+    print("\n已安裝的 Experts：")
     if not experts:
         print("  （未安裝任何 Expert）")
     else:
         for e in experts:
             print(f"  [{e['install_order']}] {e['name']} ({e['domain']})")
 
-    # ── Symlink 健康狀態 ──
-    print("\nSymlinks 健康狀態：")
-    all_ok = True
-    for kind in ["skills", "agents", "commands", "hooks"]:
-        kind_dir = claude_dir / kind
-        if not kind_dir.exists():
-            continue
-        items = sorted([i for i in kind_dir.iterdir() if i.is_symlink()])
-        if not items:
-            continue
-        print(f"  {kind.capitalize()}：")
-        for item in items:
-            target = Path(os.readlink(item))
-            if item.exists():
-                print(f"    ✅ {item.name} → {target} OK")
-                logger.debug("cmd_doctor: OK %s/%s", kind, item.name)
-            else:
-                print(f"    ❌ {item.name} → {target} DANGLING")
-                logger.warning("cmd_doctor: DANGLING %s/%s → %s", kind, item.name, target)
+    # ── B. 環境變數（CONNSYS_JARVIS_*）──
+    print("\nB. 環境變數（CONNSYS_JARVIS_*）：")
+    if not env_path.exists():
+        print(f"  ❌ .env 不存在：{env_path}")
+        print(f"     → 修正：重新執行 --init <expert.json>")
+        all_ok = False
+        logger.warning("cmd_doctor: .env missing at %s", env_path)
+    else:
+        env_vars = parse_env_file(env_path)
+        for var in REQUIRED_ENV_VARS:
+            val = env_vars.get(var)
+            if val is None:
+                print(f"  ❌ {var}：未定義")
+                print(f"     → 修正：重新執行 --init <expert.json>")
                 all_ok = False
+                logger.warning("cmd_doctor: missing env var %s", var)
+            elif var in PATH_ENV_VARS and not Path(val).exists():
+                print(f"  ❌ {var} = {val}（路徑不存在）")
+                print(f"     → 修正：確認路徑存在，或重新執行 --init <expert.json>")
+                all_ok = False
+                logger.warning("cmd_doctor: env path not found %s=%s", var, val)
+            else:
+                print(f"  ✅ {var} = {val}")
+                logger.debug("cmd_doctor: env OK %s", var)
 
-    # ── 環境工具檢查 ──
-    print("\n環境檢查：")
+    # ── C. Symlink 完整性（expected vs actual，僅 Linux/macOS）──
+    print("\nC. Symlink 完整性：")
+    if platform.system() == "Windows":
+        print("  ⚠️  Windows 環境：symlink 完整性檢查略過")
+    else:
+        # expected：從 declared_symlinks 聚合所有已安裝 Expert 宣告的 symlink
+        expected_by_kind: dict = {}
+        for e in experts:
+            for kind, names in e.get("declared_symlinks", {}).items():
+                expected_by_kind.setdefault(kind, set()).update(names)
 
-    # Python 版本（需 >= 3.8，PEP 723 需 >= 3.11）
-    pv     = platform.python_version()
-    py_ok  = tuple(int(x) for x in pv.split(".")[:2]) >= (3, 8)
-    py_icon = "✅" if py_ok else "❌"
-    print(f"  Python: {pv} {py_icon}")
-    logger.debug("cmd_doctor: Python %s %s", pv, "OK" if py_ok else "FAIL")
+        for kind in ["skills", "agents", "commands", "hooks"]:
+            kind_dir = claude_dir / kind
+            expected = expected_by_kind.get(kind, set())
 
-    # uv（執行 PEP 723 inline script 的工具）
+            actual: dict = {}
+            if kind_dir.exists():
+                for item in sorted(kind_dir.iterdir()):
+                    if item.is_symlink():
+                        actual[item.name] = item
+
+            if not expected and not actual:
+                continue
+
+            print(f"  {kind.capitalize()}（預期 {len(expected)}，實際 {len(actual)}）：")
+
+            for name in sorted(expected):
+                if name not in actual:
+                    print(f"    ❌ [缺少] {name}")
+                    print(f"       → 修正：python setup.py --init <expert.json>")
+                    all_ok = False
+                    logger.warning("cmd_doctor: missing symlink %s/%s", kind, name)
+                else:
+                    item   = actual[name]
+                    target = Path(os.readlink(item))
+                    if item.exists():
+                        print(f"    ✅ {name} → {target}")
+                        logger.debug("cmd_doctor: OK %s/%s", kind, name)
+                    else:
+                        print(f"    ❌ {name} → {target} DANGLING")
+                        print(f"       → 修正：重新執行 --init 或 --add")
+                        all_ok = False
+                        logger.warning("cmd_doctor: DANGLING %s/%s → %s", kind, name, target)
+
+            for name in sorted(actual):
+                if name not in expected:
+                    item         = actual[name]
+                    target       = Path(os.readlink(item))
+                    dangling_note = "（DANGLING）" if not item.exists() else ""
+                    print(f"    ⚠️  [多餘] {name} → {target}{dangling_note}")
+                    print(f"       → 修正：python setup.py --remove <expert-name> 全清再重建")
+                    all_ok = False
+                    logger.warning("cmd_doctor: orphan symlink %s/%s", kind, name)
+
+        # 已建 skill links 的 SKILL.md 驗證
+        skills_dir = claude_dir / "skills"
+        if skills_dir.exists():
+            skill_links = sorted(
+                item for item in skills_dir.iterdir() if item.is_symlink() and item.exists()
+            )
+            if skill_links:
+                print(f"  Skills SKILL.md：")
+                for item in skill_links:
+                    skill_md = item / "SKILL.md"
+                    if skill_md.exists():
+                        print(f"    ✅ {item.name}/SKILL.md")
+                        logger.debug("cmd_doctor: SKILL.md OK %s", item.name)
+                    else:
+                        print(f"    ⚠️  {item.name}/SKILL.md 不存在")
+                        print(f"       → 修正：在 skill folder 補充 SKILL.md")
+                        all_ok = False
+                        logger.warning("cmd_doctor: SKILL.md missing for skill link %s", item.name)
+
+    # ── D. CLAUDE.md 內容驗證 ──
+    print("\nD. CLAUDE.md 驗證：")
+    if not claude_md.exists():
+        print(f"  ❌ CLAUDE.md 不存在：{claude_md}")
+        print(f"     → 修正：重新執行 --init <expert.json>")
+        all_ok = False
+        logger.warning("cmd_doctor: CLAUDE.md missing")
+    else:
+        actual_includes: set = set()
+        for line in claude_md.read_text().splitlines():
+            stripped = line.strip()
+            if stripped.startswith('@') and stripped != '@CLAUDE.local.md':
+                actual_includes.add(stripped)
+
+        expected_content  = generate_claude_md(workspace, installed)
+        expected_includes: set = set()
+        for line in expected_content.splitlines():
+            stripped = line.strip()
+            if stripped.startswith('@') and stripped != '@CLAUDE.local.md':
+                expected_includes.add(stripped)
+
+        mode = "with-all-experts" if installed.get("include_all_experts") else "identity-only"
+
+        if actual_includes == expected_includes:
+            print(f"  ✅ 內容符合預期（{mode}，{len(expected_includes)} 個 @include）")
+            logger.debug("cmd_doctor: CLAUDE.md OK, %d includes", len(expected_includes))
+        else:
+            missing_inc = expected_includes - actual_includes
+            extra_inc   = actual_includes   - expected_includes
+            for inc in sorted(missing_inc):
+                print(f"  ❌ [缺少 @include] {inc}")
+                all_ok = False
+                logger.warning("cmd_doctor: CLAUDE.md missing include: %s", inc)
+            for inc in sorted(extra_inc):
+                print(f"  ⚠️  [多餘 @include] {inc}")
+                all_ok = False
+                logger.warning("cmd_doctor: CLAUDE.md extra include: %s", inc)
+            if missing_inc or extra_inc:
+                print(f"     → 修正：重新執行 --init 或 --add <expert.json>")
+
+        # 驗證每個 @include 目標檔案存在
+        for inc in sorted(actual_includes | expected_includes):
+            rel    = inc.lstrip('@')
+            target = workspace / rel
+            if not target.exists():
+                print(f"  ❌ @include 目標不存在：{rel}")
+                print(f"     → 修正：確認 connsys-jarvis repo 路徑正確，或重新執行 --init")
+                all_ok = False
+                logger.warning("cmd_doctor: @include target missing: %s", rel)
+
+    # ── E. 環境工具 ──
+    print("\nE. 環境工具：")
     uv_path = shutil.which("uv")
     if uv_path:
-        print(f"  uv: 找到 ({uv_path}) ✅")
+        print(f"  uv:  找到 ({uv_path}) ✅")
     else:
-        print("  uv: 未找到 ⚠️")
+        print("  uv:  未找到 ⚠️")
         logger.warning("cmd_doctor: uv not found")
 
-    # uvx（執行 pytest 等工具的快捷方式）
     uvx_path = shutil.which("uvx")
     if uvx_path:
         print(f"  uvx: 找到 ({uvx_path}) ✅")
@@ -1460,25 +1683,110 @@ def cmd_doctor(workspace: Path) -> None:
         print("  uvx: 未找到 ⚠️")
         logger.warning("cmd_doctor: uvx not found")
 
-    # .env 設定檔
-    env_path  = get_dot_dir(workspace) / ENV_FILE
-    env_icon  = "✅" if env_path.exists() else "❌"
-    print(f"  .env: {env_path} {env_icon}")
-    logger.debug("cmd_doctor: .env %s", "OK" if env_path.exists() else "MISSING")
+    # ── F. Expert 結構完整性（掃描 connsys-jarvis repo）──
+    print("\nF. Expert 結構完整性（掃描 connsys-jarvis repo）：")
 
-    # CLAUDE.md
-    claude_md   = workspace / CLAUDE_MD
-    claude_icon = "✅" if claude_md.exists() else "❌"
-    print(f"  CLAUDE.md: {claude_md} {claude_icon}")
-    logger.debug("cmd_doctor: CLAUDE.md %s", "OK" if claude_md.exists() else "MISSING")
+    expert_dirs = sorted(jarvis_dir.glob("*/experts/*/"))
+    expert_dirs = [d for d in expert_dirs if d.is_dir()]
 
+    if not expert_dirs:
+        print("  （未找到任何 expert folder）")
+    else:
+        # F1: 必要檔案
+        REQUIRED_EXPERT_FILES = ["expert.json", "expert.md", "rules.md", "duties.md", "soul.md"]
+        print(f"  F1 必要檔案（{', '.join(REQUIRED_EXPERT_FILES)}）：")
+        for exp_dir in expert_dirs:
+            rel = str(exp_dir.relative_to(jarvis_dir))
+            missing_files = [f for f in REQUIRED_EXPERT_FILES if not (exp_dir / f).exists()]
+            if missing_files:
+                print(f"    ❌ {rel} 缺少：{', '.join(missing_files)}")
+                print(f"       → 修正：補充上列缺少的檔案")
+                all_ok = False
+                logger.warning("cmd_doctor: expert missing files %s: %s", rel, missing_files)
+            else:
+                print(f"    ✅ {rel}")
+
+        # F2: expert.json 必要欄位
+        REQUIRED_JSON_FIELDS = ["name", "domain", "owner"]
+        print(f"\n  F2 expert.json 欄位（{', '.join(REQUIRED_JSON_FIELDS)}, internal.skills）：")
+        for exp_dir in expert_dirs:
+            rel          = str(exp_dir.relative_to(jarvis_dir))
+            expert_json  = exp_dir / "expert.json"
+            if not expert_json.exists():
+                continue    # 已由 F1 報告
+            try:
+                data = json.loads(expert_json.read_text())
+            except Exception as e:
+                print(f"    ❌ {rel}/expert.json 無法解析：{e}")
+                all_ok = False
+                continue
+
+            missing_fields = [f for f in REQUIRED_JSON_FIELDS if not data.get(f)]
+            # internal.skills 必須是 list（可為空）
+            internal      = data.get("internal")
+            has_int_skills = (
+                isinstance(internal, dict) and "skills" in internal
+                and isinstance(internal["skills"], list)
+            )
+            if missing_fields or not has_int_skills:
+                issues_desc = []
+                if missing_fields:
+                    issues_desc.append(f"缺少欄位：{', '.join(missing_fields)}")
+                if not has_int_skills:
+                    issues_desc.append("internal.skills 不存在或格式錯誤")
+                print(f"    ❌ {rel}/expert.json — {'; '.join(issues_desc)}")
+                print(f"       → 修正：補充上列缺少的欄位")
+                all_ok = False
+                logger.warning("cmd_doctor: expert.json issues %s: %s", rel, issues_desc)
+            else:
+                print(f"    ✅ {rel}/expert.json")
+
+        # F3: skill SKILL.md 完整性
+        print(f"\n  F3 Skill SKILL.md：")
+        skill_dirs_all = sorted(jarvis_dir.glob("*/experts/*/skills/*/"))
+        skill_dirs_all = [d for d in skill_dirs_all if d.is_dir()]
+        if not skill_dirs_all:
+            print("    （未找到任何 skill folder）")
+        else:
+            f3_ok = True
+            for skill_dir in skill_dirs_all:
+                rel = str(skill_dir.relative_to(jarvis_dir))
+                if not (skill_dir / "SKILL.md").exists():
+                    print(f"    ⚠️  {rel} 缺少 SKILL.md")
+                    print(f"       → 修正：在此 skill folder 補充 SKILL.md")
+                    all_ok = False
+                    f3_ok  = False
+                    logger.warning("cmd_doctor: skill missing SKILL.md: %s", rel)
+            if f3_ok:
+                print(f"    ✅ 所有 {len(skill_dirs_all)} 個 skill folder 均有 SKILL.md")
+
+        # F4: orphan skill（skill folder 未被任何 expert.json 引用）
+        print(f"\n  F4 Orphan Skill（未被任何 expert.json 引用）：")
+        named_skills, all_skills_experts = collect_skill_references(jarvis_dir)
+        f4_ok = True
+        for skill_dir in skill_dirs_all:
+            skill_name = skill_dir.name
+            # parent expert 相對於 jarvis_dir：domain/experts/expert-name
+            parts = skill_dir.relative_to(jarvis_dir).parts
+            parent_expert_rel = str(Path(*parts[:3]))   # e.g. "wifi-bora/experts/wifi-bora-base-expert"
+            if skill_name not in named_skills and parent_expert_rel not in all_skills_experts:
+                rel = str(skill_dir.relative_to(jarvis_dir))
+                print(f"    ⚠️  {rel}（未被任何 expert.json 引用）")
+                print(f"       → 修正：加入某個 expert.json 的 internal.skills，或刪除此資料夾")
+                all_ok = False
+                f4_ok  = False
+                logger.warning("cmd_doctor: orphan skill: %s", rel)
+        if f4_ok and skill_dirs_all:
+            print(f"    ✅ 所有 skill 均有被引用")
+
+    # ── 總體狀態 ──
     print()
     if all_ok:
         print("總體狀態：✅ 健康")
         logger.info("cmd_doctor: overall status HEALTHY")
     else:
-        print("總體狀態：❌ 有 dangling symlinks，請重新執行 --init 或 --add")
-        logger.warning("cmd_doctor: overall status UNHEALTHY (dangling symlinks)")
+        print("總體狀態：❌ 有問題需修正（詳見上方各項 ❌ / ⚠️ 說明）")
+        logger.warning("cmd_doctor: overall status UNHEALTHY")
 
 
 # ─── Usage ────────────────────────────────────────────────────────────────────

@@ -656,7 +656,7 @@ workspace/                                       ← $CONNSYS_JARVIS_WORKSPACE_R
 | FR-02-4 | 支援 `--remove <expert.json>` 參數：從已安裝清單移除此 Expert，依剩餘 Expert 重建 symlink 和 CLAUDE.md；**全清再重建策略**：先清除 .claude/ 下所有 symlinks，再依剩餘 Expert（按 install_order）逐一重建，確保 symlink 集合與已安裝清單完全同步 | Must | 全清再重建與 --add 策略一致，邏輯簡單可靠，無需維護 reference count |
 | FR-02-5 | 支援 `--uninstall` 參數：清除所有 link 和 CLAUDE.md，但保留 `.connsys-jarvis/log/` 和 `.connsys-jarvis/memory/` | Must | 完全清除安裝，保留記憶 |
 | FR-02-6 | 支援 `--list` 參數：即時掃描 connsys-jarvis 目錄，列出**所有** Expert（已安裝 + 可用）及 symlink 狀態；每個 Expert 標注 status（installed/available）、install_order、is_identity | Must | 讓同仁了解目前安裝狀態，並一覽可用但尚未安裝的 Expert |
-| FR-02-7 | 支援 `--doctor` 參數：診斷所有 symlink 是否 dangling、列出已安裝 Expert、檢查 Python/uv/uvx 環境 | Must | 快速排查安裝問題 |
+| FR-02-7 | 支援 `--doctor` 參數：診斷所有 symlink 是否 dangling、列出已安裝 Expert、檢查 Python/uv/uvx 環境；所有異常只顯示修正建議，不自動執行修復 | Must | 快速排查安裝問題 |
 | FR-02-8 | setup.py 讀取 `expert.json` 兩類來源：**① `dependencies`**（引用其他 Expert 的 symlinks）和 **② `internal`**（本 Expert 自有的 skills/hooks/commands）。`dependencies` 陣列每個元素可針對四個 key（skills/hooks/agents/commands）各自指定選擇規則：**`"all"`** → 繼承該 Expert 的全部；**`["name1","name2"]`** → 只繼承指定清單；**省略 key** → 不繼承（空集合）。`internal` 下的四個 key 永遠全部建立 | Must | 精確控制每個依賴 expert 貢獻的 link；internal 與 dependencies 分開，避免不必要的 skill 被載入 |
 | FR-02-9 | expert.json 支援 `exclude_symlink.patterns`（全域 regex 清單），在所有 link 建立完成後（Step 1+2），於 Step 3 移除名稱符合任一 pattern 的 link | Must | 全域過濾可跨所有 dependency 統一移除不需要的 link，正則表達式提供更彈性的匹配 |
 | FR-02-10 | setup.py 執行後將環境變數寫入 `workspace/.connsys-jarvis/.env`；同仁需手動執行 `source .connsys-jarvis/.env` | Must | 環境變數需存入 shell，Python 程式本身無法修改 parent shell 環境 |
@@ -670,6 +670,12 @@ workspace/                                       ← $CONNSYS_JARVIS_WORKSPACE_R
 | FR-02-18 | 支援 `--query <expert-name>` 參數：即時掃描並讀取指定 Expert 的 expert.json，顯示 metadata（name、domain、description、version、status、dependencies、internal）；支援部分名稱匹配 | Must | 讓工程師和 skill 可快速查詢指定 Expert 的能力與狀態 |
 | FR-02-19 | `--list` 和 `--query` 支援 `--format json` 旗標：以 JSON 格式輸出結果，供 framework-expert-discovery-knowhow skill 或 LLM 呼叫；預設輸出 table 格式（人類可讀）| Must | LLM 可直接解析 JSON 取得結構化 Expert 清單，無需解析文字輸出 |
 | FR-02-20 | `--add <expert.json>` 對已安裝的 Expert 執行**重新安裝**：先從已安裝清單移除，再依正常 --add 流程重建 symlinks 和 CLAUDE.md（冪等性：重複 --add 結果一致）| Must | 同仁更新 expert.json 後可直接重新 --add 而無需先 --remove；確保安裝狀態正確 |
+| FR-02-21 | `--doctor` 顯示系統資訊：OS 版本、Python 版本、connsys-jarvis 版本（`SETUP_VERSION`） | Should | 診斷時快速確認執行環境 |
+| FR-02-22 | `--doctor` 驗證 6 個 `CONNSYS_JARVIS_*` 環境變數存在性；對路徑類變數（PATH/WORKSPACE/CODESPACE/MEMORY）驗證目錄實際存在 | Should | 環境配置問題是最常見的安裝失敗原因 |
+| FR-02-23 | `--doctor` 驗證 symlink 完整性（Linux/macOS）：expected（依 declared_symlinks 計算）vs actual（`.claude/` 現況），回報 missing / orphan / dangling；同時驗證已建 skill link 指向的 folder 含 SKILL.md | Should | 安裝後 repo 路徑改變或手動刪除會造成不一致 |
+| FR-02-24 | `--doctor` 驗證 CLAUDE.md 的 @include 行是否符合已安裝 Expert 的預期內容；同時驗證每個 @include 目標檔案存在 | Should | CLAUDE.md 手動修改或損壞時快速發現 |
+| FR-02-25 | `--doctor` 掃描 connsys-jarvis repo 所有 expert folder（F1~F4）：F1 必要檔案、F2 expert.json 必要欄位（name/domain/owner/internal.skills）、F3 skill SKILL.md、F4 orphan skill | Should | 確保 Expert repo 結構符合規範，方便 code review |
+| FR-02-26 | `--doctor` 所有異常均顯示具體的修正建議指令；不自動執行修復動作 | Must | 保護使用者不受意外自動修改影響 |
 
 ### FR-03：環境變數
 

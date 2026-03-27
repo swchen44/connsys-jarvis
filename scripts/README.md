@@ -59,7 +59,7 @@ python ./connsys-jarvis/scripts/setup.py --doctor
 | `--list --format json` | 同上，JSON 格式輸出（供 LLM / skill 使用） |
 | `--query <expert-name>` | 查詢指定 Expert 的完整 metadata（支援部分名稱匹配） |
 | `--query <expert-name> --format json` | 同上，JSON 格式輸出 |
-| `--doctor` | 健康診斷 |
+| `--doctor` | 健康診斷（系統資訊 / 環境變數 / symlink / CLAUDE.md / Expert 結構完整性） |
 | `--debug <任何指令>` | 開啟 debug 日誌 |
 
 ---
@@ -294,6 +294,8 @@ main()
 | `cmd_init()` | ~545 | --init 實作 |
 | `cmd_add()` | ~610 | --add 實作 |
 | `cmd_remove()` | ~670 | --remove 實作（含 ref counting） |
+| `parse_env_file()` | ~860 | 解析 .env，回傳 {key:value}（供 cmd_doctor 使用）|
+| `collect_skill_references()` | ~885 | 收集所有 expert.json 的 skill 引用（orphan 檢查）|
 | `cmd_doctor()` | ~790 | --doctor 診斷 |
 
 ---
@@ -593,6 +595,50 @@ uvx pytest scripts/test/test_setup.py -v --last-failed
 
 # 查看詳細 log（測試使用 tmp_path，不影響真實 workspace）
 uvx pytest scripts/test/test_setup.py -v --tb=long
+```
+
+### Q: `--doctor` 顯示 env var `路徑不存在`
+
+```bash
+# 確認 .env 內容與實際路徑
+cat .connsys-jarvis/.env
+
+# 最常見原因：connsys-jarvis 路徑改變（重新 clone 或移動）
+# 重新執行 --init 以重建 .env
+python ./connsys-jarvis/scripts/setup.py \
+    --init <your-expert.json>
+```
+
+### Q: `--doctor` 顯示 CLAUDE.md `缺少 @include`
+
+```bash
+# CLAUDE.md 被手動編輯或安裝後損壞
+# 重新執行 --init 或 --add 重新生成 CLAUDE.md
+python ./connsys-jarvis/scripts/setup.py \
+    --init <your-expert.json>
+```
+
+### Q: `--doctor` 顯示 expert.json `缺少欄位：owner`
+
+```bash
+# expert.json 格式要求：必須有 name, domain, owner, internal.skills
+# 編輯 expert.json 補充缺少的欄位：
+{
+  "name":   "your-expert",
+  "domain": "your-domain",
+  "owner":  "your-team",
+  ...
+  "internal": { "skills": [], "hooks": [] }
+}
+```
+
+### Q: `--doctor` 顯示 `orphan skill`
+
+```bash
+# skill folder 存在但沒有被任何 expert.json 引用
+# 選項 1：加入某個 expert.json 的 internal.skills：
+#   "internal": { "skills": ["orphan-skill-name"], ... }
+# 選項 2：刪除此 skill folder（確認不需要後）
 ```
 
 ---
