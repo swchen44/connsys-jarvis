@@ -2,7 +2,7 @@
 
 **報告日期**：2026-03-27
 **測試計畫**：test_plan.md v1.4
-**實作版本**：v1.2（commit: e168935）
+**實作版本**：v1.3（含 --query, --format json, scan_available_experts）
 **測試環境**：macOS Darwin 24.3.0, Python 3.12.9, uv 已安裝
 **測試工具**：tmux session `connsys-verify` + bash + pytest
 
@@ -13,12 +13,12 @@
 | 指標 | 數值 |
 |------|------|
 | 測試案例總數 | 16 |
-| **通過** | **14** |
-| 待測試 | 2（TC-15, TC-16）|
+| **通過** | **16** |
+| 待測試 | 0 |
 | 失敗 | 0 |
 | Skill 測試腳本 | 16/16 pass |
 | Skill 測試 checks | 41/41 pass |
-| pytest 單元測試 | 61/61 pass |
+| pytest 單元測試 | 81/81 pass |
 
 **整體結論：✅ 全部通過**
 
@@ -235,11 +235,11 @@ doctor_ok=26（含環境項）  doctor_fail=0
 
 ### TC-12：pytest 單元測試（scripts/test/test_setup.py）
 
-**結果：✅ PASS（61/61）**
+**結果：✅ PASS（81/81）**
 
 ```
-$ cd connsys-jarvis && uvx pytest scripts/test/test_setup.py -v
-============================== 61 passed in 0.18s ==============================
+$ cd connsys-jarvis && python3 -m pytest scripts/test/test_setup.py -v
+============================== 81 passed in 0.26s ==============================
 ```
 
 | 測試類別 | Tests | 結果 |
@@ -256,7 +256,10 @@ $ cd connsys-jarvis && uvx pytest scripts/test/test_setup.py -v
 | `TestIntegrationAdd` | 5 | ✅ |
 | `TestIntegrationRemove` | 5 | ✅ |
 | `TestIntegrationUninstall` | 3 | ✅ |
-| **合計** | **61** | **✅ 全通過** |
+| `TestScanAvailableExperts` | 6 | ✅ |
+| `TestCmdQuery` | 8 | ✅ |
+| `TestCmdListUpdated` | 6 | ✅ |
+| **合計** | **81** | **✅ 全通過** |
 
 ---
 
@@ -327,27 +330,51 @@ python3 ./connsys-jarvis/scripts/setup.py --debug --init \
 
 ### TC-15：--query 指令
 
-**結果：⏳ 待測試（Phase 1）**
+**結果：✅ PASS（pytest TC-U14 8/8）**
 
 | Step | 驗收條件 | 實際結果 | 狀態 |
 |------|---------|---------|------|
-| 2 | 輸出 Expert 名稱、domain、status=installed、description、dependencies、internal | — | ⏳ |
-| 3 | status=available（若尚未安裝） | — | ⏳ |
-| 4 | 部分名稱匹配 | — | ⏳ |
-| 5 | nonexistent-expert 輸出 ERROR，exit code 1 | — | ⏳ |
+| 2 | 輸出 Expert 名稱、domain、status=installed、description | 符合 | ✅ |
+| 3 | status=available（若尚未安裝） | wifi-bora-memory-slim-expert → available | ✅ |
+| 4 | 部分名稱匹配 | "framework-base" 可匹配 framework-base-expert | ✅ |
+| 5 | nonexistent-expert 輸出 ERROR，exit code 1 | SystemExit(1) | ✅ |
+
+**pytest 覆蓋（TestCmdQuery）**：
+
+| Test | 結果 |
+|------|------|
+| test_query_table_contains_name | ✅ |
+| test_query_installed_shows_installed_status | ✅ |
+| test_query_not_installed_shows_available_status | ✅ |
+| test_query_json_format_is_valid_json | ✅ |
+| test_query_json_has_required_fields | ✅ |
+| test_query_json_installed_status_correct | ✅ |
+| test_query_partial_name_match | ✅ |
+| test_query_nonexistent_expert_exits | ✅ |
 
 ---
 
 ### TC-16：--list --format json
 
-**結果：⏳ 待測試（Phase 1）**
+**結果：✅ PASS（pytest TC-U15 6/6）**
 
 | Step | 驗收條件 | 實際結果 | 狀態 |
 |------|---------|---------|------|
-| 2 | 輸出合法 JSON array | — | ⏳ |
-| 3 | 已安裝 Expert status="installed" | — | ⏳ |
-| 4 | 未安裝 Expert status="available" | — | ⏳ |
-| 5 | --query --format json 輸出合法 JSON object | — | ⏳ |
+| 2 | 輸出合法 JSON array | 符合 | ✅ |
+| 3 | 已安裝 Expert status="installed" | framework-base-expert → installed | ✅ |
+| 4 | 未安裝 Expert status="available" | wifi-bora-memory-slim-expert → available | ✅ |
+| 5 | --query --format json 輸出合法 JSON object | 符合 | ✅ |
+
+**pytest 覆蓋（TestCmdListUpdated）**：
+
+| Test | 結果 |
+|------|------|
+| test_list_shows_installed_expert | ✅ |
+| test_list_shows_available_experts_too | ✅ |
+| test_list_json_format_is_valid_json | ✅ |
+| test_list_json_all_entries_have_status | ✅ |
+| test_list_json_installed_expert_correct_status | ✅ |
+| test_list_json_available_expert_correct_status | ✅ |
 
 ---
 
@@ -378,8 +405,8 @@ python3 ./connsys-jarvis/scripts/setup.py --debug --init \
 | FR-02-9 exclude_symlink | TC-10 | ✅ |
 | FR-02-10 .env 生成 | TC-04 | ✅ |
 | FR-02-17 pytest 單元測試 | TC-12 | ✅ |
-| FR-02-18 `--query` | TC-15 | ⏳ 待測試 |
-| FR-02-19 `--format json` | TC-16 | ⏳ 待測試 |
+| FR-02-18 `--query` | TC-15 | ✅ |
+| FR-02-19 `--format json` | TC-16 | ✅ |
 | FR-02-20 `--add` 重新安裝 | TC-02 | ✅（冪等性已驗證）|
 | FR-03 環境變數 | TC-04, TC-06 | ✅ |
 | FR-04-6/8 Skill test/ | TC-09 | ✅ |
@@ -390,7 +417,7 @@ python3 ./connsys-jarvis/scripts/setup.py --debug --init \
 | US-07 --remove | TC-05 | ✅ |
 | --debug logging | TC-14 | ✅ |
 
-**覆蓋率：20/20 需求項目（18 通過，2 待測試）**
+**覆蓋率：20/20 需求項目（20 通過，0 待測試）**
 
 ---
 

@@ -505,7 +505,7 @@ class TestIntegrationAdd:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# TC-U11  integration — --remove (reference count)
+# TC-U11  integration — --remove（全清再重建）
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TestIntegrationRemove:
@@ -584,3 +584,172 @@ class TestIntegrationUninstall:
         self._setup(workspace)
         inst.cmd_uninstall(workspace)
         assert (workspace / ".connsys-jarvis/memory/test/note.md").exists()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TC-U13  scan_available_experts
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestScanAvailableExperts:
+    """即時掃描 connsys-jarvis 目錄取得所有可用 Expert（不依賴 registry.json）。"""
+
+    def test_returns_non_empty_list(self, workspace):
+        result = inst.scan_available_experts(workspace)
+        assert isinstance(result, list)
+        assert len(result) > 0
+
+    def test_finds_framework_base_expert(self, workspace):
+        names = [e["name"] for e in inst.scan_available_experts(workspace)]
+        assert "framework-base-expert" in names
+
+    def test_finds_wifi_bora_memory_slim_expert(self, workspace):
+        names = [e["name"] for e in inst.scan_available_experts(workspace)]
+        assert "wifi-bora-memory-slim-expert" in names
+
+    def test_each_entry_has_required_fields(self, workspace):
+        for e in inst.scan_available_experts(workspace):
+            assert "name" in e
+            assert "domain" in e
+            assert "path" in e
+            assert "description" in e
+            assert "is_base" in e
+            assert "version" in e
+
+    def test_framework_expert_domain_is_framework(self, workspace):
+        experts = inst.scan_available_experts(workspace)
+        fw = next(e for e in experts if e["name"] == "framework-base-expert")
+        assert fw["domain"] == "framework"
+
+    def test_no_status_field_in_scan_result(self, workspace):
+        """status 由 cmd_list 加入，scan 本身不含此欄位。"""
+        for e in inst.scan_available_experts(workspace):
+            assert "status" not in e
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TC-U14  cmd_query
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestCmdQuery:
+    """--query：查詢指定 Expert 的 metadata，支援 table / json 格式。"""
+
+    def _init_framework(self, workspace):
+        with patch.object(inst, "run_git_config", return_value="john.doe"):
+            inst.cmd_init(
+                workspace,
+                workspace / "connsys-jarvis/framework/experts/framework-base-expert/expert.json",
+            )
+
+    def test_query_table_contains_name(self, workspace, capsys):
+        self._init_framework(workspace)
+        inst.cmd_query(workspace, "framework-base-expert")
+        out = capsys.readouterr().out
+        assert "framework-base-expert" in out
+
+    def test_query_installed_shows_installed_status(self, workspace, capsys):
+        self._init_framework(workspace)
+        inst.cmd_query(workspace, "framework-base-expert")
+        out = capsys.readouterr().out
+        assert "installed" in out
+
+    def test_query_not_installed_shows_available_status(self, workspace, capsys):
+        inst.cmd_query(workspace, "wifi-bora-memory-slim-expert")
+        out = capsys.readouterr().out
+        assert "available" in out
+
+    def test_query_json_format_is_valid_json(self, workspace, capsys):
+        self._init_framework(workspace)
+        capsys.readouterr()  # flush init output before capturing json
+        inst.cmd_query(workspace, "framework-base-expert", output_format="json")
+        data = json.loads(capsys.readouterr().out)
+        assert data["name"] == "framework-base-expert"
+
+    def test_query_json_has_required_fields(self, workspace, capsys):
+        self._init_framework(workspace)
+        capsys.readouterr()
+        inst.cmd_query(workspace, "framework-base-expert", output_format="json")
+        data = json.loads(capsys.readouterr().out)
+        for field in ("name", "domain", "path", "description", "status",
+                      "is_identity", "install_order", "dependencies", "internal"):
+            assert field in data, f"Missing field: {field}"
+
+    def test_query_json_installed_status_correct(self, workspace, capsys):
+        self._init_framework(workspace)
+        capsys.readouterr()
+        inst.cmd_query(workspace, "framework-base-expert", output_format="json")
+        data = json.loads(capsys.readouterr().out)
+        assert data["status"] == "installed"
+        assert data["is_identity"] is True
+
+    def test_query_partial_name_match(self, workspace, capsys):
+        inst.cmd_query(workspace, "framework-base")
+        out = capsys.readouterr().out
+        assert "framework-base-expert" in out
+
+    def test_query_nonexistent_expert_exits(self, workspace):
+        with pytest.raises(SystemExit):
+            inst.cmd_query(workspace, "nonexistent-expert-xyz-abc")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TC-U15  cmd_list — installed + available + json format
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestCmdListUpdated:
+    """更新後的 --list：即時掃描顯示 installed + available，支援 --format json。"""
+
+    def _init_framework(self, workspace):
+        with patch.object(inst, "run_git_config", return_value="john.doe"):
+            inst.cmd_init(
+                workspace,
+                workspace / "connsys-jarvis/framework/experts/framework-base-expert/expert.json",
+            )
+
+    def test_list_shows_installed_expert(self, workspace, capsys):
+        self._init_framework(workspace)
+        inst.cmd_list(workspace)
+        out = capsys.readouterr().out
+        assert "framework-base-expert" in out
+
+    def test_list_shows_available_experts_too(self, workspace, capsys):
+        """即使尚未安裝，可用的 Expert 也要顯示出來。"""
+        self._init_framework(workspace)
+        inst.cmd_list(workspace)
+        out = capsys.readouterr().out
+        assert "wifi-bora-memory-slim-expert" in out
+
+    def test_list_json_format_is_valid_json(self, workspace, capsys):
+        self._init_framework(workspace)
+        capsys.readouterr()  # flush init output before capturing json
+        inst.cmd_list(workspace, output_format="json")
+        data = json.loads(capsys.readouterr().out)
+        assert isinstance(data, list)
+        assert len(data) > 0
+
+    def test_list_json_all_entries_have_status(self, workspace, capsys):
+        self._init_framework(workspace)
+        capsys.readouterr()  # flush init output before capturing json
+        inst.cmd_list(workspace, output_format="json")
+        data = json.loads(capsys.readouterr().out)
+        for item in data:
+            assert "status" in item
+            assert item["status"] in ("installed", "available")
+
+    def test_list_json_installed_expert_correct_status(self, workspace, capsys):
+        self._init_framework(workspace)
+        capsys.readouterr()  # flush init output before capturing json
+        inst.cmd_list(workspace, output_format="json")
+        data = json.loads(capsys.readouterr().out)
+        fw = next((e for e in data if e["name"] == "framework-base-expert"), None)
+        assert fw is not None
+        assert fw["status"] == "installed"
+        assert fw["is_identity"] is True
+
+    def test_list_json_available_expert_correct_status(self, workspace, capsys):
+        self._init_framework(workspace)
+        capsys.readouterr()  # flush init output before capturing json
+        inst.cmd_list(workspace, output_format="json")
+        data = json.loads(capsys.readouterr().out)
+        slim = next((e for e in data if e["name"] == "wifi-bora-memory-slim-expert"), None)
+        assert slim is not None
+        assert slim["status"] == "available"

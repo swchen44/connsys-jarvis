@@ -51,11 +51,14 @@ python ./connsys-jarvis/scripts/setup.py --doctor
 | 指令 | 說明 |
 |------|------|
 | `--init <expert.json>` | 全新安裝（清除既有，重建） |
-| `--add <expert.json>` | 疊加安裝（預設：CLAUDE.md 只含最後 Expert） |
+| `--add <expert.json>` | 疊加安裝（預設：CLAUDE.md 只含最後 Expert）；重複 --add = 重新安裝 |
 | `--add <expert.json> --with-all-experts` | 疊加安裝（CLAUDE.md 包含所有 Expert 的 expert.md） |
-| `--remove <name or path>` | 移除指定 Expert |
+| `--remove <name or path>` | 移除指定 Expert（全清再重建剩餘 Expert symlinks） |
 | `--uninstall` | 完全卸載（保留 memory/） |
-| `--list` | 列出安裝狀態 |
+| `--list` | 列出所有 Expert（已安裝 + 可用），即時掃描，不依賴 registry.json |
+| `--list --format json` | 同上，JSON 格式輸出（供 LLM / skill 使用） |
+| `--query <expert-name>` | 查詢指定 Expert 的完整 metadata（支援部分名稱匹配） |
+| `--query <expert-name> --format json` | 同上，JSON 格式輸出 |
 | `--doctor` | 健康診斷 |
 | `--debug <任何指令>` | 開啟 debug 日誌 |
 
@@ -87,7 +90,7 @@ workspace/                          ← cwd（使用者執行指令的地方）
 │   │   ├── expert.json            ← Expert 宣告（被 setup.py 讀取）
 │   │   ├── skills/                ← skill 子目錄
 │   │   └── hooks/                 ← hook 腳本（.sh / .py）
-│   └── registry.json              ← 所有 Expert 目錄
+│   └── (no registry.json)         ← Expert 清單由 setup.py 即時掃描產生
 │
 ├── .claude/                        ← Claude Code 讀取的設定目錄
 │   ├── skills/
@@ -111,7 +114,8 @@ workspace/                          ← cwd（使用者執行指令的地方）
 |------|------|
 | **Pure stdlib** | 無第三方依賴，`python3 script.py` 即可執行 |
 | **cwd = workspace** | workspace 定義為執行指令時的 cwd，不跟隨 symlink |
-| **冪等性** | 重複執行相同指令結果相同，`[=]` 代表跳過已存在的 symlink |
+| **冪等性** | 重複執行相同指令結果相同，`[=]` 代表跳過已存在的 symlink；`--add` 重複 = 重新安裝 |
+| **不依賴 registry.json** | Expert 探索（`--list`/`--query`）每次即時掃描 `*/experts/*/expert.json` |
 | **保護記憶** | `--uninstall` 不刪 memory/，避免使用者知識損失 |
 | **分離設定** | setup.py 不修改 settings.json（由 setup-claude.sh 負責）|
 
