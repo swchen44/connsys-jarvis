@@ -60,11 +60,22 @@ python connsys-jarvis/setup.py --query framework-base-expert
 python connsys-jarvis/setup.py --query framework-base-expert --format json
 ```
 
-### 健康檢查
+### 健康診斷（--doctor）
 
 ```bash
 python connsys-jarvis/setup.py --doctor
 ```
+
+`--doctor` 執行 6 個診斷區段，只回報問題與修正建議，不自動修復：
+
+| 區段 | 說明 |
+|------|------|
+| A. 系統資訊 | OS 版本、Python 版本、connsys-jarvis 版本 |
+| B. 環境變數 | 6 個 `CONNSYS_JARVIS_*` 變數存在性與路徑合法性 |
+| C. Symlink 完整性 | missing / orphan / dangling；已建 skill link 的 SKILL.md |
+| D. CLAUDE.md | @include 與已安裝 Expert 比對、target 檔案存在性 |
+| E. 環境工具 | uv / uvx 是否安裝 |
+| F. Expert 結構 | 掃描 repo 中所有 expert folder：必要檔案、必要欄位、skill SKILL.md、orphan skill |
 
 ### 卸載
 
@@ -87,6 +98,17 @@ python connsys-jarvis/setup.py --uninstall
 | `hooks/` | 生命週期 hook 腳本 |
 | `commands/` | 自定義指令 |
 | `agents/` | 子 agent 定義 |
+
+### expert.json 必要欄位
+
+| 欄位 | 說明 |
+|------|------|
+| `name` | Expert 的唯一識別名稱（kebab-case） |
+| `domain` | 所屬 domain（例如 `framework`、`wifi-bora`）|
+| `owner` | 負責維護的團隊（例如 `wifi-team`）|
+| `internal.skills` | 此 Expert 自身提供的 skill 清單（可為空 `[]`）|
+
+`--doctor` 的 F2 區段會驗證以上欄位是否齊全。
 
 ## 場景支援
 
