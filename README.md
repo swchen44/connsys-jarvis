@@ -114,3 +114,55 @@ python connsys-jarvis/setup.py --uninstall
 
 - **Agent First**：workspace 根目錄有 `codespace/` 子目錄，AI 在獨立環境操作
 - **Legacy**：workspace 根目錄有 `.repo` 目錄，傳統 Android repo 結構
+
+## 執行測試
+
+### 快速自我驗證（一步完成）
+
+```bash
+# 從 workspace 根目錄執行（connsys-jarvis 需已存在或 symlink）
+bash connsys-jarvis/scripts/test/run_integration_tests.sh
+```
+
+輸出範例：
+```
+✅ TC-01-1 success message
+✅ exists: /tmp/connsys-jarvis-test/codespace
+...
+🎉 All tests passed!
+```
+
+若某步驟失敗，腳本以 exit code 1 結束，並在失敗行顯示 `❌`。
+
+### 用 tmux 在背景執行
+
+```bash
+SESSION="connsys-jarvis"
+
+# 建立 tmux session
+tmux new-session -d -s "$SESSION" -x 200 -y 60
+
+# 送入測試指令，完成後發出 signal
+tmux send-keys -t "$SESSION" \
+  "bash connsys-jarvis/scripts/test/run_integration_tests.sh; tmux wait-for -S ${SESSION}-done" Enter
+
+# 主行程阻塞等待（無 sleep loop）
+tmux wait-for "${SESSION}-done"
+```
+
+### pytest 單元測試（獨立執行）
+
+```bash
+cd connsys-jarvis
+python3 -m pytest scripts/test/test_setup.py -v
+# 預期：104 passed
+```
+
+### 測試覆蓋範圍
+
+| 測試 | 涵蓋 TC | 方式 |
+|------|---------|------|
+| `run_integration_tests.sh` | TC-01~08, TC-11, TC-13~16 | bash 整合測試 |
+| `scripts/test/test_setup.py` | TC-12, TC-17（A~F）| pytest 單元測試 |
+
+詳細測試計畫見 `doc/test_plan.md`，測試結果見 `doc/test_report.md`。

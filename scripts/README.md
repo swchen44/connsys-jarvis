@@ -526,41 +526,55 @@ uv run --with pytest pytest scripts/test/test_setup.py -v
 | `TestDoctorClaudeMd` | `cmd_doctor()` D 區段 | @include 對比 |
 | `TestDoctorExpertStructure` | `cmd_doctor()` F 區段 + `collect_skill_references()` | F1~F4 結構驗證 |
 
-### 7.2 手動整合測試（tmux）
+### 7.2 整合測試腳本
 
-參考 `test_plan.md` TC-01 ~ TC-12 的步驟，以下是快速驗證腳本：
+整合測試腳本位於 `scripts/test/run_integration_tests.sh`，涵蓋 TC-01~TC-08、TC-11、TC-13~TC-16 共 68 個 checks。
+
+#### 直接執行（一行）
 
 ```bash
-# 建立乾淨 workspace
-rm -rf /tmp/cj-test && mkdir /tmp/cj-test
-ln -s /path/to/connsys-jarvis /tmp/cj-test/connsys-jarvis
-cd /tmp/cj-test
+# 從 workspace 根目錄執行
+bash connsys-jarvis/scripts/test/run_integration_tests.sh
+```
 
-# TC-01: --init
-python ./connsys-jarvis/scripts/setup.py \
-    --init framework/framework-base-expert/expert.json
-ls .claude/skills/ | wc -l   # 預期: 3
-ls .claude/hooks/  | wc -l   # 預期: 5
-ls .claude/commands/ | wc -l  # 預期: 2
+成功輸出結尾：
+```
+  Total : 68
+  ✅ Pass : 68
+  ❌ Fail : 0
+🎉 All tests passed!
+```
 
-# TC-02: --add
-python ./connsys-jarvis/scripts/setup.py \
-    --add wifi-bora/wifi-bora-memory-slim-expert/expert.json
-ls .claude/skills/ | wc -l   # 預期: 13
+#### 用 tmux 執行（背景 + wait-for 同步）
 
-# TC-03: --doctor
-python ./connsys-jarvis/scripts/setup.py --doctor
-# 預期最後一行: 總體狀態：✅ 健康
+```bash
+SESSION="connsys-jarvis"
 
-# TC-05: --remove
-python ./connsys-jarvis/scripts/setup.py \
-    --remove wifi-bora/wifi-bora-memory-slim-expert/expert.json
-ls .claude/skills/ | wc -l   # 預期: 3
+# 建立 session（-d detach 模式，不佔用終端）
+tmux new-session -d -s "$SESSION" -x 200 -y 60
 
-# TC-07: --uninstall
-python ./connsys-jarvis/scripts/setup.py --uninstall
-ls CLAUDE.md 2>/dev/null || echo "GONE"   # 預期: GONE
-ls .claude/skills/ | wc -l                # 預期: 0
+# 送入指令，完成後發出 signal
+tmux send-keys -t "$SESSION" \
+  "bash connsys-jarvis/scripts/test/run_integration_tests.sh 2>&1 | tee /tmp/cj_test.txt; \
+   tmux wait-for -S ${SESSION}-done" Enter
+
+# 阻塞等待完成（精確同步，無 sleep loop）
+tmux wait-for "${SESSION}-done"
+
+# 查看結果
+cat /tmp/cj_test.txt
+```
+
+> **tmux wait-for 說明**：`tmux wait-for -S <signal>` 在 session 內發出 signal，
+> `tmux wait-for <signal>` 在外部阻塞等待。比 sleep 精確，測試一完成即解除阻塞。
+
+#### 一步驗證失敗時
+
+腳本遇到 `❌` 不會立即中止，會繼續跑完所有 TC 並在最後顯示失敗數量，exit code 為 1：
+
+```bash
+bash run_integration_tests.sh
+echo "exit code: $?"   # 0 = 全過，1 = 有失敗
 ```
 
 ### 7.3 Debug 模式驗證

@@ -846,6 +846,10 @@ def write_env_file(workspace: Path, active_expert_name: str) -> None:
     """
     dot_dir = get_dot_dir(workspace)
     dot_dir.mkdir(parents=True, exist_ok=True)
+    # 建立 memory/ 和 codespace/ 確保環境變數路徑存在（--doctor B 區段驗證）
+    (dot_dir / "memory").mkdir(exist_ok=True)
+    if detect_scenario(workspace) == "agent-first":
+        (workspace / "codespace").mkdir(exist_ok=True)
     env_path = dot_dir / ENV_FILE
 
     jarvis_path    = get_jarvis_dir(workspace)
