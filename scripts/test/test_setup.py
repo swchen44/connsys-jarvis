@@ -831,7 +831,7 @@ class TestDoctorEnvVars:
         capsys.readouterr()
         inst.cmd_doctor(workspace)
         out = capsys.readouterr().out
-        assert ".env 不存在" in out
+        assert ".env not found" in out
 
     def test_missing_env_file_shows_fix_hint(self, workspace, capsys):
         inst.cmd_init(workspace, self._fw_json(workspace))
@@ -852,7 +852,7 @@ class TestDoctorEnvVars:
         capsys.readouterr()
         inst.cmd_doctor(workspace)
         out = capsys.readouterr().out
-        assert "路徑不存在" in out
+        assert "path does not exist" in out
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -870,9 +870,9 @@ class TestDoctorSymlinkIntegrity:
         capsys.readouterr()
         inst.cmd_doctor(workspace)
         out = capsys.readouterr().out
-        # Symlink 區段中不應有 ❌ [缺少] 或 ⚠️ [多餘]
-        assert "缺少]" not in out
-        assert "多餘]" not in out
+        # Symlink 區段中不應有 ❌ [missing] 或 ⚠️ [orphan]
+        assert "missing]" not in out
+        assert "orphan]" not in out
 
     def test_missing_symlink_shows_error(self, workspace, capsys):
         inst.cmd_init(workspace, self._fw_json(workspace))
@@ -883,7 +883,7 @@ class TestDoctorSymlinkIntegrity:
         capsys.readouterr()
         inst.cmd_doctor(workspace)
         out = capsys.readouterr().out
-        assert "缺少]" in out
+        assert "missing]" in out
 
     def test_orphan_symlink_shows_warning(self, workspace, capsys):
         inst.cmd_init(workspace, self._fw_json(workspace))
@@ -893,7 +893,7 @@ class TestDoctorSymlinkIntegrity:
         capsys.readouterr()
         inst.cmd_doctor(workspace)
         out = capsys.readouterr().out
-        assert "多餘]" in out
+        assert "orphan]" in out
 
     def test_installed_skill_link_without_skill_md_shows_warning(self, workspace, capsys):
         """已建 skill link 指向的 folder 缺少 SKILL.md → ⚠️"""
@@ -906,7 +906,7 @@ class TestDoctorSymlinkIntegrity:
         inst.cmd_doctor(root)
         out = capsys.readouterr().out
         assert "SKILL.md" in out
-        assert "不存在" in out
+        assert "missing" in out
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -924,7 +924,7 @@ class TestDoctorClaudeMd:
         capsys.readouterr()
         inst.cmd_doctor(workspace)
         out = capsys.readouterr().out
-        assert "內容符合預期" in out
+        assert "Content matches expected" in out
 
     def test_include_targets_all_exist_shows_checkmarks(self, workspace, capsys):
         """正常安裝後，@include 目標存在性區段中每個 @include 都應顯示 ✅"""
@@ -932,9 +932,9 @@ class TestDoctorClaudeMd:
         capsys.readouterr()
         inst.cmd_doctor(workspace)
         out = capsys.readouterr().out
-        assert "@include 目標存在性" in out
-        # 不應有任何 ❌（檔案不存在）
-        assert "檔案不存在" not in out
+        assert "@include target existence" in out
+        # 不應有任何 ❌（file not found）
+        assert "file not found" not in out
 
     def test_include_target_missing_shows_error(self, workspace, capsys):
         """CLAUDE.md 中的 @include 指向不存在的檔案 → ❌"""
@@ -948,7 +948,7 @@ class TestDoctorClaudeMd:
         inst.cmd_doctor(workspace)
         out = capsys.readouterr().out
         assert "ghost.md" in out
-        assert "檔案不存在" in out
+        assert "file not found" in out
 
     def test_missing_claude_md_shows_error(self, workspace, capsys):
         inst.cmd_init(workspace, self._fw_json(workspace))
@@ -956,7 +956,7 @@ class TestDoctorClaudeMd:
         capsys.readouterr()
         inst.cmd_doctor(workspace)
         out = capsys.readouterr().out
-        assert "CLAUDE.md 不存在" in out
+        assert "CLAUDE.md not found" in out
 
     def test_missing_include_shows_error(self, workspace, capsys):
         inst.cmd_init(workspace, self._fw_json(workspace))
@@ -968,7 +968,7 @@ class TestDoctorClaudeMd:
         capsys.readouterr()
         inst.cmd_doctor(workspace)
         out = capsys.readouterr().out
-        assert "缺少 @include" in out
+        assert "missing @include" in out
 
     def test_extra_include_shows_warning(self, workspace, capsys):
         inst.cmd_init(workspace, self._fw_json(workspace))
@@ -980,7 +980,7 @@ class TestDoctorClaudeMd:
         capsys.readouterr()
         inst.cmd_doctor(workspace)
         out = capsys.readouterr().out
-        assert "多餘 @include" in out
+        assert "extra @include" in out
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1006,7 +1006,7 @@ class TestDoctorExpertStructure:
         (root / "connsys-jarvis/framework/mini-expert/soul.md").unlink()
         out  = self._run_doctor(root, capsys)
         assert "soul.md" in out
-        assert "缺少" in out
+        assert "missing" in out
 
     def test_missing_owner_field_shows_error(self, tmp_path, capsys):
         root     = _build_mini_jarvis(tmp_path)
@@ -1040,4 +1040,4 @@ class TestDoctorExpertStructure:
         (orphan / "SKILL.md").write_text("# orphan\n")
         out = self._run_doctor(root, capsys)
         assert "orphan-skill" in out
-        assert "未被任何 expert.json 引用" in out
+        assert "not referenced by any expert.json" in out

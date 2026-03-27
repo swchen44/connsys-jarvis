@@ -817,7 +817,7 @@ def write_claude_md(workspace: Path, installed: dict) -> None:
     logger.debug("write_claude_md: writing %d chars to %s", len(content), claude_md_path)
     with open(claude_md_path, "w") as f:
         f.write(content)
-    print(f"  CLAUDE.md 已更新: {claude_md_path}")
+    print(f"  CLAUDE.md updated: {claude_md_path}")
 
 
 # ─── .env Generation ──────────────────────────────────────────────────────────
@@ -872,8 +872,8 @@ def write_env_file(workspace: Path, active_expert_name: str) -> None:
     ]
     with open(env_path, "w") as f:
         f.write("\n".join(lines))
-    print(f"  .env 已寫入: {env_path}")
-    print(f"  請執行: source {env_path}")
+    print(f"  .env written to: {env_path}")
+    print(f"  Run: source {env_path}")
 
 
 # ─── .installed-experts.json Schema ──────────────────────────────────────────
@@ -974,12 +974,12 @@ def cmd_init(workspace: Path, expert_json_rel: str) -> None:
     expert_data = load_expert_json(expert_json_path)
 
     # 步驟 1：清除舊 symlinks（避免舊 link 殘留影響新安裝）
-    print("\n[1] 清除既有 symlinks...")
+    print("\n[1] Clearing existing symlinks...")
     logger.info("cmd_init: Step 1 - clearing existing symlinks")
     clear_claude_symlinks(workspace)
 
     # 步驟 2：清空安裝狀態（--init 是全新開始）
-    print("[2] 清除 .installed-experts.json...")
+    print("[2] Clearing .installed-experts.json...")
     logger.info("cmd_init: Step 2 - resetting installed-experts.json")
     installed = {
         "schema_version": SCHEMA_VERSION,
@@ -988,7 +988,7 @@ def cmd_init(workspace: Path, expert_json_rel: str) -> None:
     }
 
     # 步驟 3：建立 symlinks
-    print("[3] 建立 symlinks...")
+    print("[3] Creating symlinks...")
     logger.info("cmd_init: Step 3 - building symlinks for %s", expert_data["name"])
     symlinks = build_symlinks_for_expert(workspace, expert_json_path, expert_data)
     results  = apply_symlinks(symlinks)
@@ -1000,7 +1000,7 @@ def cmd_init(workspace: Path, expert_json_rel: str) -> None:
         print(f"  [{icon}] {kind}/{name} → {status}")
 
     # 步驟 4：記錄安裝狀態
-    print("[4] 更新 .installed-experts.json...")
+    print("[4] Updating .installed-experts.json...")
     logger.info("cmd_init: Step 4 - saving installed-experts.json")
     entry = make_expert_entry(
         workspace, expert_json_path, expert_data,
@@ -1012,17 +1012,17 @@ def cmd_init(workspace: Path, expert_json_rel: str) -> None:
     save_installed_experts(workspace, installed)
 
     # 步驟 5：生成 CLAUDE.md
-    print("[5] 生成 CLAUDE.md...")
+    print("[5] Generating CLAUDE.md...")
     logger.info("cmd_init: Step 5 - generating CLAUDE.md")
     write_claude_md(workspace, installed)
 
     # 步驟 6：寫入環境變數
-    print("[6] 寫入 .env...")
+    print("[6] Writing .env...")
     logger.info("cmd_init: Step 6 - writing .env")
     write_env_file(workspace, expert_data["name"])
 
     logger.info("cmd_init: completed successfully for %s", expert_data["name"])
-    print(f"\n完成！Expert '{expert_data['name']}' 已安裝。")
+    print(f"\nDone! Expert '{expert_data['name']}' installed.")
 
 
 def cmd_add(workspace: Path, expert_json_rel: str, include_all: bool = False) -> None:
@@ -1050,7 +1050,7 @@ def cmd_add(workspace: Path, expert_json_rel: str, include_all: bool = False) ->
     print(f"\n=== Connsys Jarvis Add ===")
     print(f"Expert: {expert_json_rel}")
     if include_all:
-        print("模式: --with-all-experts（CLAUDE.md 將包含所有 Expert 的 expert.md）")
+        print("Mode: --with-all-experts (CLAUDE.md will include expert.md for all Experts)")
     logger.info("cmd_add: workspace=%s, expert=%s, include_all=%s",
                 workspace, expert_json_rel, include_all)
 
@@ -1069,7 +1069,7 @@ def cmd_add(workspace: Path, expert_json_rel: str, include_all: bool = False) ->
     existing_names = [e["name"] for e in installed["experts"]]
     if expert_data["name"] in existing_names:
         logger.info("cmd_add: expert %s already installed, updating", expert_data["name"])
-        print(f"Expert '{expert_data['name']}' 已安裝，更新...")
+        print(f"Expert '{expert_data['name']}' already installed, updating...")
         installed["experts"] = [e for e in installed["experts"]
                                  if e["name"] != expert_data["name"]]
 
@@ -1121,7 +1121,7 @@ def cmd_add(workspace: Path, expert_json_rel: str, include_all: bool = False) ->
 
     logger.info("cmd_add: completed successfully for %s (include_all=%s)",
                 expert_data["name"], include_all)
-    print(f"\n完成！Expert '{expert_data['name']}' 已加入。")
+    print(f"\nDone! Expert '{expert_data['name']}' added.")
 
 
 def cmd_remove(workspace: Path, expert_arg: str) -> None:
@@ -1167,7 +1167,7 @@ def cmd_remove(workspace: Path, expert_arg: str) -> None:
     )
     if not target:
         logger.error("cmd_remove: expert '%s' not found in installed list", expert_arg)
-        print(f"ERROR: Expert '{expert_arg}' 未安裝", file=sys.stderr)
+        print(f"ERROR: Expert '{expert_arg}' not installed", file=sys.stderr)
         sys.exit(1)
 
     target_name = target["name"]
@@ -1180,7 +1180,7 @@ def cmd_remove(workspace: Path, expert_arg: str) -> None:
     logger.info("cmd_remove: clearing all symlinks and rebuilding from %d remaining experts",
                 len(remaining))
     clear_claude_symlinks(workspace)
-    print(f"  [-] 已清除所有 symlinks")
+    print(f"  [-] All symlinks cleared")
 
     for e in remaining:
         ep = get_jarvis_dir(workspace) / e["path"]
@@ -1206,7 +1206,7 @@ def cmd_remove(workspace: Path, expert_arg: str) -> None:
     write_env_file(workspace, new_active)
 
     logger.info("cmd_remove: completed for %s", target_name)
-    print(f"\n完成！Expert '{target_name}' 已移除。")
+    print(f"\nDone! Expert '{target_name}' removed.")
 
 
 def cmd_uninstall(workspace: Path) -> None:
@@ -1224,19 +1224,19 @@ def cmd_uninstall(workspace: Path) -> None:
     logger.info("cmd_uninstall: workspace=%s", workspace)
 
     # 步驟 1：清除所有 symlinks
-    print("[1] 清除所有 symlinks...")
+    print("[1] Clearing all symlinks...")
     clear_claude_symlinks(workspace)
 
     # 步驟 2：刪除 CLAUDE.md
-    print("[2] 清除 CLAUDE.md...")
+    print("[2] Removing CLAUDE.md...")
     claude_md = workspace / CLAUDE_MD
     if claude_md.exists():
         claude_md.unlink()
         logger.info("cmd_uninstall: deleted CLAUDE.md")
-        print(f"  已刪除 {claude_md}")
+        print(f"  Deleted {claude_md}")
 
     # 步驟 3：刪除安裝狀態檔和 .env（但不刪 memory/ 和 log/）
-    print("[3] 清除 .installed-experts.json 和 .env...")
+    print("[3] Removing .installed-experts.json and .env...")
     installed_path = get_installed_experts_path(workspace)
     if installed_path.exists():
         installed_path.unlink()
@@ -1249,7 +1249,7 @@ def cmd_uninstall(workspace: Path) -> None:
         logger.debug("cmd_uninstall: deleted .env")
 
     logger.info("cmd_uninstall: completed, memory/ and log/ preserved")
-    print(f"\n完成！保留 {dot_dir}/log/ 和 {dot_dir}/memory/")
+    print(f"\nDone! Kept {dot_dir}/log/ and {dot_dir}/memory/")
 
 
 def cmd_list(workspace: Path, output_format: str = "table") -> None:
@@ -1292,7 +1292,7 @@ def cmd_list(workspace: Path, output_format: str = "table") -> None:
         return
 
     # ── Table 格式 ──
-    print("\n=== Connsys Jarvis — Expert 清單 ===\n")
+    print("\n=== Connsys Jarvis — Expert List ===\n")
     for r in result:
         status_icon   = "✅" if r["status"] == "installed" else "○ "
         order_mark    = f" [{r['install_order']}]" if r["install_order"] is not None else ""
@@ -1302,10 +1302,10 @@ def cmd_list(workspace: Path, output_format: str = "table") -> None:
             print(f"      {r['description']}")
 
     installed_count = sum(1 for r in result if r["status"] == "installed")
-    print(f"\n已安裝：{installed_count}  可用：{len(result)}")
+    print(f"\nInstalled: {installed_count}  Available: {len(result)}")
 
     # ── Symlink 清單 ──
-    print("\n=== .claude/ 中的 Symlinks ===\n")
+    print("\n=== Symlinks in .claude/ ===\n")
     for kind in ["skills", "agents", "commands", "hooks"]:
         kind_dir = claude_dir / kind
         if not kind_dir.exists():
@@ -1348,11 +1348,11 @@ def cmd_query(workspace: Path, expert_name: str, output_format: str = "table") -
         elif len(matches) > 1:
             names = [m["name"] for m in matches]
             logger.warning("cmd_query: ambiguous name %r, matches: %s", expert_name, names)
-            print(f"多個匹配，請指定完整名稱：{names}", file=sys.stderr)
+            print(f"Multiple matches, please specify a full name: {names}", file=sys.stderr)
             sys.exit(1)
         else:
             logger.error("cmd_query: expert '%s' not found", expert_name)
-            print(f"ERROR: Expert '{expert_name}' 不存在", file=sys.stderr)
+            print(f"ERROR: Expert '{expert_name}' not found", file=sys.stderr)
             sys.exit(1)
 
     # 讀取完整 expert.json
@@ -1384,7 +1384,7 @@ def cmd_query(workspace: Path, expert_name: str, output_format: str = "table") -
     if result["is_identity"]:
         inst_mark = " ← identity"
     elif result["status"] == "installed":
-        inst_mark = f" [已安裝 #{result['install_order']}]"
+        inst_mark = f" [installed #{result['install_order']}]"
     else:
         inst_mark = ""
     print(f"\n=== Expert: {result['name']} ===")
@@ -1504,7 +1504,7 @@ def cmd_doctor(workspace: Path) -> None:
     print("\n=== Connsys Jarvis Doctor ===\n")
 
     # ── A. 系統資訊 ──
-    print("A. 系統資訊：")
+    print("A. System Info:")
     os_info = f"{platform.system()} {platform.release()}"
     print(f"  OS:             {os_info}")
     py_ver = platform.python_version()
@@ -1512,24 +1512,24 @@ def cmd_doctor(workspace: Path) -> None:
     py_icon = "✅" if py_ok else "❌"
     print(f"  Python:         {py_ver} {py_icon}")
     if not py_ok:
-        print("     → 需要 Python 3.8+")
+        print("     → Requires Python 3.8+")
         all_ok = False
     print(f"  connsys-jarvis: v{SETUP_VERSION}")
     logger.debug("cmd_doctor: OS=%s, Python=%s", os_info, py_ver)
 
     # ── 已安裝的 Experts ──
-    print("\n已安裝的 Experts：")
+    print("\nInstalled Experts:")
     if not experts:
-        print("  （未安裝任何 Expert）")
+        print("  (No experts installed)")
     else:
         for e in experts:
             print(f"  [{e['install_order']}] {e['name']} ({e['domain']})")
 
     # ── B. 環境變數（CONNSYS_JARVIS_*）──
-    print("\nB. 環境變數（CONNSYS_JARVIS_*）：")
+    print("\nB. Environment Variables (CONNSYS_JARVIS_*):")
     if not env_path.exists():
-        print(f"  ❌ .env 不存在：{env_path}")
-        print(f"     → 修正：重新執行 --init <expert.json>")
+        print(f"  ❌ .env not found: {env_path}")
+        print(f"     → Fix: re-run --init <expert.json>")
         all_ok = False
         logger.debug("cmd_doctor: .env missing at %s", env_path)
     else:
@@ -1537,13 +1537,13 @@ def cmd_doctor(workspace: Path) -> None:
         for var in REQUIRED_ENV_VARS:
             val = env_vars.get(var)
             if val is None:
-                print(f"  ❌ {var}：未定義")
-                print(f"     → 修正：重新執行 --init <expert.json>")
+                print(f"  ❌ {var}: not defined")
+                print(f"     → Fix: re-run --init <expert.json>")
                 all_ok = False
                 logger.debug("cmd_doctor: missing env var %s", var)
             elif var in PATH_ENV_VARS and not Path(val).exists():
-                print(f"  ❌ {var} = {val}（路徑不存在）")
-                print(f"     → 修正：確認路徑存在，或重新執行 --init <expert.json>")
+                print(f"  ❌ {var} = {val} (path does not exist)")
+                print(f"     → Fix: verify the path exists, or re-run --init <expert.json>")
                 all_ok = False
                 logger.debug("cmd_doctor: env path not found %s=%s", var, val)
             else:
@@ -1551,9 +1551,9 @@ def cmd_doctor(workspace: Path) -> None:
                 logger.debug("cmd_doctor: env OK %s", var)
 
     # ── C. Symlink 完整性（expected vs actual，僅 Linux/macOS）──
-    print("\nC. Symlink 完整性：")
+    print("\nC. Symlink Integrity:")
     if platform.system() == "Windows":
-        print("  ⚠️  Windows 環境：symlink 完整性檢查略過")
+        print("  ⚠️  Windows: symlink integrity check skipped")
     else:
         # expected：從 declared_symlinks 聚合所有已安裝 Expert 宣告的 symlink
         expected_by_kind: dict = {}
@@ -1574,12 +1574,12 @@ def cmd_doctor(workspace: Path) -> None:
             if not expected and not actual:
                 continue
 
-            print(f"  {kind.capitalize()}（預期 {len(expected)}，實際 {len(actual)}）：")
+            print(f"  {kind.capitalize()} (expected {len(expected)}, actual {len(actual)}):")
 
             for name in sorted(expected):
                 if name not in actual:
-                    print(f"    ❌ [缺少] {name}")
-                    print(f"       → 修正：python setup.py --init <expert.json>")
+                    print(f"    ❌ [missing] {name}")
+                    print(f"       → Fix: python setup.py --init <expert.json>")
                     all_ok = False
                     logger.debug("cmd_doctor: missing symlink %s/%s", kind, name)
                 else:
@@ -1590,7 +1590,7 @@ def cmd_doctor(workspace: Path) -> None:
                         logger.debug("cmd_doctor: OK %s/%s", kind, name)
                     else:
                         print(f"    ❌ {name} → {target} DANGLING")
-                        print(f"       → 修正：重新執行 --init 或 --add")
+                        print(f"       → Fix: re-run --init or --add")
                         all_ok = False
                         logger.debug("cmd_doctor: DANGLING %s/%s → %s", kind, name, target)
 
@@ -1598,9 +1598,9 @@ def cmd_doctor(workspace: Path) -> None:
                 if name not in expected:
                     item         = actual[name]
                     target       = Path(os.readlink(item))
-                    dangling_note = "（DANGLING）" if not item.exists() else ""
-                    print(f"    ⚠️  [多餘] {name} → {target}{dangling_note}")
-                    print(f"       → 修正：python setup.py --remove <expert-name> 全清再重建")
+                    dangling_note = " (DANGLING)" if not item.exists() else ""
+                    print(f"    ⚠️  [orphan] {name} → {target}{dangling_note}")
+                    print(f"       → Fix: python setup.py --remove <expert-name> (full clear and rebuild)")
                     all_ok = False
                     logger.debug("cmd_doctor: orphan symlink %s/%s", kind, name)
 
@@ -1611,23 +1611,23 @@ def cmd_doctor(workspace: Path) -> None:
                 item for item in skills_dir.iterdir() if item.is_symlink() and item.exists()
             )
             if skill_links:
-                print(f"  Skills SKILL.md：")
+                print(f"  Skills SKILL.md:")
                 for item in skill_links:
                     skill_md = item / "SKILL.md"
                     if skill_md.exists():
                         print(f"    ✅ {item.name}/SKILL.md")
                         logger.debug("cmd_doctor: SKILL.md OK %s", item.name)
                     else:
-                        print(f"    ⚠️  {item.name}/SKILL.md 不存在")
-                        print(f"       → 修正：在 skill folder 補充 SKILL.md")
+                        print(f"    ⚠️  {item.name}/SKILL.md missing")
+                        print(f"       → Fix: add SKILL.md to the skill folder")
                         all_ok = False
                         logger.debug("cmd_doctor: SKILL.md missing for skill link %s", item.name)
 
     # ── D. CLAUDE.md 內容驗證 ──
-    print("\nD. CLAUDE.md 驗證：")
+    print("\nD. CLAUDE.md Validation:")
     if not claude_md.exists():
-        print(f"  ❌ CLAUDE.md 不存在：{claude_md}")
-        print(f"     → 修正：重新執行 --init <expert.json>")
+        print(f"  ❌ CLAUDE.md not found: {claude_md}")
+        print(f"     → Fix: re-run --init <expert.json>")
         all_ok = False
         logger.debug("cmd_doctor: CLAUDE.md missing")
     else:
@@ -1647,26 +1647,26 @@ def cmd_doctor(workspace: Path) -> None:
         mode = "with-all-experts" if installed.get("include_all_experts") else "identity-only"
 
         if actual_includes == expected_includes:
-            print(f"  ✅ 內容符合預期（{mode}，{len(expected_includes)} 個 @include）")
+            print(f"  ✅ Content matches expected ({mode}, {len(expected_includes)} @include lines)")
             logger.debug("cmd_doctor: CLAUDE.md OK, %d includes", len(expected_includes))
         else:
             missing_inc = expected_includes - actual_includes
             extra_inc   = actual_includes   - expected_includes
             for inc in sorted(missing_inc):
-                print(f"  ❌ [缺少 @include] {inc}")
+                print(f"  ❌ [missing @include] {inc}")
                 all_ok = False
                 logger.debug("cmd_doctor: CLAUDE.md missing include: %s", inc)
             for inc in sorted(extra_inc):
-                print(f"  ⚠️  [多餘 @include] {inc}")
+                print(f"  ⚠️  [extra @include] {inc}")
                 all_ok = False
                 logger.debug("cmd_doctor: CLAUDE.md extra include: %s", inc)
             if missing_inc or extra_inc:
-                print(f"     → 修正：重新執行 --init 或 --add <expert.json>")
+                print(f"     → Fix: re-run --init or --add <expert.json>")
 
         # 驗證 CLAUDE.md 中每個 @include 目標檔案存在
         # 只檢查實際存在於 CLAUDE.md 的 @-行（actual_includes），排除 @CLAUDE.local.md
         if actual_includes:
-            print(f"  @include 目標存在性（{len(actual_includes)} 個）：")
+            print(f"  @include target existence ({len(actual_includes)} entries):")
             for inc in sorted(actual_includes):
                 rel    = inc.lstrip('@')
                 target = workspace / rel
@@ -1674,44 +1674,44 @@ def cmd_doctor(workspace: Path) -> None:
                     print(f"    ✅ {rel}")
                     logger.debug("cmd_doctor: @include target OK: %s", rel)
                 else:
-                    print(f"    ❌ {rel}（檔案不存在）")
-                    print(f"       → 修正：確認 connsys-jarvis repo 路徑正確，或重新執行 --init")
+                    print(f"    ❌ {rel} (file not found)")
+                    print(f"       → Fix: verify connsys-jarvis repo path, or re-run --init")
                     all_ok = False
                     logger.debug("cmd_doctor: @include target missing: %s", rel)
 
     # ── E. 環境工具 ──
-    print("\nE. 環境工具：")
+    print("\nE. Tools:")
     uv_path = shutil.which("uv")
     if uv_path:
-        print(f"  uv:  找到 ({uv_path}) ✅")
+        print(f"  uv:  found ({uv_path}) ✅")
     else:
-        print("  uv:  未找到 ⚠️")
+        print("  uv:  not found ⚠️")
         logger.warning("cmd_doctor: uv not found")
 
     uvx_path = shutil.which("uvx")
     if uvx_path:
-        print(f"  uvx: 找到 ({uvx_path}) ✅")
+        print(f"  uvx: found ({uvx_path}) ✅")
     else:
-        print("  uvx: 未找到 ⚠️")
+        print("  uvx: not found ⚠️")
         logger.warning("cmd_doctor: uvx not found")
 
     # ── F. Expert 結構完整性（掃描 connsys-jarvis repo）──
-    print("\nF. Expert 結構完整性（掃描 connsys-jarvis repo）：")
+    print("\nF. Expert Structure (scanning connsys-jarvis repo):")
 
     expert_dirs = sorted(d for d in jarvis_dir.glob("*/*-expert") if d.is_dir())
 
     if not expert_dirs:
-        print("  （未找到任何 expert folder）")
+        print("  (no expert folders found)")
     else:
         # F1: 必要檔案
         REQUIRED_EXPERT_FILES = ["expert.json", "expert.md", "rules.md", "duties.md", "soul.md"]
-        print(f"  F1 必要檔案（{', '.join(REQUIRED_EXPERT_FILES)}）：")
+        print(f"  F1 Required Files ({', '.join(REQUIRED_EXPERT_FILES)}):")
         for exp_dir in expert_dirs:
             rel = str(exp_dir.relative_to(jarvis_dir))
             missing_files = [f for f in REQUIRED_EXPERT_FILES if not (exp_dir / f).exists()]
             if missing_files:
-                print(f"    ❌ {rel} 缺少：{', '.join(missing_files)}")
-                print(f"       → 修正：補充上列缺少的檔案")
+                print(f"    ❌ {rel} missing: {', '.join(missing_files)}")
+                print(f"       → Fix: add the missing files listed above")
                 all_ok = False
                 logger.debug("cmd_doctor: expert missing files %s: %s", rel, missing_files)
             else:
@@ -1719,7 +1719,7 @@ def cmd_doctor(workspace: Path) -> None:
 
         # F2: expert.json 必要欄位
         REQUIRED_JSON_FIELDS = ["name", "domain", "owner"]
-        print(f"\n  F2 expert.json 欄位（{', '.join(REQUIRED_JSON_FIELDS)}, internal.skills）：")
+        print(f"\n  F2 expert.json Fields ({', '.join(REQUIRED_JSON_FIELDS)}, internal.skills):")
         for exp_dir in expert_dirs:
             rel          = str(exp_dir.relative_to(jarvis_dir))
             expert_json  = exp_dir / "expert.json"
@@ -1728,7 +1728,7 @@ def cmd_doctor(workspace: Path) -> None:
             try:
                 data = json.loads(expert_json.read_text())
             except Exception as e:
-                print(f"    ❌ {rel}/expert.json 無法解析：{e}")
+                print(f"    ❌ {rel}/expert.json parse error: {e}")
                 all_ok = False
                 continue
 
@@ -1742,36 +1742,36 @@ def cmd_doctor(workspace: Path) -> None:
             if missing_fields or not has_int_skills:
                 issues_desc = []
                 if missing_fields:
-                    issues_desc.append(f"缺少欄位：{', '.join(missing_fields)}")
+                    issues_desc.append(f"missing fields: {', '.join(missing_fields)}")
                 if not has_int_skills:
-                    issues_desc.append("internal.skills 不存在或格式錯誤")
+                    issues_desc.append("internal.skills missing or invalid format")
                 print(f"    ❌ {rel}/expert.json — {'; '.join(issues_desc)}")
-                print(f"       → 修正：補充上列缺少的欄位")
+                print(f"       → Fix: add the missing fields listed above")
                 all_ok = False
                 logger.debug("cmd_doctor: expert.json issues %s: %s", rel, issues_desc)
             else:
                 print(f"    ✅ {rel}/expert.json")
 
         # F3: skill SKILL.md 完整性
-        print(f"\n  F3 Skill SKILL.md：")
+        print(f"\n  F3 Skill SKILL.md:")
         skill_dirs_all = sorted(d for d in jarvis_dir.glob("*/*-expert/skills/*") if d.is_dir())
         if not skill_dirs_all:
-            print("    （未找到任何 skill folder）")
+            print("    (no skill folders found)")
         else:
             f3_ok = True
             for skill_dir in skill_dirs_all:
                 rel = str(skill_dir.relative_to(jarvis_dir))
                 if not (skill_dir / "SKILL.md").exists():
-                    print(f"    ⚠️  {rel} 缺少 SKILL.md")
-                    print(f"       → 修正：在此 skill folder 補充 SKILL.md")
+                    print(f"    ⚠️  {rel} missing SKILL.md")
+                    print(f"       → Fix: add SKILL.md to this skill folder")
                     all_ok = False
                     f3_ok  = False
                     logger.debug("cmd_doctor: skill missing SKILL.md: %s", rel)
             if f3_ok:
-                print(f"    ✅ 所有 {len(skill_dirs_all)} 個 skill folder 均有 SKILL.md")
+                print(f"    ✅ All {len(skill_dirs_all)} skill folders have SKILL.md")
 
         # F4: orphan skill（skill folder 未被任何 expert.json 引用）
-        print(f"\n  F4 Orphan Skill（未被任何 expert.json 引用）：")
+        print(f"\n  F4 Orphan Skills (not referenced by any expert.json):")
         named_skills, all_skills_experts = collect_skill_references(jarvis_dir)
         f4_ok = True
         for skill_dir in skill_dirs_all:
@@ -1781,21 +1781,21 @@ def cmd_doctor(workspace: Path) -> None:
             parent_expert_rel = str(Path(*parts[:2]))   # e.g. "wifi-bora/wifi-bora-base-expert"
             if skill_name not in named_skills and parent_expert_rel not in all_skills_experts:
                 rel = str(skill_dir.relative_to(jarvis_dir))
-                print(f"    ⚠️  {rel}（未被任何 expert.json 引用）")
-                print(f"       → 修正：加入某個 expert.json 的 internal.skills，或刪除此資料夾")
+                print(f"    ⚠️  {rel} (not referenced by any expert.json)")
+                print(f"       → Fix: add to internal.skills in an expert.json, or delete this folder")
                 all_ok = False
                 f4_ok  = False
                 logger.debug("cmd_doctor: orphan skill: %s", rel)
         if f4_ok and skill_dirs_all:
-            print(f"    ✅ 所有 skill 均有被引用")
+            print(f"    ✅ All skills are referenced")
 
     # ── 總體狀態 ──
     print()
     if all_ok:
-        print("總體狀態：✅ 健康")
+        print("Overall: ✅ Healthy")
         logger.info("cmd_doctor: overall status HEALTHY")
     else:
-        print("總體狀態：❌ 有問題需修正（詳見上方各項 ❌ / ⚠️ 說明）")
+        print("Overall: ❌ Issues found (see ❌ / ⚠️ details above)")
         logger.debug("cmd_doctor: overall status UNHEALTHY")
 
 
@@ -1806,29 +1806,29 @@ def print_usage() -> None:
     print("""
 Connsys Jarvis Setup Script
 
-用法（從 workspace 根目錄執行）：
-  python connsys-jarvis/scripts/setup.py --init   <expert.json>   初始化並安裝 Expert
-  python connsys-jarvis/scripts/setup.py --add    <expert.json>   新增 Expert（重複執行 = 重新安裝）
-  python connsys-jarvis/scripts/setup.py --remove <expert-name>   移除 Expert
-  python connsys-jarvis/scripts/setup.py --uninstall              卸載所有
-  python connsys-jarvis/scripts/setup.py --list                   列出所有 Expert（已安裝 + 可用）
-  python connsys-jarvis/scripts/setup.py --list --format json     以 JSON 格式輸出（供 LLM 使用）
-  python connsys-jarvis/scripts/setup.py --query <expert-name>    查詢指定 Expert 的 metadata
+Usage (run from workspace root):
+  python connsys-jarvis/scripts/setup.py --init   <expert.json>   Initialize and install an Expert
+  python connsys-jarvis/scripts/setup.py --add    <expert.json>   Add an Expert (re-run = reinstall)
+  python connsys-jarvis/scripts/setup.py --remove <expert-name>   Remove an Expert
+  python connsys-jarvis/scripts/setup.py --uninstall              Uninstall everything
+  python connsys-jarvis/scripts/setup.py --list                   List all Experts (installed + available)
+  python connsys-jarvis/scripts/setup.py --list --format json     Output in JSON format (for LLM use)
+  python connsys-jarvis/scripts/setup.py --query <expert-name>    Query metadata for a specific Expert
   python connsys-jarvis/scripts/setup.py --query <expert-name> --format json
-  python connsys-jarvis/scripts/setup.py --doctor                 健康檢查
+  python connsys-jarvis/scripts/setup.py --doctor                 Health check
 
-CLAUDE.md 模式選項（搭配 --add 使用）：
-  --with-all-experts  在 CLAUDE.md 中加入所有已安裝 Expert 的 expert.md
-                      （預設只包含最後安裝的 Expert 的四份文件）
+CLAUDE.md mode options (used with --add):
+  --with-all-experts  Include expert.md for all installed Experts in CLAUDE.md
+                      (default: only the four files of the last installed Expert)
 
-輸出格式選項：
-  --format table      人類可讀格式（預設）
-  --format json       JSON 格式（供 framework-expert-discovery skill / LLM 使用）
+Output format options:
+  --format table      Human-readable format (default)
+  --format json       JSON format (for framework-expert-discovery skill / LLM use)
 
-Debug 選項（可放在任何位置）：
-  --debug   顯示 DEBUG 層級日誌（console），同時寫入 .connsys-jarvis/log/setup.log
+Debug options (can be placed anywhere):
+  --debug   Show DEBUG-level logs (console) and write to .connsys-jarvis/log/setup.log
 
-範例：
+Examples:
   python connsys-jarvis/scripts/setup.py --init wifi-bora/wifi-bora-memory-slim-expert/expert.json
   python connsys-jarvis/scripts/setup.py --add  sys-bora/sys-bora-preflight-expert/expert.json
   python connsys-jarvis/scripts/setup.py --add  sys-bora/sys-bora-preflight-expert/expert.json --with-all-experts
@@ -1837,10 +1837,10 @@ Debug 選項（可放在任何位置）：
   python connsys-jarvis/scripts/setup.py --query wifi-bora-memory-slim-expert
   python connsys-jarvis/scripts/setup.py --debug --doctor
 
-注意：
-  - expert.json 路徑可以是相對於 workspace 或相對於 connsys-jarvis/ 目錄
-  - 不依賴 registry.json；Expert 清單每次即時掃描 connsys-jarvis 目錄取得
-  - --add 若 Expert 已安裝，則執行重新安裝（先移除再重建 symlinks）
+Notes:
+  - expert.json path can be relative to workspace or to the connsys-jarvis/ directory
+  - Does not depend on registry.json; Expert list is scanned live from the connsys-jarvis directory
+  - --add reinstalls the Expert if already installed (remove then rebuild symlinks)
 """)
 
 
@@ -1906,21 +1906,21 @@ def main() -> None:
     if cmd == "--init":
         if len(args) < 2:
             logger.error("--init requires expert.json path")
-            print("ERROR: --init 需要指定 expert.json 路徑", file=sys.stderr)
+            print("ERROR: --init requires an expert.json path", file=sys.stderr)
             sys.exit(1)
         cmd_init(workspace, args[1])
 
     elif cmd == "--add":
         if len(args) < 2:
             logger.error("--add requires expert.json path")
-            print("ERROR: --add 需要指定 expert.json 路徑", file=sys.stderr)
+            print("ERROR: --add requires an expert.json path", file=sys.stderr)
             sys.exit(1)
         cmd_add(workspace, args[1], include_all=include_all)
 
     elif cmd == "--remove":
         if len(args) < 2:
             logger.error("--remove requires expert name or path")
-            print("ERROR: --remove 需要指定 expert name", file=sys.stderr)
+            print("ERROR: --remove requires an expert name", file=sys.stderr)
             sys.exit(1)
         cmd_remove(workspace, args[1])
 
@@ -1933,7 +1933,7 @@ def main() -> None:
     elif cmd == "--query":
         if len(args) < 2:
             logger.error("--query requires expert name")
-            print("ERROR: --query 需要指定 Expert 名稱", file=sys.stderr)
+            print("ERROR: --query requires an expert name", file=sys.stderr)
             sys.exit(1)
         cmd_query(workspace, args[1], output_format=output_format)
 
@@ -1945,7 +1945,7 @@ def main() -> None:
 
     else:
         logger.error("unknown command: %r", cmd)
-        print(f"ERROR: 未知指令 '{cmd}'", file=sys.stderr)
+        print(f"ERROR: unknown command '{cmd}'", file=sys.stderr)
         print_usage()
         sys.exit(1)
 
