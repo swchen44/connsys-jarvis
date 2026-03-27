@@ -1657,15 +1657,21 @@ def cmd_doctor(workspace: Path) -> None:
             if missing_inc or extra_inc:
                 print(f"     → 修正：重新執行 --init 或 --add <expert.json>")
 
-        # 驗證每個 @include 目標檔案存在
-        for inc in sorted(actual_includes | expected_includes):
-            rel    = inc.lstrip('@')
-            target = workspace / rel
-            if not target.exists():
-                print(f"  ❌ @include 目標不存在：{rel}")
-                print(f"     → 修正：確認 connsys-jarvis repo 路徑正確，或重新執行 --init")
-                all_ok = False
-                logger.debug("cmd_doctor: @include target missing: %s", rel)
+        # 驗證 CLAUDE.md 中每個 @include 目標檔案存在
+        # 只檢查實際存在於 CLAUDE.md 的 @-行（actual_includes），排除 @CLAUDE.local.md
+        if actual_includes:
+            print(f"  @include 目標存在性（{len(actual_includes)} 個）：")
+            for inc in sorted(actual_includes):
+                rel    = inc.lstrip('@')
+                target = workspace / rel
+                if target.exists():
+                    print(f"    ✅ {rel}")
+                    logger.debug("cmd_doctor: @include target OK: %s", rel)
+                else:
+                    print(f"    ❌ {rel}（檔案不存在）")
+                    print(f"       → 修正：確認 connsys-jarvis repo 路徑正確，或重新執行 --init")
+                    all_ok = False
+                    logger.debug("cmd_doctor: @include target missing: %s", rel)
 
     # ── E. 環境工具 ──
     print("\nE. 環境工具：")

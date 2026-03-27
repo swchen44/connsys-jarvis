@@ -947,6 +947,30 @@ class TestDoctorClaudeMd:
         out = capsys.readouterr().out
         assert "內容符合預期" in out
 
+    def test_include_targets_all_exist_shows_checkmarks(self, workspace, capsys):
+        """正常安裝後，@include 目標存在性區段中每個 @include 都應顯示 ✅"""
+        inst.cmd_init(workspace, self._fw_json(workspace))
+        capsys.readouterr()
+        inst.cmd_doctor(workspace)
+        out = capsys.readouterr().out
+        assert "@include 目標存在性" in out
+        # 不應有任何 ❌（檔案不存在）
+        assert "檔案不存在" not in out
+
+    def test_include_target_missing_shows_error(self, workspace, capsys):
+        """CLAUDE.md 中的 @include 指向不存在的檔案 → ❌"""
+        inst.cmd_init(workspace, self._fw_json(workspace))
+        claude_md = workspace / "CLAUDE.md"
+        # 加一行指向不存在檔案的 @include
+        claude_md.write_text(
+            claude_md.read_text() + "@connsys-jarvis/nonexistent/ghost.md\n"
+        )
+        capsys.readouterr()
+        inst.cmd_doctor(workspace)
+        out = capsys.readouterr().out
+        assert "ghost.md" in out
+        assert "檔案不存在" in out
+
     def test_missing_claude_md_shows_error(self, workspace, capsys):
         inst.cmd_init(workspace, self._fw_json(workspace))
         (workspace / "CLAUDE.md").unlink()
