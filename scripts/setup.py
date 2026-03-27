@@ -1525,7 +1525,7 @@ def cmd_doctor(workspace: Path) -> None:
         print(f"  ❌ .env 不存在：{env_path}")
         print(f"     → 修正：重新執行 --init <expert.json>")
         all_ok = False
-        logger.warning("cmd_doctor: .env missing at %s", env_path)
+        logger.debug("cmd_doctor: .env missing at %s", env_path)
     else:
         env_vars = parse_env_file(env_path)
         for var in REQUIRED_ENV_VARS:
@@ -1534,12 +1534,12 @@ def cmd_doctor(workspace: Path) -> None:
                 print(f"  ❌ {var}：未定義")
                 print(f"     → 修正：重新執行 --init <expert.json>")
                 all_ok = False
-                logger.warning("cmd_doctor: missing env var %s", var)
+                logger.debug("cmd_doctor: missing env var %s", var)
             elif var in PATH_ENV_VARS and not Path(val).exists():
                 print(f"  ❌ {var} = {val}（路徑不存在）")
                 print(f"     → 修正：確認路徑存在，或重新執行 --init <expert.json>")
                 all_ok = False
-                logger.warning("cmd_doctor: env path not found %s=%s", var, val)
+                logger.debug("cmd_doctor: env path not found %s=%s", var, val)
             else:
                 print(f"  ✅ {var} = {val}")
                 logger.debug("cmd_doctor: env OK %s", var)
@@ -1575,7 +1575,7 @@ def cmd_doctor(workspace: Path) -> None:
                     print(f"    ❌ [缺少] {name}")
                     print(f"       → 修正：python setup.py --init <expert.json>")
                     all_ok = False
-                    logger.warning("cmd_doctor: missing symlink %s/%s", kind, name)
+                    logger.debug("cmd_doctor: missing symlink %s/%s", kind, name)
                 else:
                     item   = actual[name]
                     target = Path(os.readlink(item))
@@ -1586,7 +1586,7 @@ def cmd_doctor(workspace: Path) -> None:
                         print(f"    ❌ {name} → {target} DANGLING")
                         print(f"       → 修正：重新執行 --init 或 --add")
                         all_ok = False
-                        logger.warning("cmd_doctor: DANGLING %s/%s → %s", kind, name, target)
+                        logger.debug("cmd_doctor: DANGLING %s/%s → %s", kind, name, target)
 
             for name in sorted(actual):
                 if name not in expected:
@@ -1596,7 +1596,7 @@ def cmd_doctor(workspace: Path) -> None:
                     print(f"    ⚠️  [多餘] {name} → {target}{dangling_note}")
                     print(f"       → 修正：python setup.py --remove <expert-name> 全清再重建")
                     all_ok = False
-                    logger.warning("cmd_doctor: orphan symlink %s/%s", kind, name)
+                    logger.debug("cmd_doctor: orphan symlink %s/%s", kind, name)
 
         # 已建 skill links 的 SKILL.md 驗證
         skills_dir = claude_dir / "skills"
@@ -1615,7 +1615,7 @@ def cmd_doctor(workspace: Path) -> None:
                         print(f"    ⚠️  {item.name}/SKILL.md 不存在")
                         print(f"       → 修正：在 skill folder 補充 SKILL.md")
                         all_ok = False
-                        logger.warning("cmd_doctor: SKILL.md missing for skill link %s", item.name)
+                        logger.debug("cmd_doctor: SKILL.md missing for skill link %s", item.name)
 
     # ── D. CLAUDE.md 內容驗證 ──
     print("\nD. CLAUDE.md 驗證：")
@@ -1623,7 +1623,7 @@ def cmd_doctor(workspace: Path) -> None:
         print(f"  ❌ CLAUDE.md 不存在：{claude_md}")
         print(f"     → 修正：重新執行 --init <expert.json>")
         all_ok = False
-        logger.warning("cmd_doctor: CLAUDE.md missing")
+        logger.debug("cmd_doctor: CLAUDE.md missing")
     else:
         actual_includes: set = set()
         for line in claude_md.read_text().splitlines():
@@ -1649,11 +1649,11 @@ def cmd_doctor(workspace: Path) -> None:
             for inc in sorted(missing_inc):
                 print(f"  ❌ [缺少 @include] {inc}")
                 all_ok = False
-                logger.warning("cmd_doctor: CLAUDE.md missing include: %s", inc)
+                logger.debug("cmd_doctor: CLAUDE.md missing include: %s", inc)
             for inc in sorted(extra_inc):
                 print(f"  ⚠️  [多餘 @include] {inc}")
                 all_ok = False
-                logger.warning("cmd_doctor: CLAUDE.md extra include: %s", inc)
+                logger.debug("cmd_doctor: CLAUDE.md extra include: %s", inc)
             if missing_inc or extra_inc:
                 print(f"     → 修正：重新執行 --init 或 --add <expert.json>")
 
@@ -1665,7 +1665,7 @@ def cmd_doctor(workspace: Path) -> None:
                 print(f"  ❌ @include 目標不存在：{rel}")
                 print(f"     → 修正：確認 connsys-jarvis repo 路徑正確，或重新執行 --init")
                 all_ok = False
-                logger.warning("cmd_doctor: @include target missing: %s", rel)
+                logger.debug("cmd_doctor: @include target missing: %s", rel)
 
     # ── E. 環境工具 ──
     print("\nE. 環境工具：")
@@ -1686,8 +1686,7 @@ def cmd_doctor(workspace: Path) -> None:
     # ── F. Expert 結構完整性（掃描 connsys-jarvis repo）──
     print("\nF. Expert 結構完整性（掃描 connsys-jarvis repo）：")
 
-    expert_dirs = sorted(jarvis_dir.glob("*/experts/*/"))
-    expert_dirs = [d for d in expert_dirs if d.is_dir()]
+    expert_dirs = sorted(d for d in jarvis_dir.glob("*/experts/*") if d.is_dir())
 
     if not expert_dirs:
         print("  （未找到任何 expert folder）")
@@ -1702,7 +1701,7 @@ def cmd_doctor(workspace: Path) -> None:
                 print(f"    ❌ {rel} 缺少：{', '.join(missing_files)}")
                 print(f"       → 修正：補充上列缺少的檔案")
                 all_ok = False
-                logger.warning("cmd_doctor: expert missing files %s: %s", rel, missing_files)
+                logger.debug("cmd_doctor: expert missing files %s: %s", rel, missing_files)
             else:
                 print(f"    ✅ {rel}")
 
@@ -1737,14 +1736,13 @@ def cmd_doctor(workspace: Path) -> None:
                 print(f"    ❌ {rel}/expert.json — {'; '.join(issues_desc)}")
                 print(f"       → 修正：補充上列缺少的欄位")
                 all_ok = False
-                logger.warning("cmd_doctor: expert.json issues %s: %s", rel, issues_desc)
+                logger.debug("cmd_doctor: expert.json issues %s: %s", rel, issues_desc)
             else:
                 print(f"    ✅ {rel}/expert.json")
 
         # F3: skill SKILL.md 完整性
         print(f"\n  F3 Skill SKILL.md：")
-        skill_dirs_all = sorted(jarvis_dir.glob("*/experts/*/skills/*/"))
-        skill_dirs_all = [d for d in skill_dirs_all if d.is_dir()]
+        skill_dirs_all = sorted(d for d in jarvis_dir.glob("*/experts/*/skills/*") if d.is_dir())
         if not skill_dirs_all:
             print("    （未找到任何 skill folder）")
         else:
@@ -1756,7 +1754,7 @@ def cmd_doctor(workspace: Path) -> None:
                     print(f"       → 修正：在此 skill folder 補充 SKILL.md")
                     all_ok = False
                     f3_ok  = False
-                    logger.warning("cmd_doctor: skill missing SKILL.md: %s", rel)
+                    logger.debug("cmd_doctor: skill missing SKILL.md: %s", rel)
             if f3_ok:
                 print(f"    ✅ 所有 {len(skill_dirs_all)} 個 skill folder 均有 SKILL.md")
 
@@ -1775,7 +1773,7 @@ def cmd_doctor(workspace: Path) -> None:
                 print(f"       → 修正：加入某個 expert.json 的 internal.skills，或刪除此資料夾")
                 all_ok = False
                 f4_ok  = False
-                logger.warning("cmd_doctor: orphan skill: %s", rel)
+                logger.debug("cmd_doctor: orphan skill: %s", rel)
         if f4_ok and skill_dirs_all:
             print(f"    ✅ 所有 skill 均有被引用")
 
@@ -1786,7 +1784,7 @@ def cmd_doctor(workspace: Path) -> None:
         logger.info("cmd_doctor: overall status HEALTHY")
     else:
         print("總體狀態：❌ 有問題需修正（詳見上方各項 ❌ / ⚠️ 說明）")
-        logger.warning("cmd_doctor: overall status UNHEALTHY")
+        logger.debug("cmd_doctor: overall status UNHEALTHY")
 
 
 # ─── Usage ────────────────────────────────────────────────────────────────────
