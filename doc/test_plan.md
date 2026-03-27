@@ -1,12 +1,13 @@
 # Connsys Jarvis — 測試計畫
 
-**文件版本**：v1.3
+**文件版本**：v1.4
 **日期**：2026-03-27
-**依據**：agents-requirements.md v3.2, agents-design.md v3.2
+**依據**：agents-requirements.md v3.3, agents-design.md v3.3
 **變更說明**：
 - v1.1 — setup.py 路徑改為 scripts/setup.py；新增 TC-12 pytest 單元測試
 - v1.2 — 修正 TC-02 Step 6（預設 identity-only，無 count header）；更新 TC-12 測試數 57→61（含 --with-all-experts tests）；新增 TC-13（--with-all-experts 整合）、TC-14（--debug 日誌）
 - v1.3 — TC-02 補充 Step 8、9（驗證 include_all_experts=false 及 install_order）；對齊需求書 FR-02-4 reference count 與 FR-02-8 dependencies/internal 定義
+- v1.4 — 更新 TC-05（--remove 改全清再重建）；更新 TC-08（--list 顯示 installed+available，新增 --format json）；新增 TC-15（--query）、TC-16（--list --format json）
 
 ---
 
@@ -101,9 +102,9 @@
 
 ---
 
-## TC-05：移除單一 Expert（--remove + Reference Count）
+## TC-05：移除單一 Expert（--remove + 全清再重建）
 
-**目的**：驗證 `--remove` 只刪除無其他依賴的 symlinks，共用 symlinks 保留
+**目的**：驗證 `--remove` 採全清再重建策略，正確清除所有 symlinks 再依剩餘 Expert 重建
 **對應需求**：FR-02-4, US-07
 
 ### Steps
@@ -112,8 +113,8 @@
 |---|------|---------|
 | 1 | 前置：TC-02 完成後（13 skills） | |
 | 2 | `python3 ./connsys-jarvis/scripts/setup.py --remove wifi-bora/experts/wifi-bora-memory-slim-expert/expert.json` | 輸出「完成！Expert 'wifi-bora-memory-slim-expert' 已移除」 |
-| 3 | 確認輸出 `[-]` 移除清單 | wifi-bora-memslim-flow, wifi-bora-ast-tool, wifi-bora-lsp-tool 等 10 個 |
-| 4 | `ls .claude/skills/ \| wc -l` | 3（僅保留 framework-base-expert 的 3 個） |
+| 3 | 確認輸出：所有既有 symlinks 先清除，再依剩餘 Expert 重建 | 移除 wifi-bora-memslim-flow 等 10 個，重建 framework 的 3 個 |
+| 4 | `ls .claude/skills/ \| wc -l` | 3（framework-base-expert 的 3 個被重建） |
 | 5 | `ls .claude/skills/` | framework-expert-discovery-knowhow, framework-handoff-flow, framework-memory-tool |
 | 6 | `cat CLAUDE.md` | 退回單 Expert 格式，identity 改為 framework-base-expert |
 | 7 | `cat .connsys-jarvis/.installed-experts.json` | experts 陣列只剩 1 個（framework-base-expert） |
@@ -158,19 +159,21 @@
 
 ## TC-08：列出安裝狀態（--list）
 
-**目的**：驗證 `--list` 顯示正確的 Expert 清單與 symlink 狀態
-**對應需求**：FR-02-6
+**目的**：驗證 `--list` 顯示所有 Expert（已安裝 + 可用），以及 --format json 輸出
+**對應需求**：FR-02-6, FR-02-19
 
 ### Steps
 
 | # | 步驟 | 預期結果 |
 |---|------|---------|
 | 1 | 前置：TC-02 完成後（2 Experts 已安裝） | |
-| 2 | `python3 ./connsys-jarvis/scripts/setup.py --list` | 輸出「=== 已安裝的 Experts ===」 |
-| 3 | 確認 Expert 清單 | [1] framework-base-expert, [2] wifi-bora-memory-slim-expert ← identity |
-| 4 | 確認 Skills 數量 | Skills (13): 全部 ✅ |
-| 5 | 確認 Hooks 數量 | Hooks (5): 全部 ✅ |
-| 6 | 確認 Commands 數量 | Commands (2): 全部 ✅ |
+| 2 | `python3 ./connsys-jarvis/scripts/setup.py --list` | 輸出 Expert 清單（已安裝 + 可用） |
+| 3 | 確認已安裝 Expert 清單及 status | framework-base-expert status=installed, wifi-bora-memory-slim-expert status=installed ← identity |
+| 4 | 確認可用但未安裝的 Expert 也顯示 | 其他掃描到的 Expert 標注 status=available |
+| 5 | 確認 Skills 數量 | Skills (13): 全部 ✅ |
+| 6 | 確認 Hooks 數量 | Hooks (5): 全部 ✅ |
+| 7 | 確認 Commands 數量 | Commands (2): 全部 ✅ |
+| 8 | `python3 ./connsys-jarvis/scripts/setup.py --list --format json` | 輸出合法 JSON array，含 status 欄位 |
 
 ---
 
@@ -282,3 +285,34 @@
 | 4 | `grep -c DEBUG .connsys-jarvis/log/setup.log` | 日誌檔含多行 DEBUG 記錄（> 0）|
 | 5 | `python3 ./connsys-jarvis/scripts/setup.py --init framework/experts/framework-base-expert/expert.json 2>&1 \| grep -c DEBUG \|\| echo 0` | console 無 DEBUG 輸出（輸出 0）|
 | 6 | `ls .connsys-jarvis/log/setup.log` | 日誌檔仍存在（file handler 不受 --debug 影響）|
+
+---
+
+## TC-15：--query 指令
+
+**目的**：驗證 `--query` 能即時查詢 Expert metadata
+**對應需求**：FR-02-18
+
+| # | 步驟 | 預期結果 |
+|---|------|---------|
+| 1 | 前置：TC-01 完成後（framework-base-expert 已安裝） | |
+| 2 | `python3 ./connsys-jarvis/scripts/setup.py --query framework-base-expert` | 輸出 Expert 名稱、domain、status=installed、description、dependencies、internal |
+| 3 | `python3 ./connsys-jarvis/scripts/setup.py --query wifi-bora-memory-slim-expert` | 輸出 status=available（若尚未安裝） |
+| 4 | `python3 ./connsys-jarvis/scripts/setup.py --query memory-slim` | 部分名稱匹配，輸出 wifi-bora-memory-slim-expert |
+| 5 | `python3 ./connsys-jarvis/scripts/setup.py --query nonexistent-expert` | 輸出 ERROR 訊息，exit code 1 |
+
+---
+
+## TC-16：--list --format json
+
+**目的**：驗證 `--list --format json` 輸出供 LLM 使用的 JSON
+**對應需求**：FR-02-19
+
+| # | 步驟 | 預期結果 |
+|---|------|---------|
+| 1 | 前置：TC-02 完成後（2 Experts 已安裝） | |
+| 2 | `python3 ./connsys-jarvis/scripts/setup.py --list --format json` | 輸出合法 JSON array |
+| 3 | 解析 JSON，確認已安裝 Expert status="installed" | framework-base-expert status=installed |
+| 4 | 解析 JSON，確認未安裝 Expert status="available" | 其他掃描到的 expert status=available |
+| 5 | `python3 ./connsys-jarvis/scripts/setup.py --query framework-base-expert --format json` | 輸出合法 JSON object，含 dependencies、internal |
+

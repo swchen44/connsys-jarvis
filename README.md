@@ -7,7 +7,6 @@ Connsys Jarvis 是一個多 Expert AI 助理框架，為 ConnSys 工程師提供
 ```
 connsys-jarvis/
 ├── setup.py          ← 安裝程式（Python stdlib only）
-├── registry.json       ← 所有 Expert 的全域清單
 ├── framework/          ← 框架層 Expert（跨 domain 共用）
 ├── wifi-bora/          ← WiFi Bora domain Experts
 ├── sys-bora/           ← Sys Bora domain Experts
@@ -41,10 +40,24 @@ python connsys-jarvis/setup.py --add sys-bora/experts/sys-bora-preflight-expert/
 python connsys-jarvis/setup.py --remove sys-bora-preflight-expert
 ```
 
-### 列出已安裝的 Experts
+### 列出所有 Expert（已安裝 + 可用）
 
 ```bash
 python connsys-jarvis/setup.py --list
+
+# JSON 格式輸出（供 LLM 或 skill 呼叫）
+python connsys-jarvis/setup.py --list --format json
+```
+
+> 不依賴 registry.json，每次即時掃描
+
+### 查詢指定 Expert
+
+```bash
+python connsys-jarvis/setup.py --query framework-base-expert
+
+# JSON 格式輸出
+python connsys-jarvis/setup.py --query framework-base-expert --format json
 ```
 
 ### 健康檢查

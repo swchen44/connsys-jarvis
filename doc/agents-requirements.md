@@ -1,6 +1,6 @@
 # Consys Experts — 需求書
 
-**文件版本**：v3.1
+**文件版本**：v3.3
 **狀態**：Draft
 **目標讀者**：架構師、開發者、產品負責人
 **改版說明**：
@@ -17,6 +17,7 @@
 - v3.0：架構重大重設計——install.sh 改為單一 setup.py（stdlib only）、expert 資料夾移除 CLAUDE.md 和 install.sh、新增 soul.md / rules.md / duties.md / agents/ 資料夾、記憶改用 .connsys-jarvis/memory/、環境變數輸出至 .connsys-jarvis/.env、新增 symlink 靈活性設計原則（因應 agent 生態快速演進）
 - v3.1：expert.json dependencies 改為陣列格式（支援 all/正面表列/省略=不繼承）、exclude_symlink 改為全域 regex patterns（3-step 執行順序）、更新 domain 清單（wifi-bora/sys-bora/bt-bora/lrwpan-bora/wifi-gen4m/wifi-logan）、common 改為 base、加入新 expert 清單
 - v3.2：setup.py 路徑改為 `scripts/setup.py`；新增 FR-02-17（pytest 單元測試 `scripts/test/test_setup.py`）；更新目錄結構加入 `scripts/` 子節
+- v3.3：移除 registry.json；setup.py 改為即時掃描 Expert 目錄；新增 --query 指令、--format json 輸出格式；--remove 改為全清再重建策略（與 --add 一致）；--add 重複安裝 = 重新安裝
 
 > **注意**：文件中所列的 expert、skill 名稱均為**示例**，用於說明命名規則與架構設計。實際規劃以團隊討論為準。
 
@@ -362,7 +363,6 @@
 ```
 connsys-jarvis/ (git)
 ├── README.md
-├── registry.json                    ← 所有 Expert 目錄（expert-discovery 用）
 ├── scripts/                         ← 安裝程式與測試
 │   ├── setup.py                   ← 唯一安裝程式（設定環境變數、管理 symlink）
 │   └── test/
@@ -643,7 +643,6 @@ workspace/                                       ← $CONNSYS_JARVIS_WORKSPACE_R
 | `lrwpan-bora-base-expert` | lrwpan-bora | — | lrwpan fw 下載/編譯；LR-WPAN (802.15.4) 標準基礎；fw 架構與 SDS；自動上傳 |
 | `wifi-gen4m-base-expert` | wifi-gen4m | — | wifi gen4m driver 下載/編譯；Wi-Fi 標準基礎；driver 架構與 SDS；自動上傳 |
 | `wifi-logan-base-expert` | wifi-logan | — | wifi logan driver 下載/編譯；Wi-Fi 標準基礎；driver 架構與 SDS；自動上傳 |
-| FR-01-6 | `registry.json` 列出所有 Expert 及其 metadata | Must | expert-discovery 的資料來源 |
 
 ### FR-02：scripts/setup.py（取代 install.sh）
 
@@ -654,9 +653,9 @@ workspace/                                       ← $CONNSYS_JARVIS_WORKSPACE_R
 | FR-02-1 | `connsys-jarvis/scripts/setup.py` 為**唯一安裝程式**，以 Python stdlib 實作，用 `uv run ./connsys-jarvis/scripts/setup.py` 執行 | Must | 單一入口，避免每個 Expert 各自維護 install.sh；Python stdlib 無需額外依賴 |
 | FR-02-2 | 支援 `--init <expert.json>` 參數：**全新安裝**，清除所有既有 link，讀取 expert.json 及其 dependencies，重建所有 symlink，重新生成 CLAUDE.md 和 .env | Must | 初次安裝或強制重建時使用 |
 | FR-02-3 | 支援 `--add <expert.json>` 參數：**疊加安裝**，在既有 Expert 基礎上加入新的 Expert；CLAUDE.md 預設只包含最後安裝 Expert 的 identity（soul/rules/duties/expert.md），加上 `--with-all-experts` 旗標則同時輸出所有已安裝 Expert 的 expert.md（Identity + Capabilities 雙區段） | Must | 多 Expert 安裝流程；預設 identity-only 避免 context 過大，`--with-all-experts` 視需要開啟全能力 |
-| FR-02-4 | 支援 `--remove <expert.json>` 參數：從已安裝清單移除此 Expert，依剩餘 Expert 重建 symlink 和 CLAUDE.md；**Reference Count 規則**：只有當 symlink 不再被任何其他已安裝 Expert 的 `declared_symlinks` 引用時才刪除，有共用的 symlink 保留 | Must | 移除特定 Expert 時，不破壞其他 Expert 依賴的共用 symlinks |
+| FR-02-4 | 支援 `--remove <expert.json>` 參數：從已安裝清單移除此 Expert，依剩餘 Expert 重建 symlink 和 CLAUDE.md；**全清再重建策略**：先清除 .claude/ 下所有 symlinks，再依剩餘 Expert（按 install_order）逐一重建，確保 symlink 集合與已安裝清單完全同步 | Must | 全清再重建與 --add 策略一致，邏輯簡單可靠，無需維護 reference count |
 | FR-02-5 | 支援 `--uninstall` 參數：清除所有 link 和 CLAUDE.md，但保留 `.connsys-jarvis/log/` 和 `.connsys-jarvis/memory/` | Must | 完全清除安裝，保留記憶 |
-| FR-02-6 | 支援 `--list` 參數：列出目前已安裝的 Expert 清單及所有 symlink 及來源 | Must | 讓同仁了解目前安裝狀態 |
+| FR-02-6 | 支援 `--list` 參數：即時掃描 connsys-jarvis 目錄，列出**所有** Expert（已安裝 + 可用）及 symlink 狀態；每個 Expert 標注 status（installed/available）、install_order、is_identity | Must | 讓同仁了解目前安裝狀態，並一覽可用但尚未安裝的 Expert |
 | FR-02-7 | 支援 `--doctor` 參數：診斷所有 symlink 是否 dangling、列出已安裝 Expert、檢查 Python/uv/uvx 環境 | Must | 快速排查安裝問題 |
 | FR-02-8 | setup.py 讀取 `expert.json` 兩類來源：**① `dependencies`**（引用其他 Expert 的 symlinks）和 **② `internal`**（本 Expert 自有的 skills/hooks/commands）。`dependencies` 陣列每個元素可針對四個 key（skills/hooks/agents/commands）各自指定選擇規則：**`"all"`** → 繼承該 Expert 的全部；**`["name1","name2"]`** → 只繼承指定清單；**省略 key** → 不繼承（空集合）。`internal` 下的四個 key 永遠全部建立 | Must | 精確控制每個依賴 expert 貢獻的 link；internal 與 dependencies 分開，避免不必要的 skill 被載入 |
 | FR-02-9 | expert.json 支援 `exclude_symlink.patterns`（全域 regex 清單），在所有 link 建立完成後（Step 1+2），於 Step 3 移除名稱符合任一 pattern 的 link | Must | 全域過濾可跨所有 dependency 統一移除不需要的 link，正則表達式提供更彈性的匹配 |
@@ -668,6 +667,9 @@ workspace/                                       ← $CONNSYS_JARVIS_WORKSPACE_R
 | FR-02-15 | Windows 環境下 symlink 不可用時，setup.py 自動降級為 **copy 模式**（功能相同，但更新 expert 內容後需重新執行）| Should | 跨平台支援 |
 | FR-02-16 | Hook 實作語言優先順序：**Shell（預設）→ Python（複雜邏輯）→ JS（最後考慮）**；Python 腳本採 PEP 723 | Must | 一致的語言策略，Shell 無需額外 runtime |
 | FR-02-17 | `connsys-jarvis/scripts/test/test_setup.py` 提供 **pytest 單元測試**，覆蓋 `setup.py` 所有核心函式；執行方式：`uvx pytest scripts/test/test_setup.py -v` 或 `uv run --with pytest pytest scripts/test/test_setup.py` | Must | 確保安裝邏輯可回歸測試；含環境變數生成、CLAUDE.md 生成、symlink 建立等整合測試 |
+| FR-02-18 | 支援 `--query <expert-name>` 參數：即時掃描並讀取指定 Expert 的 expert.json，顯示 metadata（name、domain、description、version、status、dependencies、internal）；支援部分名稱匹配 | Must | 讓工程師和 skill 可快速查詢指定 Expert 的能力與狀態 |
+| FR-02-19 | `--list` 和 `--query` 支援 `--format json` 旗標：以 JSON 格式輸出結果，供 framework-expert-discovery-knowhow skill 或 LLM 呼叫；預設輸出 table 格式（人類可讀）| Must | LLM 可直接解析 JSON 取得結構化 Expert 清單，無需解析文字輸出 |
+| FR-02-20 | `--add <expert.json>` 對已安裝的 Expert 執行**重新安裝**：先從已安裝清單移除，再依正常 --add 流程重建 symlinks 和 CLAUDE.md（冪等性：重複 --add 結果一致）| Must | 同仁更新 expert.json 後可直接重新 --add 而無需先 --remove；確保安裝狀態正確 |
 
 ### FR-03：環境變數
 
@@ -980,25 +982,15 @@ AI Agent 生態系統的安全威脅已有實際案例：
 
 ---
 
-### FW-05：registry.json 格式與 Expert 推薦機制
+### FW-05：Expert 推薦機制
 
-**背景**：
+**現況**：`registry.json` 已廢棄並移除（v3.3）。`setup.py --list --format json` 和 `--query <name> --format json` 提供即時 Expert 探索能力，`framework-expert-discovery-knowhow` skill 可直接呼叫這兩個指令取得 JSON 資料。
 
-FR-01-6 定義了 `registry.json` 的存在，但格式尚未定義。同時，缺乏根據當前任務自動推薦合適 Expert 的機制。
-
-**目標**：
-
-定義 `registry.json` 格式（與 expert.json 的關係、aggregate 還是 index）、以及 `expert-discovery` skill 的自動推薦邏輯。
-
-**需求**：
+**待規劃**：根據當前任務自動推薦合適 Expert 的機制（根據 task context 比對 Expert 的 description/capabilities）。
 
 | 編號 | 需求 | 優先級 |
 |------|------|--------|
-| FW-05-1 | 定義 `registry.json` 格式（Expert 名稱、描述、能力標籤、install 路徑）| Future |
-| FW-05-2 | 定義 `registry.json` 的生成機制（人工維護 or 自動從 expert.json aggregate）| Future |
-| FW-05-3 | `expert-discovery` skill 支援根據關鍵字或任務描述推薦合適的 Expert | Future |
-
-> 此功能待開始實際使用多 Expert 後再行設計。
+| FW-05-1 | 定義 expert-discovery skill 的自動推薦邏輯（根據任務描述比對 Expert description 排序）| Future |
 
 ---
 

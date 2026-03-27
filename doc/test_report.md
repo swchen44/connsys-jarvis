@@ -1,7 +1,7 @@
 # Connsys Jarvis — 測試報告
 
 **報告日期**：2026-03-27
-**測試計畫**：test_plan.md v1.3
+**測試計畫**：test_plan.md v1.4
 **實作版本**：v1.2（commit: e168935）
 **測試環境**：macOS Darwin 24.3.0, Python 3.12.9, uv 已安裝
 **測試工具**：tmux session `connsys-verify` + bash + pytest
@@ -12,8 +12,9 @@
 
 | 指標 | 數值 |
 |------|------|
-| 測試案例總數 | 14 |
+| 測試案例總數 | 16 |
 | **通過** | **14** |
+| 待測試 | 2（TC-15, TC-16）|
 | 失敗 | 0 |
 | Skill 測試腳本 | 16/16 pass |
 | Skill 測試 checks | 41/41 pass |
@@ -111,28 +112,25 @@ doctor_ok=26（含環境項）  doctor_fail=0
 
 ---
 
-### TC-05：移除單一 Expert（--remove + Reference Count）
+### TC-05：移除單一 Expert（--remove + 全清再重建）
 
 **結果：✅ PASS**
 
 | Step | 驗收條件 | 實際結果 | 狀態 |
 |------|---------|---------|------|
 | 2 | 輸出「完成！Expert 'wifi-bora-memory-slim-expert' 已移除」 | 符合 | ✅ |
-| 3 | 輸出 10 個 `[-]` 移除項目 | 10 個 `[-]` | ✅ |
-| 4 | `.claude/skills/` 剩 3 個 | 3 | ✅ |
+| 3 | 所有既有 symlinks 先清除，再依剩餘 Expert 重建 | 移除 10 個，重建 framework 的 3 個 | ✅ |
+| 4 | `.claude/skills/` 剩 3 個（framework 重建後） | 3 | ✅ |
 | 5 | 剩餘 skills 為 framework-base-expert 的 3 個 | 符合 | ✅ |
 | 6 | `CLAUDE.md` 退回單 Expert 格式 | 符合 | ✅ |
 | 7 | `.installed-experts.json` 剩 1 個 Expert | 1 | ✅ |
 
-**Reference Count 驗證**：
+**全清再重建驗證**：
 
-| Skill | 只有 wifi-bora-slim 聲明 | 結果 |
-|-------|------------------------|------|
-| wifi-bora-memslim-flow | ✅ | 已刪除 ✅ |
-| wifi-bora-ast-tool | ✅ | 已刪除 ✅ |
-| wifi-bora-lsp-tool | ✅ | 已刪除 ✅ |
-| framework-expert-discovery-knowhow | ❌ (framework 仍聲明) | 保留 ✅ |
-| session-start.sh | ❌ (framework 仍聲明) | 保留 ✅ |
+| 動作 | 說明 | 結果 |
+|------|------|------|
+| 全清 | 移除 .claude/ 下所有 13 個 symlinks | ✅ 全部清除 |
+| 重建 | 依剩餘 framework-base-expert（install_order=1）重建 3 個 skills + hooks + commands | ✅ 重建完成 |
 
 ---
 
@@ -327,6 +325,32 @@ python3 ./connsys-jarvis/scripts/setup.py --debug --init \
 
 ---
 
+### TC-15：--query 指令
+
+**結果：⏳ 待測試（Phase 1）**
+
+| Step | 驗收條件 | 實際結果 | 狀態 |
+|------|---------|---------|------|
+| 2 | 輸出 Expert 名稱、domain、status=installed、description、dependencies、internal | — | ⏳ |
+| 3 | status=available（若尚未安裝） | — | ⏳ |
+| 4 | 部分名稱匹配 | — | ⏳ |
+| 5 | nonexistent-expert 輸出 ERROR，exit code 1 | — | ⏳ |
+
+---
+
+### TC-16：--list --format json
+
+**結果：⏳ 待測試（Phase 1）**
+
+| Step | 驗收條件 | 實際結果 | 狀態 |
+|------|---------|---------|------|
+| 2 | 輸出合法 JSON array | — | ⏳ |
+| 3 | 已安裝 Expert status="installed" | — | ⏳ |
+| 4 | 未安裝 Expert status="available" | — | ⏳ |
+| 5 | --query --format json 輸出合法 JSON object | — | ⏳ |
+
+---
+
 ## 缺陷記錄
 
 在測試過程中發現並修復的缺陷：
@@ -354,6 +378,9 @@ python3 ./connsys-jarvis/scripts/setup.py --debug --init \
 | FR-02-9 exclude_symlink | TC-10 | ✅ |
 | FR-02-10 .env 生成 | TC-04 | ✅ |
 | FR-02-17 pytest 單元測試 | TC-12 | ✅ |
+| FR-02-18 `--query` | TC-15 | ⏳ 待測試 |
+| FR-02-19 `--format json` | TC-16 | ⏳ 待測試 |
+| FR-02-20 `--add` 重新安裝 | TC-02 | ✅（冪等性已驗證）|
 | FR-03 環境變數 | TC-04, TC-06 | ✅ |
 | FR-04-6/8 Skill test/ | TC-09 | ✅ |
 | FR-05-2/3 CLAUDE.md | TC-01, TC-02, TC-05, TC-13 | ✅ |
@@ -363,7 +390,7 @@ python3 ./connsys-jarvis/scripts/setup.py --debug --init \
 | US-07 --remove | TC-05 | ✅ |
 | --debug logging | TC-14 | ✅ |
 
-**覆蓋率：18/18 需求項目（100%）**
+**覆蓋率：20/20 需求項目（18 通過，2 待測試）**
 
 ---
 
