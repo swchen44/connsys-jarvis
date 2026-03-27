@@ -6,7 +6,7 @@
 **目標讀者**：Project Lead、各 Domain Owner、Framework Engineer
 
 > 本文件定義 `connsys-jarvis` 系統的開發角色、職責範圍、短期任務與長期任務。
-> 短期 = Phase 0–2（3/1–5/30，基礎建設 + 第一批 Expert 上線）；長期 = Phase 3–5（6/1 起，擴充 + PDCA + 自我強化）。
+> 短期 = Phase 0–2（3/1–5/29，基礎建設 + 第一批 Expert 上線）；長期 = Phase 3–5（6/1 起，擴充 + PDCA + 自我強化）。
 
 ---
 
@@ -269,7 +269,7 @@ Phase 1                     [══════════════]
 (4/1~4/24)                  Framework 基礎設施實作 + 測試（含 memory-slim 示範組）
 
 Phase 2                               [═════════════════════]
-(4/27~5/30)                           Domain Base Experts 設計・實作・測試
+(4/20~5/29)                           Domain Base Experts 設計・實作・測試
 
 Phase 3                                                       [═════════════════════]
 (6/1~6/30)                                                    應用 Experts 設計・實作・測試
@@ -280,7 +280,7 @@ Phase 4                                                                         
 Phase 5  TBD ───────────────────────────── 依 Phase 4 KPI 結果排期 ────────────────────────────────
          ──────────────────────────────────────────────────────────────────────────────────────────
          ▲ P0/P1 重疊（4/1~4/15）：Framework 設計定稿同時，基礎設施開始實作
-         ▲ P1/P2 重疊（4/24~4/27）：Framework 收尾，Domain 開始進場
+         ▲ P1/P2 重疊（4/20~4/24）：Framework 收尾，Domain 開始進場
 ```
 
 #### Mermaid 甘特圖
@@ -301,14 +301,14 @@ gantt
     framework-base-expert（5 skills）           :p1b, 2026-04-01, 2026-04-24
     wifi-bora-memory-slim-expert（示範組）       :p1c, 2026-04-01, 2026-04-24
 
-    section Phase 2：Domain Base Experts（4/27~5/30）
-    sys-bora-base-expert（最高優先）             :crit, p2a, 2026-04-27, 2026-05-30
-    sys-bora-preflight-expert                   :p2b, 2026-04-27, 2026-05-30
-    wifi-bora-base-expert                       :p2c, 2026-04-27, 2026-05-30
-    bt-bora-base-expert                         :p2d, 2026-04-27, 2026-05-30
-    lrwpan-bora-base-expert                     :p2e, 2026-04-27, 2026-05-30
-    wifi-gen4m-base-expert                      :p2f, 2026-04-27, 2026-05-30
-    wifi-logan-base-expert                      :p2g, 2026-04-27, 2026-05-30
+    section Phase 2：Domain Base Experts（4/20~5/29）
+    sys-bora-base-expert（最高優先）             :crit, p2a, 2026-04-20, 2026-05-29
+    sys-bora-preflight-expert                   :p2b, 2026-04-20, 2026-05-29
+    wifi-bora-base-expert                       :p2c, 2026-04-20, 2026-05-29
+    bt-bora-base-expert                         :p2d, 2026-04-20, 2026-05-29
+    lrwpan-bora-base-expert                     :p2e, 2026-04-20, 2026-05-29
+    wifi-gen4m-base-expert                      :p2f, 2026-04-20, 2026-05-29
+    wifi-logan-base-expert                      :p2g, 2026-04-20, 2026-05-29
 
     section Phase 3：應用 Experts（6/1~6/30）
     wifi-bora-memory-slim（示範→正式）           :p3a, 2026-06-01, 2026-06-30
@@ -349,7 +349,7 @@ gantt
 | 1-4 | `framework-base-expert` | Framework Eng | handoff-flow / discovery / memory-tool |
 | 1-5 | `registry.json` 初版 | Framework Eng | 所有 expert 目錄 |
 
-### Phase 2（4/27–5/30）：Domain 層（平行進行，sys-bora-base 最先）
+### Phase 2（4/20–5/29）：Domain 層（平行進行，sys-bora-base 最先）
 
 | # | 任務 | Owner | 產出 | 前置 |
 |---|------|-------|------|------|
