@@ -5,11 +5,23 @@
 # ]
 # ///
 """
-Unit tests for connsys-jarvis/scripts/setup.py
+[LEGACY] Monolith test file — all 110 tests still live here for backward compatibility.
 
-Run:
+Tests have been reorganised into a 3-layer pyramid:
+  scripts/test/unit/         ← TC-U01~U08  (pure-logic unit tests)
+  scripts/test/integration/  ← TC-U09~U22  (cmd_* integration tests)
+  scripts/test/e2e/          ← TC-E01~E06  (subprocess end-to-end tests)
+
+Run all layers:
+    uvx pytest scripts/test/ -v
+
+Run individual layers:
+    uvx pytest scripts/test/unit/ -v
+    uvx pytest scripts/test/integration/ -v
+    uvx pytest scripts/test/e2e/ -v
+
+Run this legacy file (still works):
     uvx pytest scripts/test/test_setup.py -v
-    uv run --with pytest pytest scripts/test/test_setup.py -v
 """
 
 import json
