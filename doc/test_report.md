@@ -1,8 +1,8 @@
 # Connsys Jarvis — 測試報告
 
 **報告日期**：2026-03-29
-**測試計畫**：test_plan.md v1.5
-**實作版本**：v1.4（含 --reset 徹底重置、--init memory 保留驗證；SETUP_VERSION=1.4）
+**測試計畫**：test_plan.md v1.6
+**實作版本**：v1.4（SETUP_VERSION=1.4；含三層測試架構 unit/integration/e2e）
 **測試環境**：macOS Darwin 24.3.0, Python 3.12.9, uv 已安裝
 **測試工具**：tmux session `cj_test` + `tmux wait-for` 同步 + pytest
 
@@ -12,14 +12,19 @@
 
 | 指標 | 數值 |
 |------|------|
-| 整合測試 checks 總數 | 65 |
-| **整合測試通過** | **65** |
-| 整合測試失敗 | 0 |
-| pytest 單元測試 | **110/110 pass** |
+| bash 整合測試 checks 總數 | 65 |
+| **bash 整合測試通過** | **65** |
+| bash 整合測試失敗 | 0 |
+| pytest unit（`scripts/test/unit/`）| **38/38 pass** |
+| pytest integration（`scripts/test/integration/`）| **73/73 pass** |
+| pytest e2e（`scripts/test/e2e/`）| **18/18 pass** |
+| pytest 舊版 monolith（`test_setup.py`）| **110/110 pass** |
+| **pytest 全部（`scripts/test/`）** | **239/239 pass** |
 
-**整體結論：65/65 整合測試通過，110/110 pytest 單元測試通過**
+**整體結論：65/65 bash 整合測試通過，239/239 pytest 測試通過**
 
-> 新增 TC-U21（--reset：5 tests）、TC-U22（--init memory 保留：1 test）= 6 new tests
+> 測試架構升級為三層金字塔：unit（38）+ integration（73）+ e2e（18）= 129 new tests
+> 舊版 test_setup.py（110 tests）保留作向後相容，全部通過
 
 ---
 

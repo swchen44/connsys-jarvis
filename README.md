@@ -117,7 +117,23 @@ python connsys-jarvis/setup.py --uninstall
 
 ## 執行測試
 
-### 快速自我驗證（一步完成）
+### pytest 三層測試（推薦）
+
+```bash
+cd connsys-jarvis
+
+# 全部三層（239 tests）
+uvx pytest scripts/test/ -v
+
+# 只跑某一層（快速反饋）
+uvx pytest scripts/test/unit/ -v           # 38 tests, ~0.1s（純函式邏輯）
+uvx pytest scripts/test/integration/ -v   # 73 tests, ~0.4s（cmd_* 流程）
+uvx pytest scripts/test/e2e/ -v           # 18 tests, ~1.3s（CLI 黑箱）
+```
+
+詳細設計說明見 `scripts/test/README.md`。
+
+### bash 整合測試腳本（手動情境驗證）
 
 ```bash
 # 從 workspace 根目錄執行（connsys-jarvis 需已存在或 symlink）
@@ -132,37 +148,23 @@ bash connsys-jarvis/scripts/test/run_integration_tests.sh
 🎉 All tests passed!
 ```
 
-若某步驟失敗，腳本以 exit code 1 結束，並在失敗行顯示 `❌`。
-
 ### 用 tmux 在背景執行
 
 ```bash
 SESSION="connsys-jarvis"
-
-# 建立 tmux session
 tmux new-session -d -s "$SESSION" -x 200 -y 60
-
-# 送入測試指令，完成後發出 signal
 tmux send-keys -t "$SESSION" \
   "bash connsys-jarvis/scripts/test/run_integration_tests.sh; tmux wait-for -S ${SESSION}-done" Enter
-
-# 主行程阻塞等待（無 sleep loop）
 tmux wait-for "${SESSION}-done"
-```
-
-### pytest 單元測試（獨立執行）
-
-```bash
-cd connsys-jarvis
-python3 -m pytest scripts/test/test_setup.py -v
-# 預期：104 passed
 ```
 
 ### 測試覆蓋範圍
 
 | 測試 | 涵蓋 TC | 方式 |
 |------|---------|------|
-| `run_integration_tests.sh` | TC-01~08, TC-11, TC-13~16 | bash 整合測試 |
-| `scripts/test/test_setup.py` | TC-12, TC-17（A~F）| pytest 單元測試 |
+| `scripts/test/unit/` | TC-U01~U08（38 tests）| pytest 純函式單元測試 |
+| `scripts/test/integration/` | TC-U09~U22（73 tests）| pytest cmd_* 整合測試 |
+| `scripts/test/e2e/` | TC-E01~E06（18 tests）| pytest subprocess E2E 測試 |
+| `run_integration_tests.sh` | TC-01~08, TC-11, TC-13~16 | bash 手動整合驗證 |
 
 詳細測試計畫見 `doc/test_plan.md`，測試結果見 `doc/test_report.md`。

@@ -487,45 +487,60 @@ grep 'cmd_remove' .connsys-jarvis/log/install.log
 
 ## 7. 驗證方法
 
-### 7.1 Unit Test（pytest）
+### 7.1 pytest 三層測試
+
+測試採**三層金字塔**設計，詳細說明見 `scripts/test/README.md`。
 
 ```bash
 # 從 connsys-jarvis 目錄執行
-cd /path/to/connsys-jarvis
-uvx pytest scripts/test/test_setup.py -v
+
+# 全部三層（239 tests）
+uvx pytest scripts/test/ -v
+
+# 只跑某一層（快速反饋）
+uvx pytest scripts/test/unit/ -v           # 38 tests, ~0.1s
+uvx pytest scripts/test/integration/ -v   # 73 tests, ~0.4s
+uvx pytest scripts/test/e2e/ -v           # 18 tests, ~1.3s
 
 # 執行特定測試類
-uvx pytest scripts/test/test_setup.py::TestWriteEnvFile -v
-uvx pytest scripts/test/test_setup.py::TestIntegrationInit -v
+uvx pytest scripts/test/unit/test_unit.py::TestWriteEnvFile -v
+uvx pytest scripts/test/integration/test_integration.py::TestIntegrationInit -v
 
-# 若無 uvx，用 uv run
-uv run --with pytest pytest scripts/test/test_setup.py -v
+# 舊版 monolith（向後相容）
+uvx pytest scripts/test/test_setup.py -v  # 110 tests
+
+# 若無 uvx
+uv run --with pytest pytest scripts/test/ -v
 ```
 
-**測試涵蓋的函式與場景**：
+**測試層說明**：
 
-| 測試類 | 涵蓋函式 | 重點 |
-|--------|----------|------|
-| `TestDetectScenario` | `detect_scenario()` | .repo 偵測 |
-| `TestGetCodespacePath` | `get_codespace_path()` | agent-first vs legacy 路徑 |
-| `TestResolveItems` | `resolve_items()` | "all"/list/None 三種 spec |
-| `TestApplyExcludePatterns` | `apply_exclude_patterns()` | regex 過濾邏輯 |
-| `TestGenerateClaudeMdSingle` | `generate_claude_md()` | 單 Expert 格式 |
-| `TestGenerateClaudeMdMulti` | `generate_claude_md()` | 多 Expert 格式，含 --with-all-experts |
-| `TestWriteEnvFile` | `write_env_file()` | 6 個環境變數，含前綴驗證 |
-| `TestInstalledExpertsSchema` | `save/load_installed_experts()` | JSON 讀寫 roundtrip |
-| `TestIntegrationInit` | `cmd_init()` | 完整 init 流程 |
-| `TestIntegrationAdd` | `cmd_add()` | 冪等疊加安裝 |
-| `TestIntegrationRemove` | `cmd_remove()` | 全清再重建 |
-| `TestIntegrationUninstall` | `cmd_uninstall()` | 保留 memory/ |
-| `TestScanAvailableExperts` | `scan_available_experts()` | 即時掃描，fields 驗證 |
-| `TestCmdQuery` | `cmd_query()` | 安裝狀態、JSON 格式、部分匹配 |
-| `TestCmdListUpdated` | `cmd_list()` | available experts、JSON 格式 |
-| `TestDoctorSystemInfo` | `cmd_doctor()` A 區段 | OS / Python / version 顯示 |
-| `TestDoctorEnvVars` | `cmd_doctor()` B 區段 + `parse_env_file()` | 6 vars 驗證、缺失偵測 |
-| `TestDoctorSymlinkIntegrity` | `cmd_doctor()` C 區段 | missing/orphan/SKILL.md |
-| `TestDoctorClaudeMd` | `cmd_doctor()` D 區段 | @include 對比 |
-| `TestDoctorExpertStructure` | `cmd_doctor()` F 區段 + `collect_skill_references()` | F1~F4 結構驗證 |
+| 層 | 目錄 | 測試對象 | 速度 | 數量 |
+|----|------|----------|------|------|
+| Unit | `unit/` | 單一 function，不碰磁碟 | ~0.1s | 38 |
+| Integration | `integration/` | cmd_* 函式，真實 tmp_path | ~0.4s | 73 |
+| E2E | `e2e/` | CLI 黑箱（subprocess.run） | ~1.3s | 18 |
+
+**各層涵蓋範圍**：
+
+| 層 | 測試類 | 涵蓋函式 | 重點 |
+|----|--------|----------|------|
+| Unit | `TestDetectScenario` | `detect_scenario()` | .repo 偵測 |
+| Unit | `TestGetCodespacePath` | `get_codespace_path()` | agent-first vs legacy |
+| Unit | `TestResolveItems` | `resolve_items()` | "all"/list/None 三種 spec |
+| Unit | `TestApplyExcludePatterns` | `apply_exclude_patterns()` | regex 過濾邏輯 |
+| Unit | `TestGenerateClaudeMdSingle/Multi` | `generate_claude_md()` | 單/多 Expert，--with-all-experts |
+| Unit | `TestWriteEnvFile` | `write_env_file()` | 6 個變數，前綴驗證 |
+| Unit | `TestInstalledExpertsSchema` | `save/load_installed_experts()` | JSON roundtrip |
+| Integration | `TestIntegrationInit` | `cmd_init()` | 完整流程 + memory 保留 |
+| Integration | `TestIntegrationAdd/Remove` | `cmd_add/remove()` | 冪等疊加、全清再重建 |
+| Integration | `TestIntegrationUninstall/Reset` | `cmd_uninstall/reset()` | memory 保留 vs 刪除 |
+| Integration | `TestScanAvailableExperts` | `scan_available_experts()` | 即時掃描 |
+| Integration | `TestCmdQuery/ListUpdated` | `cmd_query/list()` | JSON 格式、部分匹配 |
+| Integration | `TestDoctor*`（5 classes） | `cmd_doctor()` A~F | 全診斷區段 |
+| E2E | `TestE2EInit/Add/Uninstall/Reset` | `--init/--add/--uninstall/--reset` | CLI 完整流程 |
+| E2E | `TestE2EList` | `--list --format json` | JSON 輸出驗證 |
+| E2E | `TestE2EMultiExpertWorkflow` | init→add→list→remove | 端對端工作流 |
 
 ### 7.2 整合測試腳本
 
@@ -664,14 +679,16 @@ python ./connsys-jarvis/scripts/setup.py \
 ### Q: 測試失敗（pytest）
 
 ```bash
-# 開啟 pytest 的詳細輸出
-uvx pytest scripts/test/test_setup.py -v -s
+# 開啟 pytest 的詳細輸出（可鎖定特定層）
+uvx pytest scripts/test/unit/ -v -s
+uvx pytest scripts/test/integration/ -v -s
+uvx pytest scripts/test/e2e/ -v -s
 
-# 只執行失敗的測試
-uvx pytest scripts/test/test_setup.py -v --last-failed
+# 只執行上次失敗的測試
+uvx pytest scripts/test/ -v --last-failed
 
 # 查看詳細 log（測試使用 tmp_path，不影響真實 workspace）
-uvx pytest scripts/test/test_setup.py -v --tb=long
+uvx pytest scripts/test/ -v --tb=long
 ```
 
 ### Q: `--doctor` 顯示 env var `路徑不存在`

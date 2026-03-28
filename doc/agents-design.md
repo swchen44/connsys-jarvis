@@ -1,8 +1,8 @@
 # Consys Experts — 設計書
 
-**文件版本**：v3.4
+**文件版本**：v3.5
 **狀態**：Draft
-**依據**：agents-requirements.md v3.4
+**依據**：agents-requirements.md v3.5
 
 > **注意**：本文件中所列的 expert、skill 名稱均為**示例**，用於說明命名規則與架構設計。實際 expert 與 skill 的規劃以團隊討論為準。
 
@@ -328,7 +328,15 @@ connsys-jarvis/
 ├── scripts/                        ← 安裝程式與測試
 │   ├── setup.py                  ← 唯一安裝程式（Python stdlib）
 │   └── test/
-│       └── test_setup.py         ← pytest 單元測試（uvx pytest）
+│       ├── conftest.py           ← 共用 fixtures（全層共用）
+│       ├── test_setup.py         ← 舊版 monolith（向後相容，仍可執行）
+│       ├── unit/                 ← 單元測試（TC-U01~U08，38 tests）
+│       │   └── test_unit.py
+│       ├── integration/          ← 整合測試（TC-U09~U22，73 tests）
+│       │   ├── conftest.py
+│       │   └── test_integration.py
+│       └── e2e/                  ← 端對端測試（TC-E01~E06，18 tests）
+│           └── test_e2e.py
 ├── README.md
 │
 ├── framework/                      ← 框架 domain（跨所有 domain 共用）
@@ -886,46 +894,76 @@ Symlinks 健康狀態：
     python3 -c "import os; os.remove('.claude/skills/wifi-bora-lsp-tool')"
 ```
 
-### 5.7 scripts/ 目錄設計與單元測試
+### 5.7 scripts/ 目錄設計與測試架構
 
-`connsys-jarvis/scripts/` 目錄集中管理所有可執行腳本：
+`connsys-jarvis/scripts/` 目錄集中管理所有可執行腳本，測試採**三層金字塔**設計：
 
 ```
 scripts/
-├── setup.py          ← 主安裝程式（Python stdlib，PEP 723）
+├── setup.py                ← 主安裝程式（Python stdlib，PEP 723）
 └── test/
-    └── test_setup.py ← pytest 單元測試
+    ├── conftest.py         ← 共用 fixtures（workspace / legacy_workspace / …）
+    ├── test_setup.py       ← 舊版 monolith（向後相容）
+    ├── unit/               ← Layer 1：單元測試（純函式邏輯）
+    │   └── test_unit.py
+    ├── integration/        ← Layer 2：整合測試（cmd_* 多模組協作）
+    │   ├── conftest.py     ← build_mini_jarvis helper
+    │   └── test_integration.py
+    └── e2e/                ← Layer 3：端對端測試（subprocess CLI 黑箱）
+        └── test_e2e.py
 ```
+
+**三層設計原則**：
+
+| 層級 | 測試對象 | 特性 | 數量 |
+|------|----------|------|------|
+| Unit | 單一 function（`apply_exclude_patterns` 等）| 不碰磁碟，ms 級 | 38 |
+| Integration | cmd_* 函式協作（真實 tmp_path）| 驗證 symlink/JSON 實際建立 | 73 |
+| E2E | CLI 黑箱（`subprocess.run`）| 驗證 stdout + 檔案系統 | 18 |
 
 **執行測試**：
 
 ```bash
-# 從 workspace 根目錄執行（connsys-jarvis 為 symlink）
-uvx pytest connsys-jarvis/scripts/test/test_setup.py -v
+# 全部三層（從 connsys-jarvis 目錄）
+uvx pytest scripts/test/ -v                       # 239 tests
 
-# 或從 connsys-jarvis 目錄執行
-cd connsys-jarvis && uvx pytest scripts/test/test_setup.py -v
+# 只跑某一層（快速反饋）
+uvx pytest scripts/test/unit/ -v                  # 38 tests, ~0.1s
+uvx pytest scripts/test/integration/ -v           # 73 tests, ~0.4s
+uvx pytest scripts/test/e2e/ -v                   # 18 tests, ~1.3s
 
-# 使用 uv run（若未安裝 uvx）
-uv run --with pytest pytest scripts/test/test_setup.py -v
+# 舊版（向後相容）
+uvx pytest scripts/test/test_setup.py -v          # 110 tests
 ```
 
-**測試覆蓋範圍**（`test_setup.py` 共 61 個測試）：
+**測試覆蓋範圍**：
 
-| 測試類 | 函式 | 測試數 |
-|--------|------|--------|
-| `TestDetectScenario` | `detect_scenario()` | 3 |
-| `TestGetCodespacePath` | `get_codespace_path()` | 2 |
-| `TestResolveItems` | `resolve_items()` | 6 |
-| `TestApplyExcludePatterns` | `apply_exclude_patterns()` | 4 |
-| `TestGenerateClaudeMdSingle` | `generate_claude_md()` 單 Expert | 4 |
-| `TestGenerateClaudeMdMulti` | `generate_claude_md()` 多 Expert（identity-only × 4 + --with-all-experts × 4）| 8 |
-| `TestWriteEnvFile` | `write_env_file()` + 環境變數驗證 | 10 |
-| `TestInstalledExpertsSchema` | `.installed-experts.json` 讀寫 | 3 |
-| `TestIntegrationInit` | `--init` 整合測試 | 8 |
-| `TestIntegrationAdd` | `--add` 整合測試 | 5 |
-| `TestIntegrationRemove` | `--remove` 整合測試 | 5 |
-| `TestIntegrationUninstall` | `--uninstall` 整合測試 | 3 |
+| 層 | 測試類 | 函式 / 場景 | 測試數 |
+|----|--------|------------|--------|
+| Unit | `TestDetectScenario` | `detect_scenario()` | 3 |
+| Unit | `TestGetCodespacePath` | `get_codespace_path()` | 2 |
+| Unit | `TestResolveItems` | `resolve_items()` | 6 |
+| Unit | `TestApplyExcludePatterns` | `apply_exclude_patterns()` | 4 |
+| Unit | `TestGenerateClaudeMdSingle` | `generate_claude_md()` 單 Expert | 4 |
+| Unit | `TestGenerateClaudeMdMulti` | `generate_claude_md()` 多 Expert | 8 |
+| Unit | `TestWriteEnvFile` | `write_env_file()` + 變數驗證 | 10 |
+| Unit | `TestInstalledExpertsSchema` | `.installed-experts.json` 讀寫 | 3 |
+| Integration | `TestIntegrationInit` | `cmd_init()` + memory 保留 | 9 |
+| Integration | `TestIntegrationAdd` | `cmd_add()` 冪等疊加 | 5 |
+| Integration | `TestIntegrationRemove` | `cmd_remove()` 全清再重建 | 5 |
+| Integration | `TestIntegrationUninstall` | `cmd_uninstall()` 保留 memory | 3 |
+| Integration | `TestIntegrationReset` | `cmd_reset()` 刪除 memory | 5 |
+| Integration | `TestInitMemoryPreservation` | `--init` handoff 效果 | 1 |
+| Integration | `TestScanAvailableExperts` | `scan_available_experts()` | 6 |
+| Integration | `TestCmdQuery` | `cmd_query()` | 8 |
+| Integration | `TestCmdListUpdated` | `cmd_list()` | 6 |
+| Integration | `TestDoctorSystemInfo/EnvVars/Symlink/ClaudeMd/ExpertStructure` | `cmd_doctor()` A~F 區段 | 21 |
+| E2E | `TestE2EInit` | `--init` CLI 完整流程 | 6 |
+| E2E | `TestE2EAdd` | `--add` CLI 流程 | 2 |
+| E2E | `TestE2EUninstall` | `--uninstall` CLI 流程 | 3 |
+| E2E | `TestE2EReset` | `--reset` CLI 流程 | 4 |
+| E2E | `TestE2EList` | `--list --format json` | 2 |
+| E2E | `TestE2EMultiExpertWorkflow` | init→add→list→remove 完整流程 | 1 |
 
 ---
 

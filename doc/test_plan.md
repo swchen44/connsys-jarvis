@@ -1,14 +1,15 @@
 # Connsys Jarvis — 測試計畫
 
-**文件版本**：v1.5
-**日期**：2026-03-28
-**依據**：agents-requirements.md v3.4, agents-design.md v3.4
+**文件版本**：v1.6
+**日期**：2026-03-29
+**依據**：agents-requirements.md v3.5, agents-design.md v3.5
 **變更說明**：
 - v1.1 — setup.py 路徑改為 scripts/setup.py；新增 TC-12 pytest 單元測試
 - v1.2 — 修正 TC-02 Step 6（預設 identity-only，無 count header）；更新 TC-12 測試數 57→61（含 --with-all-experts tests）；新增 TC-13（--with-all-experts 整合）、TC-14（--debug 日誌）
 - v1.3 — TC-02 補充 Step 8、9（驗證 include_all_experts=false 及 install_order）；對齊需求書 FR-02-4 reference count 與 FR-02-8 dependencies/internal 定義
 - v1.4 — 更新 TC-05（--remove 改全清再重建）；更新 TC-08（--list 顯示 installed+available，新增 --format json）；新增 TC-15（--query）、TC-16（--list --format json）
 - v1.5 — TC-01 補充 Step 10（--init memory 保留驗證）；新增 TC-18（--reset 整合測試）
+- v1.6 — TC-12 更新（三層金字塔架構，239 tests）；新增 TC-E01~E06（E2E subprocess 測試）
 
 ---
 
@@ -228,27 +229,34 @@
 
 ---
 
-## TC-12：pytest 單元測試（scripts/test/test_setup.py）
+## TC-12：pytest 三層測試架構（scripts/test/）
 
-**目的**：驗證 `setup.py` 核心函式的單元測試全部通過，含環境變數生成、`--with-all-experts` 模式測試
+**目的**：驗證三層測試金字塔（unit / integration / e2e）全部通過
 **對應需求**：FR-02-17
+
+### 架構說明
+
+```
+scripts/test/
+├── conftest.py          ← 共用 fixtures（所有層共用）
+├── test_setup.py        ← 舊版 monolith（向後相容，110 tests）
+├── unit/                ← Layer 1：純函式邏輯（38 tests）
+├── integration/         ← Layer 2：cmd_* 多模組協作（73 tests）
+└── e2e/                 ← Layer 3：subprocess CLI 黑箱（18 tests）
+```
 
 ### Steps
 
 | # | 步驟 | 預期結果 |
 |---|------|---------|
 | 1 | `cd /Users/swchen.tw/git/testing/agents/connsys-jarvis` | 進入 jarvis 目錄 |
-| 2 | `uvx pytest scripts/test/test_setup.py -v` | 執行所有 61 個測試 |
-| 3 | 確認 `TestDetectScenario`（3 tests）| 3 passed |
-| 4 | 確認 `TestGetCodespacePath`（2 tests）| 2 passed |
-| 5 | 確認 `TestResolveItems`（6 tests）| 6 passed |
-| 6 | 確認 `TestApplyExcludePatterns`（4 tests）| 4 passed |
-| 7 | 確認 `TestGenerateClaudeMdSingle`（4 tests）| 4 passed |
-| 8 | 確認 `TestGenerateClaudeMdMulti`（8 tests）含預設 identity-only（4）與 `--with-all-experts`（4）| 8 passed |
-| 9 | 確認 `TestWriteEnvFile`（10 tests）含環境變數前綴 `CONNSYS_JARVIS_` 驗證 | 10 passed |
-| 10 | 確認 `TestInstalledExpertsSchema`（3 tests）| 3 passed |
-| 11 | 確認整合測試 `TestIntegrationInit/Add/Remove/Uninstall`（21 tests）| 21 passed |
-| 12 | 最終輸出 | `61 passed in X.XXs` |
+| 2 | `uvx pytest scripts/test/unit/ -v` | `38 passed`（< 0.2s） |
+| 3 | `uvx pytest scripts/test/integration/ -v` | `73 passed`（< 1s） |
+| 4 | `uvx pytest scripts/test/e2e/ -v` | `18 passed`（< 3s） |
+| 5 | `uvx pytest scripts/test/ -v` | `239 passed`（含舊版 monolith） |
+| 6 | 確認 unit/：TC-U01~U08 各類均 passed | 38 passed |
+| 7 | 確認 integration/：TC-U09~U22 各類均 passed | 73 passed |
+| 8 | 確認 e2e/：TC-E01~E06 各類均 passed | 18 passed |
 
 ---
 
@@ -374,3 +382,27 @@
 **與 TC-07（--uninstall）的關鍵差異**：Step 10 memory/ 應為 NOT FOUND；TC-07 Step 7 memory/ 應存在。
 
 **pytest 覆蓋**：新增 TC-U21（--reset 整合）= 5 tests
+
+---
+
+## TC-E01~E06：E2E 端對端測試（scripts/test/e2e/）
+
+**目的**：透過 `subprocess.run()` 模擬真實使用者 CLI 操作，從指令入口到最終檔案系統狀態，驗證整個系統的組合行為
+**對應需求**：FR-02-17
+**特性**：不 import setup.py，完全黑箱；驗證 returncode、stdout 關鍵字、檔案系統狀態
+
+| TC | 測試類 | 場景 | 測試數 |
+|----|--------|------|--------|
+| TC-E01 | `TestE2EInit` | `--init` CLI 完整流程（exit code / env hint / symlinks）| 6 |
+| TC-E02 | `TestE2EAdd` | `--add` CLI 流程（exit code / skill count）| 2 |
+| TC-E03 | `TestE2EUninstall` | `--uninstall` CLI 流程（exit code / memory 保留）| 3 |
+| TC-E04 | `TestE2EReset` | `--reset` CLI 流程（exit code / memory 刪除 / log 保留）| 4 |
+| TC-E05 | `TestE2EList` | `--list --format json` 輸出驗證 | 2 |
+| TC-E06 | `TestE2EMultiExpertWorkflow` | init→add→list→remove 完整工作流 | 1 |
+
+**合計 E2E**：18 tests
+
+**執行**：
+```bash
+uvx pytest scripts/test/e2e/ -v   # ~1.3s
+```

@@ -19,6 +19,7 @@
 - v3.2：setup.py 路徑改為 `scripts/setup.py`；新增 FR-02-17（pytest 單元測試 `scripts/test/test_setup.py`）；更新目錄結構加入 `scripts/` 子節
 - v3.3：移除 registry.json；setup.py 改為即時掃描 Expert 目錄；新增 --query 指令、--format json 輸出格式；--remove 改為全清再重建策略（與 --add 一致）；--add 重複安裝 = 重新安裝
 - v3.4：新增 FR-02-27（--reset 徹底重置，額外刪除 memory/）；更新 FR-02-2（--init memory 不受影響說明）；更新 FR-02-5（--uninstall 保留 memory 的適用場景說明）
+- v3.5：更新 FR-02-17（測試架構升級為三層金字塔：unit/integration/e2e，共 239 tests）
 
 > **注意**：文件中所列的 expert、skill 名稱均為**示例**，用於說明命名規則與架構設計。實際規劃以團隊討論為準。
 
@@ -664,7 +665,7 @@ workspace/                                       ← $CONNSYS_JARVIS_WORKSPACE_R
 | FR-02-14 | setup.py 安裝前自動檢查：system Python 版本、`uv` 是否安裝、`uvx` 是否可用；版本不符輸出警告（不阻斷）| Should | PEP 723 腳本需要 Python ≥ 3.11 |
 | FR-02-15 | Windows 環境下 symlink 不可用時，setup.py 自動降級為 **copy 模式**（功能相同，但更新 expert 內容後需重新執行）| Should | 跨平台支援 |
 | FR-02-16 | Hook 實作語言優先順序：**Shell（預設）→ Python（複雜邏輯）→ JS（最後考慮）**；Python 腳本採 PEP 723 | Must | 一致的語言策略，Shell 無需額外 runtime |
-| FR-02-17 | `connsys-jarvis/scripts/test/test_setup.py` 提供 **pytest 單元測試**，覆蓋 `setup.py` 所有核心函式；執行方式：`uvx pytest scripts/test/test_setup.py -v` 或 `uv run --with pytest pytest scripts/test/test_setup.py` | Must | 確保安裝邏輯可回歸測試；含環境變數生成、CLAUDE.md 生成、symlink 建立等整合測試 |
+| FR-02-17 | `connsys-jarvis/scripts/test/` 採**三層測試金字塔**架構：`unit/`（純函式邏輯，38 tests）、`integration/`（cmd_* 多模組協作，73 tests）、`e2e/`（subprocess CLI 黑箱，18 tests）；根層 `conftest.py` 提供共用 fixtures；舊版 `test_setup.py` 保留作向後相容；執行全部：`uvx pytest scripts/test/ -v`（239 tests） | Must | 確保安裝邏輯可回歸測試；三層分離讓 Unit 測試秒速反饋、E2E 測試抓出模組組合問題 |
 | FR-02-18 | 支援 `--query <expert-name>` 參數：即時掃描並讀取指定 Expert 的 expert.json，顯示 metadata（name、domain、description、version、status、dependencies、internal）；支援部分名稱匹配 | Must | 讓工程師和 skill 可快速查詢指定 Expert 的能力與狀態 |
 | FR-02-19 | `--list` 和 `--query` 支援 `--format json` 旗標：以 JSON 格式輸出結果，供 framework-expert-discovery-knowhow skill 或 LLM 呼叫；預設輸出 table 格式（人類可讀）| Must | LLM 可直接解析 JSON 取得結構化 Expert 清單，無需解析文字輸出 |
 | FR-02-20 | `--add <expert.json>` 對已安裝的 Expert 執行**重新安裝**：先從已安裝清單移除，再依正常 --add 流程重建 symlinks 和 CLAUDE.md（冪等性：重複 --add 結果一致）| Must | 同仁更新 expert.json 後可直接重新 --add 而無需先 --remove；確保安裝狀態正確 |
