@@ -1041,3 +1041,70 @@ class TestDoctorExpertStructure:
         out = self._run_doctor(root, capsys)
         assert "orphan-skill" in out
         assert "not referenced by any expert.json" in out
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TC-U21  integration — --reset
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestIntegrationReset:
+    """驗證 --reset 清除所有狀態（含 memory/），僅保留 log/。"""
+
+    def _setup(self, workspace):
+        inst.cmd_init(workspace, workspace / "connsys-jarvis/framework/framework-base-expert/expert.json")
+        memory_note = workspace / ".connsys-jarvis/memory/test/note.md"
+        memory_note.parent.mkdir(parents=True, exist_ok=True)
+        memory_note.write_text("memory")
+        log_file = workspace / ".connsys-jarvis/log/setup.log"
+        log_file.parent.mkdir(parents=True, exist_ok=True)
+        log_file.write_text("log")
+
+    def test_claude_md_deleted(self, workspace):
+        self._setup(workspace)
+        inst.cmd_reset(workspace)
+        assert not (workspace / "CLAUDE.md").exists()
+
+    def test_skills_symlinks_cleared(self, workspace):
+        self._setup(workspace)
+        inst.cmd_reset(workspace)
+        skills_dir = workspace / ".claude" / "skills"
+        assert not any(True for _ in skills_dir.iterdir()) if skills_dir.exists() else True
+
+    def test_memory_deleted(self, workspace):
+        """--reset 應刪除 memory/（與 --uninstall 的關鍵差異）。"""
+        self._setup(workspace)
+        inst.cmd_reset(workspace)
+        assert not (workspace / ".connsys-jarvis/memory").exists()
+
+    def test_installed_experts_deleted(self, workspace):
+        self._setup(workspace)
+        inst.cmd_reset(workspace)
+        assert not (workspace / ".connsys-jarvis/.installed-experts.json").exists()
+
+    def test_log_preserved(self, workspace):
+        """--reset 應保留 log/。"""
+        self._setup(workspace)
+        inst.cmd_reset(workspace)
+        assert (workspace / ".connsys-jarvis/log/setup.log").exists()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TC-U22  --init memory preservation
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestInitMemoryPreservation:
+    """驗證 --init 不影響 memory/（handoff 效果）。"""
+
+    def test_memory_preserved_after_init(self, workspace):
+        """--init 切換 Expert 時，memory/ 內容應保留。"""
+        # 第一次安裝
+        inst.cmd_init(workspace, workspace / "connsys-jarvis/framework/framework-base-expert/expert.json")
+        # 建立記憶
+        memory_note = workspace / ".connsys-jarvis/memory/test/note.md"
+        memory_note.parent.mkdir(parents=True, exist_ok=True)
+        memory_note.write_text("handoff note")
+        # 再次 --init（切換 expert）
+        inst.cmd_init(workspace, workspace / "connsys-jarvis/framework/framework-base-expert/expert.json")
+        # memory 應保留
+        assert memory_note.exists()
+        assert memory_note.read_text() == "handoff note"

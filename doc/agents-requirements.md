@@ -18,6 +18,7 @@
 - v3.1：expert.json dependencies 改為陣列格式（支援 all/正面表列/省略=不繼承）、exclude_symlink 改為全域 regex patterns（3-step 執行順序）、更新 domain 清單（wifi-bora/sys-bora/bt-bora/lrwpan-bora/wifi-gen4m/wifi-logan）、common 改為 base、加入新 expert 清單
 - v3.2：setup.py 路徑改為 `scripts/setup.py`；新增 FR-02-17（pytest 單元測試 `scripts/test/test_setup.py`）；更新目錄結構加入 `scripts/` 子節
 - v3.3：移除 registry.json；setup.py 改為即時掃描 Expert 目錄；新增 --query 指令、--format json 輸出格式；--remove 改為全清再重建策略（與 --add 一致）；--add 重複安裝 = 重新安裝
+- v3.4：新增 FR-02-27（--reset 徹底重置，額外刪除 memory/）；更新 FR-02-2（--init memory 不受影響說明）；更新 FR-02-5（--uninstall 保留 memory 的適用場景說明）
 
 > **注意**：文件中所列的 expert、skill 名稱均為**示例**，用於說明命名規則與架構設計。實際規劃以團隊討論為準。
 
@@ -647,10 +648,11 @@ workspace/                                       ← $CONNSYS_JARVIS_WORKSPACE_R
 | 編號 | 需求 | 優先級 | 理由 |
 |------|------|--------|------|
 | FR-02-1 | `connsys-jarvis/scripts/setup.py` 為**唯一安裝程式**，以 Python stdlib 實作，用 `uv run ./connsys-jarvis/scripts/setup.py` 執行 | Must | 單一入口，避免每個 Expert 各自維護 install.sh；Python stdlib 無需額外依賴 |
-| FR-02-2 | 支援 `--init <expert.json>` 參數：**全新安裝**，清除所有既有 link，讀取 expert.json 及其 dependencies，重建所有 symlink，重新生成 CLAUDE.md 和 .env | Must | 初次安裝或強制重建時使用 |
+| FR-02-2 | 支援 `--init <expert.json>` 參數：**全新安裝**，清除所有既有 link，讀取 expert.json 及其 dependencies，重建所有 symlink，重新生成 CLAUDE.md 和 .env；**memory 不受影響**（handoff 效果：切換 Expert 時保留 Claude 的工作記憶） | Must | 初次安裝或切換 Expert 時使用；memory 保留讓 Claude 可延續前一個 Expert 的工作記憶 |
 | FR-02-3 | 支援 `--add <expert.json>` 參數：**疊加安裝**，在既有 Expert 基礎上加入新的 Expert；CLAUDE.md 預設只包含最後安裝 Expert 的 identity（soul/rules/duties/expert.md），加上 `--with-all-experts` 旗標則同時輸出所有已安裝 Expert 的 expert.md（Identity + Capabilities 雙區段） | Must | 多 Expert 安裝流程；預設 identity-only 避免 context 過大，`--with-all-experts` 視需要開啟全能力 |
 | FR-02-4 | 支援 `--remove <expert.json>` 參數：從已安裝清單移除此 Expert，依剩餘 Expert 重建 symlink 和 CLAUDE.md；**全清再重建策略**：先清除 .claude/ 下所有 symlinks，再依剩餘 Expert（按 install_order）逐一重建，確保 symlink 集合與已安裝清單完全同步 | Must | 全清再重建與 --add 策略一致，邏輯簡單可靠，無需維護 reference count |
-| FR-02-5 | 支援 `--uninstall` 參數：清除所有 link 和 CLAUDE.md，但保留 `.connsys-jarvis/log/` 和 `.connsys-jarvis/memory/` | Must | 完全清除安裝，保留記憶 |
+| FR-02-5 | 支援 `--uninstall` 參數：清除所有 link 和 CLAUDE.md，但保留 `.connsys-jarvis/log/` 和 `.connsys-jarvis/memory/` | Must | 完全清除安裝，保留記憶；適合需要重裝但不希望遺失 Claude 工作記憶的情況 |
+| FR-02-27 | 支援 `--reset` 參數：**徹底重置**，清除所有 link、CLAUDE.md、`.installed-experts.json`、`.env`，並額外刪除 `.connsys-jarvis/memory/`，僅保留 `.connsys-jarvis/log/`；比 `--uninstall` 更激進 | Must | 完全清空所有狀態，適合需要全新開始或問題無法排除時使用；memory 一旦刪除不可恢復，執行前需確認 |
 | FR-02-6 | 支援 `--list` 參數：即時掃描 connsys-jarvis 目錄，列出**所有** Expert（已安裝 + 可用）及 symlink 狀態；每個 Expert 標注 status（installed/available）、install_order、is_identity | Must | 讓同仁了解目前安裝狀態，並一覽可用但尚未安裝的 Expert |
 | FR-02-7 | 支援 `--doctor` 參數：診斷所有 symlink 是否 dangling、列出已安裝 Expert、檢查 Python/uv/uvx 環境；所有異常只顯示修正建議，不自動執行修復 | Must | 快速排查安裝問題 |
 | FR-02-8 | setup.py 讀取 `expert.json` 兩類來源：**① `dependencies`**（引用其他 Expert 的 symlinks）和 **② `internal`**（本 Expert 自有的 skills/hooks/commands）。`dependencies` 陣列每個元素可針對四個 key（skills/hooks/agents/commands）各自指定選擇規則：**`"all"`** → 繼承該 Expert 的全部；**`["name1","name2"]`** → 只繼承指定清單；**省略 key** → 不繼承（空集合）。`internal` 下的四個 key 永遠全部建立 | Must | 精確控制每個依賴 expert 貢獻的 link；internal 與 dependencies 分開，避免不必要的 skill 被載入 |

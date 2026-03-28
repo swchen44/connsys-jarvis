@@ -54,7 +54,8 @@ python ./connsys-jarvis/scripts/setup.py --doctor
 | `--add <expert.json>` | 疊加安裝（預設：CLAUDE.md 只含最後 Expert）；重複 --add = 重新安裝 |
 | `--add <expert.json> --with-all-experts` | 疊加安裝（CLAUDE.md 包含所有 Expert 的 expert.md） |
 | `--remove <name or path>` | 移除指定 Expert（全清再重建剩餘 Expert symlinks） |
-| `--uninstall` | 完全卸載（保留 memory/） |
+| `--uninstall` | 完全卸載（保留 memory/ 和 log/） |
+| `--reset` | **徹底重置**（額外刪除 memory/，僅保留 log/）|
 | `--list` | 列出所有 Expert（已安裝 + 可用），即時掃描，不依賴 registry.json |
 | `--list --format json` | 同上，JSON 格式輸出（供 LLM / skill 使用） |
 | `--query <expert-name>` | 查詢指定 Expert 的完整 metadata（支援部分名稱匹配） |
@@ -103,7 +104,7 @@ workspace/                          ← cwd（使用者執行指令的地方）
 │   ├── .env                        ← 環境變數（需手動 source）
 │   ├── .installed-experts.json    ← 安裝狀態持久化
 │   ├── log/install.log            ← debug log 檔
-│   └── memory/                    ← AI 記憶資料（--uninstall 時保留）
+│   └── memory/                    ← AI 記憶資料（--uninstall 時保留；--reset 時刪除）
 │
 └── CLAUDE.md                       ← Claude Code 載入的主要 context
 ```
@@ -116,7 +117,7 @@ workspace/                          ← cwd（使用者執行指令的地方）
 | **cwd = workspace** | workspace 定義為執行指令時的 cwd，不跟隨 symlink |
 | **冪等性** | 重複執行相同指令結果相同，`[=]` 代表跳過已存在的 symlink；`--add` 重複 = 重新安裝 |
 | **不依賴 registry.json** | Expert 探索（`--list`/`--query`）每次即時掃描 `*/*-expert/expert.json` |
-| **保護記憶** | `--uninstall` 不刪 memory/，避免使用者知識損失 |
+| **保護記憶** | `--uninstall` 不刪 memory/，避免使用者知識損失；`--reset` 則完全清空包含 memory/ |
 | **分離設定** | setup.py 不修改 settings.json（由 setup-claude.sh 負責）|
 
 ---

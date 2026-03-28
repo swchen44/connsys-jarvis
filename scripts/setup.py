@@ -74,7 +74,7 @@ INSTALLED_EXPERTS_FILE = ".installed-experts.json"  # 安裝狀態持久化檔
 CLAUDE_MD           = "CLAUDE.md"             # Claude Code 啟動時載入的 context 設定
 ENV_FILE            = ".env"                  # 環境變數輸出檔
 SCHEMA_VERSION      = "1.0"                   # .installed-experts.json 的 schema 版本
-SETUP_VERSION       = "1.3"                  # setup.py 版本（用於 --doctor 顯示）
+SETUP_VERSION       = "1.4"                  # setup.py 版本（用於 --doctor 顯示）
 
 # --doctor 環境變數驗證常數
 REQUIRED_ENV_VARS = [
@@ -1256,6 +1256,72 @@ def cmd_uninstall(workspace: Path) -> None:
     print(f"\nDone! Kept {dot_dir}/log/ and {dot_dir}/memory/")
 
 
+def cmd_reset(workspace: Path) -> None:
+    """--reset：完全重置，清除所有 symlinks + CLAUDE.md + memory，僅保留 log/。
+
+    比 --uninstall 更徹底：額外移除 .connsys-jarvis/memory/。
+    適用於「徹底清空，不保留任何狀態」的場景。
+
+    **保留原則**：
+      - 保留 .connsys-jarvis/log/（保留歷史 log 供除錯）
+      - 刪除 CLAUDE.md、.claude/ symlinks、.installed-experts.json、.env
+      - 刪除 .connsys-jarvis/memory/（與 --uninstall 的唯一差異）
+
+    **與 --uninstall 差異**：
+      | 項目                         | --uninstall | --reset |
+      |------------------------------|-------------|---------|
+      | CLAUDE.md                    | 刪除        | 刪除    |
+      | .claude/ symlinks            | 刪除        | 刪除    |
+      | .installed-experts.json      | 刪除        | 刪除    |
+      | .env                         | 刪除        | 刪除    |
+      | .connsys-jarvis/memory/      | 保留        | 刪除    |
+      | .connsys-jarvis/log/         | 保留        | 保留    |
+
+    Args:
+        workspace: workspace 根目錄
+    """
+    print(f"\n=== Connsys Jarvis Reset ===")
+    logger.info("cmd_reset: workspace=%s", workspace)
+
+    # 步驟 1：清除所有 symlinks
+    print("[1] Clearing all symlinks...")
+    clear_claude_symlinks(workspace)
+
+    # 步驟 2：刪除 CLAUDE.md
+    print("[2] Removing CLAUDE.md...")
+    claude_md = workspace / CLAUDE_MD
+    if claude_md.exists():
+        claude_md.unlink()
+        logger.info("cmd_reset: deleted CLAUDE.md")
+        print(f"  Deleted {claude_md}")
+
+    # 步驟 3：刪除安裝狀態檔和 .env
+    print("[3] Removing .installed-experts.json and .env...")
+    installed_path = get_installed_experts_path(workspace)
+    if installed_path.exists():
+        installed_path.unlink()
+        logger.debug("cmd_reset: deleted %s", installed_path)
+
+    dot_dir  = get_dot_dir(workspace)
+    env_path = dot_dir / ENV_FILE
+    if env_path.exists():
+        env_path.unlink()
+        logger.debug("cmd_reset: deleted .env")
+
+    # 步驟 4：刪除 memory/（這是與 --uninstall 的關鍵差異）
+    print("[4] Removing memory/...")
+    memory_dir = dot_dir / "memory"
+    if memory_dir.exists():
+        shutil.rmtree(memory_dir)
+        logger.info("cmd_reset: deleted memory/ at %s", memory_dir)
+        print(f"  Deleted {memory_dir}")
+    else:
+        logger.debug("cmd_reset: memory/ not found, skipped")
+
+    logger.info("cmd_reset: completed, only log/ preserved")
+    print(f"\nDone! All state removed. Kept {dot_dir}/log/ only.")
+
+
 def cmd_list(workspace: Path, output_format: str = "table") -> None:
     """--list：列出所有 Expert（已安裝 + 可用），支援 table 和 json 格式。
 
@@ -1814,7 +1880,8 @@ Usage (run from workspace root):
   python connsys-jarvis/scripts/setup.py --init   <expert.json>   Initialize and install an Expert
   python connsys-jarvis/scripts/setup.py --add    <expert.json>   Add an Expert (re-run = reinstall)
   python connsys-jarvis/scripts/setup.py --remove <expert-name>   Remove an Expert
-  python connsys-jarvis/scripts/setup.py --uninstall              Uninstall everything
+  python connsys-jarvis/scripts/setup.py --uninstall              Uninstall everything (keep memory/)
+  python connsys-jarvis/scripts/setup.py --reset                  Full reset (remove everything incl. memory/)
   python connsys-jarvis/scripts/setup.py --list                   List all Experts (installed + available)
   python connsys-jarvis/scripts/setup.py --list --format json     Output in JSON format (for LLM use)
   python connsys-jarvis/scripts/setup.py --query <expert-name>    Query metadata for a specific Expert
@@ -1930,6 +1997,9 @@ def main() -> None:
 
     elif cmd == "--uninstall":
         cmd_uninstall(workspace)
+
+    elif cmd == "--reset":
+        cmd_reset(workspace)
 
     elif cmd == "--list":
         cmd_list(workspace, output_format=output_format)

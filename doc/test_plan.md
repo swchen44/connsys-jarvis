@@ -1,13 +1,14 @@
 # Connsys Jarvis — 測試計畫
 
-**文件版本**：v1.4
-**日期**：2026-03-27
-**依據**：agents-requirements.md v3.3, agents-design.md v3.3
+**文件版本**：v1.5
+**日期**：2026-03-28
+**依據**：agents-requirements.md v3.4, agents-design.md v3.4
 **變更說明**：
 - v1.1 — setup.py 路徑改為 scripts/setup.py；新增 TC-12 pytest 單元測試
 - v1.2 — 修正 TC-02 Step 6（預設 identity-only，無 count header）；更新 TC-12 測試數 57→61（含 --with-all-experts tests）；新增 TC-13（--with-all-experts 整合）、TC-14（--debug 日誌）
 - v1.3 — TC-02 補充 Step 8、9（驗證 include_all_experts=false 及 install_order）；對齊需求書 FR-02-4 reference count 與 FR-02-8 dependencies/internal 定義
 - v1.4 — 更新 TC-05（--remove 改全清再重建）；更新 TC-08（--list 顯示 installed+available，新增 --format json）；新增 TC-15（--query）、TC-16（--list --format json）
+- v1.5 — TC-01 補充 Step 10（--init memory 保留驗證）；新增 TC-18（--reset 整合測試）
 
 ---
 
@@ -41,6 +42,7 @@
 | 7 | `cat CLAUDE.md` | 含 @include soul.md, rules.md, duties.md, expert.md |
 | 8 | `cat .connsys-jarvis/.env` | 含 CONNSYS_JARVIS_* 6 個變數 |
 | 9 | `cat .connsys-jarvis/.installed-experts.json` | experts 陣列含 framework-base-expert |
+| 10 | 手動建立記憶：`mkdir -p .connsys-jarvis/memory/test && echo "note" > .connsys-jarvis/memory/test/note.md`，再執行 `--init framework/framework-base-expert/expert.json` | .connsys-jarvis/memory/test/note.md **仍存在**（memory 不受 --init 影響） |
 
 ---
 
@@ -345,3 +347,30 @@
 | 15 | 區段 F4 — orphan skill folder | 輸出「未被任何 expert.json 引用」|
 
 **pytest 覆蓋**：TC-U16（3）+ TC-U17（4）+ TC-U18（4）+ TC-U19（4）+ TC-U20（6）= 21 tests
+
+---
+
+## TC-18：完全重置（--reset）
+
+**目的**：驗證 `--reset` 清除所有狀態，包含 memory/，僅保留 log/
+**對應需求**：FR-02-27
+
+### Steps
+
+| # | 步驟 | 預期結果 |
+|---|------|---------|
+| 1 | 前置：TC-01 完成後（任意 Expert 已安裝） | |
+| 2 | 手動建立記憶假資料：`mkdir -p .connsys-jarvis/memory/test && touch .connsys-jarvis/memory/test/note.md` | |
+| 3 | 手動建立 log 假資料：`mkdir -p .connsys-jarvis/log && touch .connsys-jarvis/log/setup.log` | |
+| 4 | `python3 ./connsys-jarvis/scripts/setup.py --reset` | 輸出「Done! All state removed. Kept .../log/ only.」 |
+| 5 | `ls CLAUDE.md 2>/dev/null \|\| echo "NOT FOUND"` | NOT FOUND |
+| 6 | `ls .claude/skills/ \| wc -l` | 0 |
+| 7 | `ls .claude/hooks/ \| wc -l` | 0 |
+| 8 | `ls .connsys-jarvis/.installed-experts.json 2>/dev/null \|\| echo "NOT FOUND"` | NOT FOUND |
+| 9 | `ls .connsys-jarvis/.env 2>/dev/null \|\| echo "NOT FOUND"` | NOT FOUND |
+| 10 | `ls .connsys-jarvis/memory/ 2>/dev/null \|\| echo "NOT FOUND"` | NOT FOUND（memory 已刪除，與 --uninstall 差異）|
+| 11 | `ls .connsys-jarvis/log/setup.log` | 存在（log 保留）|
+
+**與 TC-07（--uninstall）的關鍵差異**：Step 10 memory/ 應為 NOT FOUND；TC-07 Step 7 memory/ 應存在。
+
+**pytest 覆蓋**：新增 TC-U21（--reset 整合）= 5 tests

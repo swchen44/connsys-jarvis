@@ -1,9 +1,9 @@
 # Connsys Jarvis — 測試報告
 
-**報告日期**：2026-03-28
-**測試計畫**：test_plan.md v1.4
-**實作版本**：v1.4（含英文輸出翻譯、--query, --format json, scan_available_experts, doctor A~F）
-**測試環境**：macOS Darwin 24.3.0, Python 3.13.2, uv 已安裝
+**報告日期**：2026-03-29
+**測試計畫**：test_plan.md v1.5
+**實作版本**：v1.4（含 --reset 徹底重置、--init memory 保留驗證；SETUP_VERSION=1.4）
+**測試環境**：macOS Darwin 24.3.0, Python 3.12.9, uv 已安裝
 **測試工具**：tmux session `cj_test` + `tmux wait-for` 同步 + pytest
 
 ---
@@ -15,9 +15,11 @@
 | 整合測試 checks 總數 | 65 |
 | **整合測試通過** | **65** |
 | 整合測試失敗 | 0 |
-| pytest 單元測試 | **104/104 pass** |
+| pytest 單元測試 | **110/110 pass** |
 
-**整體結論：65/65 整合測試通過，104/104 pytest 單元測試通過**
+**整體結論：65/65 整合測試通過，110/110 pytest 單元測試通過**
+
+> 新增 TC-U21（--reset：5 tests）、TC-U22（--init memory 保留：1 test）= 6 new tests
 
 ---
 

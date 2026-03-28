@@ -1,8 +1,8 @@
 # Consys Experts — 設計書
 
-**文件版本**：v3.3
+**文件版本**：v3.4
 **狀態**：Draft
-**依據**：agents-requirements.md v3.3
+**依據**：agents-requirements.md v3.4
 
 > **注意**：本文件中所列的 expert、skill 名稱均為**示例**，用於說明命名規則與架構設計。實際 expert 與 skill 的規劃以團隊討論為準。
 
@@ -615,6 +615,7 @@ uv run ./connsys-jarvis/scripts/setup.py --init   framework/framework-base-exper
 uv run ./connsys-jarvis/scripts/setup.py --add    wifi-bora/wifi-bora-memory-slim-expert/expert.json
 uv run ./connsys-jarvis/scripts/setup.py --remove wifi-bora/wifi-bora-memory-slim-expert/expert.json
 uv run ./connsys-jarvis/scripts/setup.py --uninstall
+uv run ./connsys-jarvis/scripts/setup.py --reset
 
 # 查詢 / 診斷
 uv run ./connsys-jarvis/scripts/setup.py --list
@@ -629,10 +630,11 @@ source .connsys-jarvis/.env
 
 | 指令 | 說明 | 影響範圍 |
 |------|------|---------|
-| `--init <expert.json>` | **全新安裝**：清除所有既有 link，重建 CLAUDE.md，建立 symlink | 全部重建 |
+| `--init <expert.json>` | **全新安裝**：清除所有既有 link，重建 CLAUDE.md，建立 symlink；**memory 不受影響**（handoff 效果） | 全部重建 |
 | `--add <expert.json>` | **疊加安裝**：保留既有 link，加入此 Expert 的 link，更新 CLAUDE.md | 新增 |
 | `--remove <expert.json>` | **移除**：移除此 Expert 的 link，重建 CLAUDE.md（若有其他 Expert 仍保留） | 重建 link |
-| `--uninstall` | **完全清除**：移除所有 link 和 CLAUDE.md，保留 `.connsys-jarvis/` 的 log/memory | 清 link |
+| `--uninstall` | **完全清除**：移除所有 link 和 CLAUDE.md，保留 `.connsys-jarvis/memory/` 和 `log/` | 清 link |
+| `--reset` | **徹底重置**：比 `--uninstall` 更激進，額外刪除 `.connsys-jarvis/memory/`，僅保留 `log/` | 清一切 |
 | `--list [--format json]` | 即時掃描列出所有 Expert（已安裝 + 可用），支援 `--format json` 輸出 | 唯讀 |
 | `--query <expert-name> [--format json]` | 即時掃描查詢指定 Expert 的 metadata；支援部分名稱匹配；支援 `--format json` | 唯讀 |
 | `--doctor` | 診斷 symlink 健康、環境版本（Python/uv/uvx）| 唯讀 |
