@@ -123,21 +123,21 @@ python connsys-jarvis/setup.py --uninstall
 cd connsys-jarvis
 
 # 全部三層（239 tests）
-uvx pytest scripts/test/ -v
+uvx pytest scripts/tests/ -v
 
 # 只跑某一層（快速反饋）
-uvx pytest scripts/test/unit/ -v           # 38 tests, ~0.1s（純函式邏輯）
-uvx pytest scripts/test/integration/ -v   # 73 tests, ~0.4s（cmd_* 流程）
-uvx pytest scripts/test/e2e/ -v           # 18 tests, ~1.3s（CLI 黑箱）
+uvx pytest scripts/tests/unit/ -v           # 38 tests, ~0.1s（純函式邏輯）
+uvx pytest scripts/tests/integration/ -v   # 73 tests, ~0.4s（cmd_* 流程）
+uvx pytest scripts/tests/e2e/ -v           # 18 tests, ~1.3s（CLI 黑箱）
 ```
 
-詳細設計說明見 `scripts/test/README.md`。
+詳細設計說明見 `scripts/tests/README.md`。
 
 ### bash 整合測試腳本（手動情境驗證）
 
 ```bash
 # 從 workspace 根目錄執行（connsys-jarvis 需已存在或 symlink）
-bash connsys-jarvis/scripts/test/run_integration_tests.sh
+bash connsys-jarvis/scripts/tests/run_integration_tests.sh
 ```
 
 輸出範例：
@@ -154,7 +154,7 @@ bash connsys-jarvis/scripts/test/run_integration_tests.sh
 SESSION="connsys-jarvis"
 tmux new-session -d -s "$SESSION" -x 200 -y 60
 tmux send-keys -t "$SESSION" \
-  "bash connsys-jarvis/scripts/test/run_integration_tests.sh; tmux wait-for -S ${SESSION}-done" Enter
+  "bash connsys-jarvis/scripts/tests/run_integration_tests.sh; tmux wait-for -S ${SESSION}-done" Enter
 tmux wait-for "${SESSION}-done"
 ```
 
@@ -162,9 +162,9 @@ tmux wait-for "${SESSION}-done"
 
 | 測試 | 涵蓋 TC | 方式 |
 |------|---------|------|
-| `scripts/test/unit/` | TC-U01~U08（38 tests）| pytest 純函式單元測試 |
-| `scripts/test/integration/` | TC-U09~U22（73 tests）| pytest cmd_* 整合測試 |
-| `scripts/test/e2e/` | TC-E01~E06（18 tests）| pytest subprocess E2E 測試 |
+| `scripts/tests/unit/` | TC-U01~U08（38 tests）| pytest 純函式單元測試 |
+| `scripts/tests/integration/` | TC-U09~U22（73 tests）| pytest cmd_* 整合測試 |
+| `scripts/tests/e2e/` | TC-E01~E06（18 tests）| pytest subprocess E2E 測試 |
 | `run_integration_tests.sh` | TC-01~08, TC-11, TC-13~16 | bash 手動整合驗證 |
 
 詳細測試計畫見 `doc/test_plan.md`，測試結果見 `doc/test_report.md`。

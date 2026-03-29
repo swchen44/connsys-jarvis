@@ -925,15 +925,15 @@ scripts/
 
 ```bash
 # 全部三層（從 connsys-jarvis 目錄）
-uvx pytest scripts/test/ -v                       # 239 tests
+uvx pytest scripts/tests/ -v                       # 239 tests
 
 # 只跑某一層（快速反饋）
-uvx pytest scripts/test/unit/ -v                  # 38 tests, ~0.1s
-uvx pytest scripts/test/integration/ -v           # 73 tests, ~0.4s
-uvx pytest scripts/test/e2e/ -v                   # 18 tests, ~1.3s
+uvx pytest scripts/tests/unit/ -v                  # 38 tests, ~0.1s
+uvx pytest scripts/tests/integration/ -v           # 73 tests, ~0.4s
+uvx pytest scripts/tests/e2e/ -v                   # 18 tests, ~1.3s
 
 # 舊版（向後相容）
-uvx pytest scripts/test/test_setup.py -v          # 110 tests
+uvx pytest scripts/tests/test_setup.py -v          # 110 tests
 ```
 
 **測試覆蓋範圍**：

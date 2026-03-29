@@ -5,7 +5,7 @@ Integration Tests — connsys-jarvis setup.py
 驗證 symlink、JSON 和 CLAUDE.md 確實被正確建立/刪除。
 
 Run:
-    uvx pytest scripts/test/integration/ -v
+    uvx pytest scripts/tests/integration/ -v
 """
 
 import json

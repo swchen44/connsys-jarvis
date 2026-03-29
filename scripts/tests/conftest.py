@@ -13,8 +13,8 @@ from unittest.mock import patch
 import pytest
 
 # ── Make setup.py importable ─────────────────────────────────────────────────
-# This file is at scripts/test/conftest.py
-# parents[0] = scripts/test/
+# This file is at scripts/tests/conftest.py
+# parents[0] = scripts/tests/
 # parents[1] = scripts/    ← SCRIPTS_DIR
 SCRIPTS_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(SCRIPTS_DIR))
@@ -33,7 +33,7 @@ def workspace(tmp_path: Path) -> Path:
       tmp_path/
         connsys-jarvis -> <real connsys-jarvis repo>   (symlink)
     """
-    # This file: scripts/test/conftest.py
+    # This file: scripts/tests/conftest.py
     # parents[2] = connsys-jarvis/
     jarvis_real = Path(__file__).resolve().parents[2]
     (tmp_path / "connsys-jarvis").symlink_to(jarvis_real)

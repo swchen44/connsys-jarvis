@@ -5,7 +5,7 @@ Unit Tests — connsys-jarvis setup.py
 不呼叫 cmd_* 函式，不依賴完整安裝流程。
 
 Run:
-    uvx pytest scripts/test/unit/ -v
+    uvx pytest scripts/tests/unit/ -v
 """
 
 import json
@@ -14,7 +14,7 @@ from unittest.mock import patch
 
 import pytest
 
-# `inst` is injected via scripts/test/conftest.py sys.path setup
+# `inst` is injected via scripts/tests/conftest.py sys.path setup
 import setup as inst
 
 

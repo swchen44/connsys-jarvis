@@ -4,13 +4,13 @@
 # 依據 doc/test_plan.md 執行 TC-01 ~ TC-16
 #
 # 用法（從任意目錄執行）：
-#   bash connsys-jarvis/scripts/test/run_integration_tests.sh
+#   bash connsys-jarvis/scripts/tests/run_integration_tests.sh
 #
 # 用 tmux 在背景執行並等待完成：
 #   SESSION="connsys-jarvis"
 #   tmux new-session -d -s "$SESSION" -x 200 -y 60
 #   tmux send-keys -t "$SESSION" \
-#     "bash connsys-jarvis/scripts/test/run_integration_tests.sh; tmux wait-for -S ${SESSION}-done" Enter
+#     "bash connsys-jarvis/scripts/tests/run_integration_tests.sh; tmux wait-for -S ${SESSION}-done" Enter
 #   tmux wait-for "${SESSION}-done"
 #
 # 需求：
@@ -20,7 +20,7 @@
 
 # ── 自動定位 connsys-jarvis 根目錄 ──────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-JARVIS_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"   # scripts/test → scripts → connsys-jarvis
+JARVIS_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"   # scripts/tests → scripts → connsys-jarvis
 SETUP="python3 ${JARVIS_DIR}/scripts/setup.py"
 
 # ── 測試 workspace ──────────────────────────────────────────
@@ -273,7 +273,7 @@ fi
 hr "TC-12: pytest 單元測試"
 # ============================================================
 cd "$JARVIS_DIR"
-pytest_out=$(python3 -m pytest "${JARVIS_DIR}/scripts/test/test_setup.py" -v 2>&1)
+pytest_out=$(python3 -m pytest "${JARVIS_DIR}/scripts/tests/test_setup.py" -v 2>&1)
 passed=$(echo "$pytest_out" | grep -oE '[0-9]+ passed' | grep -oE '[0-9]+' | tail -1)
 failed=$(echo "$pytest_out" | grep -oE '[0-9]+ failed' | grep -oE '[0-9]+' | tail -1)
 passed=${passed:-0}; failed=${failed:-0}

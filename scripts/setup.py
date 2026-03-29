@@ -50,7 +50,7 @@ connsys-jarvis repo 中 Expert 的 skills / hooks / agents / commands，
   - doc/agents-requirements.md  — 功能需求
   - doc/agents-design.md        — 系統設計
   - scripts/README.md           — 開發者指南
-  - scripts/test/test_setup.py  — pytest 單元測試
+  - scripts/tests/test_setup.py  — pytest 單元測試
 """
 
 import logging

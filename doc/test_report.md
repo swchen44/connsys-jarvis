@@ -15,11 +15,11 @@
 | bash 整合測試 checks 總數 | 65 |
 | **bash 整合測試通過** | **65** |
 | bash 整合測試失敗 | 0 |
-| pytest unit（`scripts/test/unit/`）| **38/38 pass** |
-| pytest integration（`scripts/test/integration/`）| **73/73 pass** |
-| pytest e2e（`scripts/test/e2e/`）| **18/18 pass** |
+| pytest unit（`scripts/tests/unit/`）| **38/38 pass** |
+| pytest integration（`scripts/tests/integration/`）| **73/73 pass** |
+| pytest e2e（`scripts/tests/e2e/`）| **18/18 pass** |
 | pytest 舊版 monolith（`test_setup.py`）| **110/110 pass** |
-| **pytest 全部（`scripts/test/`）** | **239/239 pass** |
+| **pytest 全部（`scripts/tests/`）** | **239/239 pass** |
 
 **整體結論：65/65 bash 整合測試通過，239/239 pytest 測試通過**
 
@@ -240,12 +240,12 @@ tmux kill-session -t cj_test
 
 ---
 
-### TC-12：pytest 單元測試（scripts/test/test_setup.py）
+### TC-12：pytest 單元測試（scripts/tests/test_setup.py）
 
 **結果：✅ PASS（104/104）**
 
 ```
-$ cd connsys-jarvis && python3 -m pytest scripts/test/test_setup.py -v
+$ cd connsys-jarvis && python3 -m pytest scripts/tests/test_setup.py -v
 ============================= 104 passed in 0.34s ==============================
 ```
 
@@ -417,5 +417,5 @@ python3 ./$JARVIS/scripts/setup.py --uninstall
 
 # ── pytest 單元測試 ───────────────────────────────────────────
 cd /Users/swchen.tw/git/testing/agents/connsys-jarvis
-python3 -m pytest scripts/test/test_setup.py -v
+python3 -m pytest scripts/tests/test_setup.py -v
 ```

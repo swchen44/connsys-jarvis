@@ -21,7 +21,7 @@
 ## 資料夾結構
 
 ```
-scripts/test/
+scripts/tests/
 ├── README.md                       ← 本文件
 ├── conftest.py                     ← 共用 fixtures（所有層自動載入）
 │
@@ -92,7 +92,7 @@ scripts/test/
 
 ```bash
 # 從 connsys-jarvis/ 根目錄執行
-uvx pytest scripts/test/ -q
+uvx pytest scripts/tests/ -q
 # 預期：239 passed
 ```
 
@@ -100,36 +100,36 @@ uvx pytest scripts/test/ -q
 
 ```bash
 # Layer 1：只改了純邏輯函式 → 只跑 unit
-uvx pytest scripts/test/unit/ -v
+uvx pytest scripts/tests/unit/ -v
 
 # Layer 2：改了 cmd_* 函式 → 跑 integration
-uvx pytest scripts/test/integration/ -v
+uvx pytest scripts/tests/integration/ -v
 
 # Layer 3：改了 CLI parsing / main() → 跑 e2e
-uvx pytest scripts/test/e2e/ -v
+uvx pytest scripts/tests/e2e/ -v
 ```
 
 ### 精確執行（鎖定測試類或函式）
 
 ```bash
 # 只跑某個測試類
-uvx pytest scripts/test/integration/test_integration.py::TestIntegrationReset -v
+uvx pytest scripts/tests/integration/test_integration.py::TestIntegrationReset -v
 
 # 只跑上次失敗的測試
-uvx pytest scripts/test/ --last-failed -v
+uvx pytest scripts/tests/ --last-failed -v
 
 # 詳細 traceback
-uvx pytest scripts/test/ --tb=long
+uvx pytest scripts/tests/ --tb=long
 ```
 
 ### 舊版 monolith（向後相容）
 
 ```bash
-uvx pytest scripts/test/test_setup.py -v
+uvx pytest scripts/tests/test_setup.py -v
 # 預期：110 passed
 ```
 
-> **注意**：執行 `uvx pytest scripts/test/` 時，pytest 同時收集 `test_setup.py`（110）+ `unit/`（38）+ `integration/`（73）+ `e2e/`（18）= 239 tests。
+> **注意**：執行 `uvx pytest scripts/tests/` 時，pytest 同時收集 `test_setup.py`（110）+ `unit/`（38）+ `integration/`（73）+ `e2e/`（18）= 239 tests。
 > unit/ 和 integration/ 的測試與 test_setup.py 部分重疊（相同邏輯，不同檔案），這是刻意的：確保分層後行為一致。
 
 ---
@@ -141,7 +141,7 @@ uvx pytest scripts/test/test_setup.py -v
 適合：純函式邏輯（沒有副作用、不碰磁碟）
 
 ```python
-# scripts/test/unit/test_unit.py
+# scripts/tests/unit/test_unit.py
 class TestMyNewFunction:
     def test_basic_case(self):
         result = inst.my_new_function(...)
@@ -153,7 +153,7 @@ class TestMyNewFunction:
 適合：驗證 cmd_* 函式對檔案系統的實際影響
 
 ```python
-# scripts/test/integration/test_integration.py
+# scripts/tests/integration/test_integration.py
 class TestMyNewCommand:
     def test_creates_expected_files(self, workspace):
         inst.cmd_my_command(workspace, ...)
@@ -165,7 +165,7 @@ class TestMyNewCommand:
 適合：驗證 CLI 整體行為（exit code、stdout、組合流程）
 
 ```python
-# scripts/test/e2e/test_e2e.py
+# scripts/tests/e2e/test_e2e.py
 class TestE2EMyScenario:
     def test_full_flow(self, ws):
         result = run_setup(ws, "--my-command", ...)

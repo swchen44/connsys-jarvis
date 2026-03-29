@@ -11,7 +11,7 @@ E2E Tests — connsys-jarvis setup.py
 - 最慢，數量最少（只覆蓋關鍵流程）
 
 Run:
-    uvx pytest scripts/test/e2e/ -v
+    uvx pytest scripts/tests/e2e/ -v
 """
 
 import subprocess
@@ -21,7 +21,7 @@ from pathlib import Path
 import pytest
 
 # ── jarvis repo path ──────────────────────────────────────────────────────────
-# This file: scripts/test/e2e/test_e2e.py
+# This file: scripts/tests/e2e/test_e2e.py
 # parents[0] = e2e/
 # parents[1] = test/
 # parents[2] = scripts/

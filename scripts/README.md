@@ -489,28 +489,28 @@ grep 'cmd_remove' .connsys-jarvis/log/install.log
 
 ### 7.1 pytest 三層測試
 
-測試採**三層金字塔**設計，詳細說明見 `scripts/test/README.md`。
+測試採**三層金字塔**設計，詳細說明見 `scripts/tests/README.md`。
 
 ```bash
 # 從 connsys-jarvis 目錄執行
 
 # 全部三層（239 tests）
-uvx pytest scripts/test/ -v
+uvx pytest scripts/tests/ -v
 
 # 只跑某一層（快速反饋）
-uvx pytest scripts/test/unit/ -v           # 38 tests, ~0.1s
-uvx pytest scripts/test/integration/ -v   # 73 tests, ~0.4s
-uvx pytest scripts/test/e2e/ -v           # 18 tests, ~1.3s
+uvx pytest scripts/tests/unit/ -v           # 38 tests, ~0.1s
+uvx pytest scripts/tests/integration/ -v   # 73 tests, ~0.4s
+uvx pytest scripts/tests/e2e/ -v           # 18 tests, ~1.3s
 
 # 執行特定測試類
-uvx pytest scripts/test/unit/test_unit.py::TestWriteEnvFile -v
-uvx pytest scripts/test/integration/test_integration.py::TestIntegrationInit -v
+uvx pytest scripts/tests/unit/test_unit.py::TestWriteEnvFile -v
+uvx pytest scripts/tests/integration/test_integration.py::TestIntegrationInit -v
 
 # 舊版 monolith（向後相容）
-uvx pytest scripts/test/test_setup.py -v  # 110 tests
+uvx pytest scripts/tests/test_setup.py -v  # 110 tests
 
 # 若無 uvx
-uv run --with pytest pytest scripts/test/ -v
+uv run --with pytest pytest scripts/tests/ -v
 ```
 
 **測試層說明**：
@@ -544,13 +544,13 @@ uv run --with pytest pytest scripts/test/ -v
 
 ### 7.2 整合測試腳本
 
-整合測試腳本位於 `scripts/test/run_integration_tests.sh`，涵蓋 TC-01~TC-08、TC-11、TC-13~TC-16 共 68 個 checks。
+整合測試腳本位於 `scripts/tests/run_integration_tests.sh`，涵蓋 TC-01~TC-08、TC-11、TC-13~TC-16 共 68 個 checks。
 
 #### 直接執行（一行）
 
 ```bash
 # 從 workspace 根目錄執行
-bash connsys-jarvis/scripts/test/run_integration_tests.sh
+bash connsys-jarvis/scripts/tests/run_integration_tests.sh
 ```
 
 成功輸出結尾：
@@ -571,7 +571,7 @@ tmux new-session -d -s "$SESSION" -x 200 -y 60
 
 # 送入指令，完成後發出 signal
 tmux send-keys -t "$SESSION" \
-  "bash connsys-jarvis/scripts/test/run_integration_tests.sh 2>&1 | tee /tmp/cj_test.txt; \
+  "bash connsys-jarvis/scripts/tests/run_integration_tests.sh 2>&1 | tee /tmp/cj_test.txt; \
    tmux wait-for -S ${SESSION}-done" Enter
 
 # 阻塞等待完成（精確同步，無 sleep loop）
@@ -680,15 +680,15 @@ python ./connsys-jarvis/scripts/setup.py \
 
 ```bash
 # 開啟 pytest 的詳細輸出（可鎖定特定層）
-uvx pytest scripts/test/unit/ -v -s
-uvx pytest scripts/test/integration/ -v -s
-uvx pytest scripts/test/e2e/ -v -s
+uvx pytest scripts/tests/unit/ -v -s
+uvx pytest scripts/tests/integration/ -v -s
+uvx pytest scripts/tests/e2e/ -v -s
 
 # 只執行上次失敗的測試
-uvx pytest scripts/test/ -v --last-failed
+uvx pytest scripts/tests/ -v --last-failed
 
 # 查看詳細 log（測試使用 tmp_path，不影響真實 workspace）
-uvx pytest scripts/test/ -v --tb=long
+uvx pytest scripts/tests/ -v --tb=long
 ```
 
 ### Q: `--doctor` 顯示 env var `路徑不存在`
@@ -745,4 +745,4 @@ python ./connsys-jarvis/scripts/setup.py \
 | `doc/agents-design.md` | 系統設計（§5 setup.py 設計） |
 | `doc/test_plan.md` | 測試計畫（TC-01~TC-12） |
 | `doc/test_report.md` | 測試報告（測試結果記錄） |
-| `scripts/test/test_setup.py` | pytest 單元測試（102 tests，含 TC-U16~TC-U20）|
+| `scripts/tests/test_setup.py` | pytest 單元測試（102 tests，含 TC-U16~TC-U20）|

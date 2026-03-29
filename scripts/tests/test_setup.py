@@ -8,20 +8,20 @@
 [LEGACY] Monolith test file — all 110 tests still live here for backward compatibility.
 
 Tests have been reorganised into a 3-layer pyramid:
-  scripts/test/unit/         ← TC-U01~U08  (pure-logic unit tests)
-  scripts/test/integration/  ← TC-U09~U22  (cmd_* integration tests)
-  scripts/test/e2e/          ← TC-E01~E06  (subprocess end-to-end tests)
+  scripts/tests/unit/         ← TC-U01~U08  (pure-logic unit tests)
+  scripts/tests/integration/  ← TC-U09~U22  (cmd_* integration tests)
+  scripts/tests/e2e/          ← TC-E01~E06  (subprocess end-to-end tests)
 
 Run all layers:
-    uvx pytest scripts/test/ -v
+    uvx pytest scripts/tests/ -v
 
 Run individual layers:
-    uvx pytest scripts/test/unit/ -v
-    uvx pytest scripts/test/integration/ -v
-    uvx pytest scripts/test/e2e/ -v
+    uvx pytest scripts/tests/unit/ -v
+    uvx pytest scripts/tests/integration/ -v
+    uvx pytest scripts/tests/e2e/ -v
 
 Run this legacy file (still works):
-    uvx pytest scripts/test/test_setup.py -v
+    uvx pytest scripts/tests/test_setup.py -v
 """
 
 import json
@@ -46,7 +46,7 @@ import setup as inst  # noqa: E402
 @pytest.fixture()
 def workspace(tmp_path: Path) -> Path:
     """Empty workspace with connsys-jarvis symlinked."""
-    jarvis_real = Path(__file__).resolve().parents[2]  # scripts/test → scripts → connsys-jarvis
+    jarvis_real = Path(__file__).resolve().parents[2]  # scripts/tests → scripts → connsys-jarvis
     jarvis_link = tmp_path / "connsys-jarvis"
     jarvis_link.symlink_to(jarvis_real)
     return tmp_path

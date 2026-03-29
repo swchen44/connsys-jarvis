@@ -229,7 +229,7 @@
 
 ---
 
-## TC-12：pytest 三層測試架構（scripts/test/）
+## TC-12：pytest 三層測試架構（scripts/tests/）
 
 **目的**：驗證三層測試金字塔（unit / integration / e2e）全部通過
 **對應需求**：FR-02-17
@@ -237,7 +237,7 @@
 ### 架構說明
 
 ```
-scripts/test/
+scripts/tests/
 ├── conftest.py          ← 共用 fixtures（所有層共用）
 ├── test_setup.py        ← 舊版 monolith（向後相容，110 tests）
 ├── unit/                ← Layer 1：純函式邏輯（38 tests）
@@ -250,10 +250,10 @@ scripts/test/
 | # | 步驟 | 預期結果 |
 |---|------|---------|
 | 1 | `cd /Users/swchen.tw/git/testing/agents/connsys-jarvis` | 進入 jarvis 目錄 |
-| 2 | `uvx pytest scripts/test/unit/ -v` | `38 passed`（< 0.2s） |
-| 3 | `uvx pytest scripts/test/integration/ -v` | `73 passed`（< 1s） |
-| 4 | `uvx pytest scripts/test/e2e/ -v` | `18 passed`（< 3s） |
-| 5 | `uvx pytest scripts/test/ -v` | `239 passed`（含舊版 monolith） |
+| 2 | `uvx pytest scripts/tests/unit/ -v` | `38 passed`（< 0.2s） |
+| 3 | `uvx pytest scripts/tests/integration/ -v` | `73 passed`（< 1s） |
+| 4 | `uvx pytest scripts/tests/e2e/ -v` | `18 passed`（< 3s） |
+| 5 | `uvx pytest scripts/tests/ -v` | `239 passed`（含舊版 monolith） |
 | 6 | 確認 unit/：TC-U01~U08 各類均 passed | 38 passed |
 | 7 | 確認 integration/：TC-U09~U22 各類均 passed | 73 passed |
 | 8 | 確認 e2e/：TC-E01~E06 各類均 passed | 18 passed |
@@ -385,7 +385,7 @@ scripts/test/
 
 ---
 
-## TC-E01~E06：E2E 端對端測試（scripts/test/e2e/）
+## TC-E01~E06：E2E 端對端測試（scripts/tests/e2e/）
 
 **目的**：透過 `subprocess.run()` 模擬真實使用者 CLI 操作，從指令入口到最終檔案系統狀態，驗證整個系統的組合行為
 **對應需求**：FR-02-17
@@ -404,5 +404,5 @@ scripts/test/
 
 **執行**：
 ```bash
-uvx pytest scripts/test/e2e/ -v   # ~1.3s
+uvx pytest scripts/tests/e2e/ -v   # ~1.3s
 ```
