@@ -1,8 +1,8 @@
 # Connsys Jarvis — 測試計畫
 
-**文件版本**：v1.6
-**日期**：2026-03-29
-**依據**：agents-requirements.md v3.5, agents-design.md v3.5
+**文件版本**：v1.7
+**日期**：2026-03-30
+**依據**：agents-requirements.md v3.6, agents-design.md v3.6
 **變更說明**：
 - v1.1 — setup.py 路徑改為 scripts/setup.py；新增 TC-12 pytest 單元測試
 - v1.2 — 修正 TC-02 Step 6（預設 identity-only，無 count header）；更新 TC-12 測試數 57→61（含 --with-all-experts tests）；新增 TC-13（--with-all-experts 整合）、TC-14（--debug 日誌）
@@ -10,6 +10,7 @@
 - v1.4 — 更新 TC-05（--remove 改全清再重建）；更新 TC-08（--list 顯示 installed+available，新增 --format json）；新增 TC-15（--query）、TC-16（--list --format json）
 - v1.5 — TC-01 補充 Step 10（--init memory 保留驗證）；新增 TC-18（--reset 整合測試）
 - v1.6 — TC-12 更新（三層金字塔架構，239 tests）；新增 TC-E01~E06（E2E subprocess 測試）
+- v1.7 — TC-12 更新（unit 50 / integration 71 / e2e 18）；更新 TC-02 Step 6（Base Experts 區段）；更新 TC-13（Base Experts 區段說明）；新增 TC-19（Base Expert is_base=true 特殊規則）
 
 ---
 
@@ -56,12 +57,12 @@
 
 | # | 步驟 | 預期結果 |
 |---|------|---------|
-| 1 | 前置：TC-01 完成後 | workspace 已有 framework-base-expert |
+| 1 | 前置：TC-01 完成後（framework-base-expert 已安裝） | workspace 已有 framework-base-expert |
 | 2 | `python3 ./connsys-jarvis/scripts/setup.py --add wifi-bora/wifi-bora-memory-slim-expert/expert.json` | 輸出「完成！Expert 'wifi-bora-memory-slim-expert' 已加入」 |
 | 3 | 確認輸出含 `[=]`（既有跳過）| framework 的 3 skills + 5 hooks + 2 commands 顯示 `[=]` |
 | 4 | 確認輸出含 `[+]`（新建） | wifi-bora 5 skills + sys-bora 2 skills + internal 3 skills |
 | 5 | `ls .claude/skills/ \| wc -l` | 13 |
-| 6 | `cat CLAUDE.md` | 預設 identity-only 格式：只含 wifi-bora-memory-slim-expert 的 soul/rules/duties/expert.md，**不含**「N Experts 已安裝」count header |
+| 6 | `cat CLAUDE.md` | 預設格式：identity wifi-bora-memory-slim-expert 的 soul/rules/duties/expert.md，加上 `## Base Experts` 區段（framework-base-expert、wifi-bora-base-expert 等 is_base=true 的四份文件），**不含**「N Experts 已安裝」count header |
 | 7 | `cat .connsys-jarvis/.installed-experts.json` | experts 陣列含 2 個 Expert，wifi-bora-memory-slim-expert 的 is_identity=true |
 | 8 | `python3 -c "import json; d=json.load(open('.connsys-jarvis/.installed-experts.json')); print(d.get('include_all_experts'))"` | `False`（預設 identity-only）|
 | 9 | 驗證 install_order：framework-base-expert=1、wifi-bora-memory-slim-expert=2 | 符合（依安裝順序遞增）|
@@ -239,9 +240,8 @@
 ```
 scripts/tests/
 ├── conftest.py          ← 共用 fixtures（所有層共用）
-├── test_setup.py        ← 舊版 monolith（向後相容，110 tests）
-├── unit/                ← Layer 1：純函式邏輯（38 tests）
-├── integration/         ← Layer 2：cmd_* 多模組協作（73 tests）
+├── unit/                ← Layer 1：純函式邏輯（50 tests）
+├── integration/         ← Layer 2：cmd_* 多模組協作（71 tests）
 └── e2e/                 ← Layer 3：subprocess CLI 黑箱（18 tests）
 ```
 
@@ -250,20 +250,20 @@ scripts/tests/
 | # | 步驟 | 預期結果 |
 |---|------|---------|
 | 1 | `cd /Users/swchen.tw/git/testing/agents/connsys-jarvis` | 進入 jarvis 目錄 |
-| 2 | `uvx pytest scripts/tests/unit/ -v` | `38 passed`（< 0.2s） |
-| 3 | `uvx pytest scripts/tests/integration/ -v` | `73 passed`（< 1s） |
+| 2 | `uvx pytest scripts/tests/unit/ -v` | `50 passed`（< 0.2s） |
+| 3 | `uvx pytest scripts/tests/integration/ -v` | `71 passed`（< 1s） |
 | 4 | `uvx pytest scripts/tests/e2e/ -v` | `18 passed`（< 3s） |
-| 5 | `uvx pytest scripts/tests/ -v` | `239 passed`（含舊版 monolith） |
-| 6 | 確認 unit/：TC-U01~U08 各類均 passed | 38 passed |
-| 7 | 確認 integration/：TC-U09~U22 各類均 passed | 73 passed |
+| 5 | `uvx pytest scripts/tests/ -v` | `139 passed` |
+| 6 | 確認 unit/：TC-U01~U08 各類均 passed | 50 passed |
+| 7 | 確認 integration/：TC-U09~U22 各類均 passed | 71 passed |
 | 8 | 確認 e2e/：TC-E01~E06 各類均 passed | 18 passed |
 
 ---
 
 ## TC-13：--with-all-experts 整合測試
 
-**目的**：驗證 `--add --with-all-experts` 時 CLAUDE.md 包含所有 Expert 的 expert.md，且偏好儲存在 `.installed-experts.json`
-**對應需求**：US-06, FR-05-2
+**目的**：驗證 `--add --with-all-experts` 時 CLAUDE.md 包含 Identity + Base Experts + Capabilities 三區段，且偏好儲存在 `.installed-experts.json`
+**對應需求**：US-06, FR-05-2, FR-05-7, FR-05-8
 
 ### Steps
 
@@ -272,11 +272,12 @@ scripts/tests/
 | 1 | 前置：TC-01 完成後（framework-base-expert 已安裝）| |
 | 2 | `python3 ./connsys-jarvis/scripts/setup.py --add --with-all-experts wifi-bora/wifi-bora-memory-slim-expert/expert.json` | 輸出「完成！Expert 'wifi-bora-memory-slim-expert' 已加入」 |
 | 3 | `cat CLAUDE.md \| grep "2 Experts"` | 含「2 Experts 已安裝」count header |
-| 4 | `cat CLAUDE.md \| grep "framework-base-expert/expert.md"` | 含 framework-base-expert/expert.md（Capabilities 區段）|
+| 4 | `cat CLAUDE.md \| grep "framework-base-expert/expert.md"` | 含 framework-base-expert/expert.md（Base Experts 區段，is_base=true）|
 | 5 | `cat CLAUDE.md \| grep "wifi-bora-memory-slim-expert/soul.md"` | 含 wifi-bora-memory-slim-expert/soul.md（Identity 區段）|
 | 6 | `cat CLAUDE.md \| grep "Expert Identity"` | 含 `## Expert Identity` 區段 header |
-| 7 | `cat CLAUDE.md \| grep "Expert Capabilities"` | 含 `## Expert Capabilities` 區段 header |
-| 8 | `python3 -c "import json; d=json.load(open('.connsys-jarvis/.installed-experts.json')); print(d['include_all_experts'])"` | `True` |
+| 7 | `cat CLAUDE.md \| grep "Base Experts"` | 含 `## Base Experts` 區段 header |
+| 8 | `cat CLAUDE.md \| grep "Expert Capabilities"` | 含 `## Expert Capabilities` 區段 header |
+| 9 | `python3 -c "import json; d=json.load(open('.connsys-jarvis/.installed-experts.json')); print(d['include_all_experts'])"` | `True` |
 
 ---
 
@@ -406,3 +407,29 @@ scripts/tests/
 ```bash
 uvx pytest scripts/tests/e2e/ -v   # ~1.3s
 ```
+
+---
+
+## TC-19：Base Expert is_base=true 特殊規則
+
+**目的**：驗證 `is_base=true` 的 Expert（包含直接安裝及依賴樹中的 Expert）其四份文件必須出現在 CLAUDE.md 的 `## Base Experts` 區段
+**對應需求**：FR-05-7, FR-05-8
+
+### 測試情境
+
+| # | 情境 | 驗證重點 |
+|---|------|---------|
+| 1 | 安裝單個 `is_base=true` Expert 作為 identity | 四份文件在主區段，無 Base Experts 區段（identity 不重複）|
+| 2 | 安裝 `is_base=true` Expert（非 identity）+ identity | Base Experts 區段含其四份文件 |
+| 3 | 安裝 identity，其 dependency 有 `is_base=true` Expert | dependency 的四份文件出現在 Base Experts 區段 |
+| 4 | 依賴鏈：A → B（is_base=true）→ C（is_base=true）→ D（is_base=false）| B 和 C 的四份文件均在 Base Experts 區段；D 不出現 |
+| 5 | Diamond dependency（兩個 Expert 共用同一 Base Expert）| Base Expert 只出現一次（DFS visited 去重）|
+
+### pytest 覆蓋
+
+| 測試類 | 場景 | 測試數 |
+|--------|------|--------|
+| `TestCollectBaseExperts` | DFS 遍歷、去重、遞迴依賴 | 6 |
+| `TestGenerateClaudeMdMulti`（擴充）| Base Experts 區段、4 檔案驗證、--with-all-experts 模式 | 4 |
+
+**合計**：10 tests（均在 unit 層）

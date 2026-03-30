@@ -256,10 +256,10 @@ class TestGenerateClaudeMdMulti:
         assert "@connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/duties.md" in content
         assert "@connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/expert.md" in content
 
-    def test_default_excludes_other_expert_md(self, workspace):
-        """預設：其他 Expert 的 expert.md 不應出現。"""
+    def test_default_base_expert_md_present(self, workspace):
+        """預設：is_base=True 的 Expert 的 expert.md 必須出現（Base Experts 區段）。"""
         content = inst.generate_claude_md(workspace, self._two_experts(include_all=False))
-        assert "@connsys-jarvis/framework/framework-base-expert/expert.md" not in content
+        assert "@connsys-jarvis/framework/framework-base-expert/expert.md" in content
 
     def test_default_no_expert_count_header(self, workspace):
         """預設：不顯示「N Experts 已安裝」count header（與單 Expert 格式相同）。"""

@@ -1,6 +1,6 @@
 # Consys Experts — 需求書
 
-**文件版本**：v3.3
+**文件版本**：v3.6
 **狀態**：Draft
 **目標讀者**：架構師、開發者、產品負責人
 **改版說明**：
@@ -20,6 +20,7 @@
 - v3.3：移除 registry.json；setup.py 改為即時掃描 Expert 目錄；新增 --query 指令、--format json 輸出格式；--remove 改為全清再重建策略（與 --add 一致）；--add 重複安裝 = 重新安裝
 - v3.4：新增 FR-02-27（--reset 徹底重置，額外刪除 memory/）；更新 FR-02-2（--init memory 不受影響說明）；更新 FR-02-5（--uninstall 保留 memory 的適用場景說明）
 - v3.5：更新 FR-02-17（測試架構升級為三層金字塔：unit/integration/e2e，共 239 tests）
+- v3.6：新增 FR-05-7、FR-05-8（Base Expert 特殊規則：expert.json is_base=true 的 Expert 其四份文件必須寫入 CLAUDE.md，含依賴樹遞迴掃描）；更新測試數 unit 50 / integration 71 / e2e 18
 
 > **注意**：文件中所列的 expert、skill 名稱均為**示例**，用於說明命名規則與架構設計。實際規劃以團隊討論為準。
 
@@ -726,6 +727,8 @@ git -C "$CONNSYS_JARVIS_MEMORY_PATH" push origin main
 | FR-05-4 | CLAUDE.md 末尾 `@include CLAUDE.local.md`（若不存在，Claude Code 忽略） | Must | 個人客製化入口 |
 | FR-05-5 | `CLAUDE.local.md` 不納入 `connsys-jarvis` repo，以 `.gitignore` 排除 | Must | 個人設定不進 repo |
 | FR-05-6 | Expert 資料夾**不含** `CLAUDE.md`（由 setup.py 在 workspace 根目錄生成） | Must | 避免混淆：expert 資料夾只含內容，workspace root 的 CLAUDE.md 才是生效的 |
+| FR-05-7 | **Base Expert 特殊規則**：凡 `expert.json` 中 `is_base: true` 的 Expert（不論是否為 identity），其 `soul.md`、`rules.md`、`duties.md`、`expert.md` 四份文件必須寫入 CLAUDE.md 的 `## Base Experts` 區段；identity 已在主區段處理，不重複輸出 | Must | Base Expert 定義整個 domain 的基礎知識，Claude 無論在何種模式下都必須能讀到 |
+| FR-05-8 | Base Expert 的偵測範圍包含**依賴樹遞迴掃描**：setup.py 在生成 CLAUDE.md 時，從每個已安裝 Expert 出發，遞迴讀取 `expert.json` 的 `dependencies` 欄位，任何中間節點的 `is_base: true` Expert 均須納入 Base Experts 區段；防止 diamond dependency 造成重複輸出 | Must | 安裝 wifi-bora-memory-slim-expert 時，其 dependency wifi-bora-base-expert 的四份文件也必須在 CLAUDE.md 中，不能因為未直接安裝而被遺漏 |
 
 ### FR-06：記憶系統（Workflow + 後臺）
 

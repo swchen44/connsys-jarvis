@@ -1,8 +1,8 @@
 # Connsys Jarvis — 測試報告
 
-**報告日期**：2026-03-29
-**測試計畫**：test_plan.md v1.6
-**實作版本**：v1.4（SETUP_VERSION=1.4；含三層測試架構 unit/integration/e2e）
+**報告日期**：2026-03-30
+**測試計畫**：test_plan.md v1.7
+**實作版本**：v1.5（SETUP_VERSION=1.5；新增 is_base=true Base Expert 特殊規則）
 **測試環境**：macOS Darwin 24.3.0, Python 3.12.9, uv 已安裝
 **測試工具**：tmux session `cj_test` + `tmux wait-for` 同步 + pytest
 
@@ -15,16 +15,16 @@
 | bash 整合測試 checks 總數 | 65 |
 | **bash 整合測試通過** | **65** |
 | bash 整合測試失敗 | 0 |
-| pytest unit（`scripts/tests/unit/`）| **38/38 pass** |
-| pytest integration（`scripts/tests/integration/`）| **73/73 pass** |
+| pytest unit（`scripts/tests/unit/`）| **50/50 pass** |
+| pytest integration（`scripts/tests/integration/`）| **71/71 pass** |
 | pytest e2e（`scripts/tests/e2e/`）| **18/18 pass** |
 | pytest 舊版 monolith（`test_setup.py`）| **110/110 pass** |
-| **pytest 全部（`scripts/tests/`）** | **239/239 pass** |
+| **pytest 全部（`scripts/tests/`）** | **249/249 pass** |
 
-**整體結論：65/65 bash 整合測試通過，239/239 pytest 測試通過**
+**整體結論：65/65 bash 整合測試通過，249/249 pytest 測試通過**
 
-> 測試架構升級為三層金字塔：unit（38）+ integration（73）+ e2e（18）= 129 new tests
-> 舊版 test_setup.py（110 tests）保留作向後相容，全部通過
+> 新增 `TestCollectBaseExperts`（6 tests）、擴充 `TestGenerateClaudeMdMulti`（+4 tests）
+> 新增 `collect_base_experts()` 函式：DFS 遍歷依賴樹，收集 is_base=true 的 Base Expert
 
 ---
 
@@ -240,14 +240,21 @@ tmux kill-session -t cj_test
 
 ---
 
-### TC-12：pytest 單元測試（scripts/tests/test_setup.py）
+### TC-12：pytest 三層測試架構（scripts/tests/）
 
-**結果：✅ PASS（104/104）**
+**結果：✅ PASS（139/139）**
 
 ```
-$ cd connsys-jarvis && python3 -m pytest scripts/tests/test_setup.py -v
-============================= 104 passed in 0.34s ==============================
+$ cd connsys-jarvis
+$ uvx pytest scripts/tests/unit/ -v
+50 passed in 0.07s
+$ uvx pytest scripts/tests/integration/ -v
+71 passed in 0.39s
+$ uvx pytest scripts/tests/e2e/ -v
+18 passed in 1.30s
 ```
+
+#### Unit 層（50 tests）
 
 | 測試類別 | Tests | 結果 |
 |---------|-------|------|
@@ -256,13 +263,22 @@ $ cd connsys-jarvis && python3 -m pytest scripts/tests/test_setup.py -v
 | `TestResolveItems` | 6 | ✅ |
 | `TestApplyExcludePatterns` | 4 | ✅ |
 | `TestGenerateClaudeMdSingle` | 4 | ✅ |
-| `TestGenerateClaudeMdMulti` | 8 | ✅ |
+| `TestGenerateClaudeMdMulti` | 12 | ✅ |
+| `TestCollectBaseExperts` | 6 | ✅ |
 | `TestWriteEnvFile` | 10 | ✅ |
 | `TestInstalledExpertsSchema` | 3 | ✅ |
-| `TestIntegrationInit` | 8 | ✅ |
+| **Unit 合計** | **50** | **✅** |
+
+#### Integration 層（71 tests）
+
+| 測試類別 | Tests | 結果 |
+|---------|-------|------|
+| `TestIntegrationInit` | 9 | ✅ |
 | `TestIntegrationAdd` | 5 | ✅ |
 | `TestIntegrationRemove` | 5 | ✅ |
 | `TestIntegrationUninstall` | 3 | ✅ |
+| `TestIntegrationReset` | 5 | ✅ |
+| `TestInitMemoryPreservation` | 1 | ✅ |
 | `TestScanAvailableExperts` | 6 | ✅ |
 | `TestCmdQuery` | 8 | ✅ |
 | `TestCmdListUpdated` | 6 | ✅ |
@@ -271,22 +287,35 @@ $ cd connsys-jarvis && python3 -m pytest scripts/tests/test_setup.py -v
 | `TestDoctorSymlinkIntegrity` | 4 | ✅ |
 | `TestDoctorClaudeMd` | 6 | ✅ |
 | `TestDoctorExpertStructure` | 6 | ✅ |
-| **合計** | **104** | **✅ 全通過** |
+| **Integration 合計** | **71** | **✅** |
+
+#### E2E 層（18 tests）
+
+| 測試類別 | Tests | 結果 |
+|---------|-------|------|
+| `TestE2EInit` | 6 | ✅ |
+| `TestE2EAdd` | 2 | ✅ |
+| `TestE2EUninstall` | 3 | ✅ |
+| `TestE2EReset` | 4 | ✅ |
+| `TestE2EList` | 2 | ✅ |
+| `TestE2EMultiExpertWorkflow` | 1 | ✅ |
+| **E2E 合計** | **18** | **✅** |
 
 ---
 
 ### TC-13：--with-all-experts
 
-**結果：✅ PASS（6/6 checks）**
+**結果：✅ PASS（7/7 checks）**
 
 | Check | 驗收條件 | 狀態 |
 |-------|---------|------|
 | TC-13-1 | 輸出「Done! Expert 'wifi-bora-memory-slim-expert' added」 | ✅ |
 | TC-13-2 | `CLAUDE.md` 含 `## Expert Identity` | ✅ |
-| TC-13-3 | `CLAUDE.md` 含 `## Expert Capabilities` | ✅ |
-| TC-13-4 | `CLAUDE.md` 含 `soul.md` | ✅ |
-| TC-13-5 | `CLAUDE.md` 含 `framework-base-expert/expert.md` | ✅ |
-| TC-13-6 | `.installed-experts.json` 的 `include_all_experts=True` | ✅ |
+| TC-13-3 | `CLAUDE.md` 含 `## Base Experts` | ✅ |
+| TC-13-4 | `CLAUDE.md` 含 `## Expert Capabilities` | ✅ |
+| TC-13-5 | `CLAUDE.md` 含 `soul.md` | ✅ |
+| TC-13-6 | `CLAUDE.md` 含 `framework-base-expert/expert.md`（Base Experts 區段）| ✅ |
+| TC-13-7 | `.installed-experts.json` 的 `include_all_experts=True` | ✅ |
 
 ---
 
@@ -342,6 +371,25 @@ $ cd connsys-jarvis && python3 -m pytest scripts/tests/test_setup.py -v
 
 ---
 
+### TC-19：Base Expert is_base=true 特殊規則
+
+**結果：✅ PASS（10/10 pytest tests）**
+
+| 測試類別 | 場景 | Tests | 結果 |
+|---------|------|-------|------|
+| `TestCollectBaseExperts::test_empty_experts_returns_empty` | 空清單回傳 [] | 1 | ✅ |
+| `TestCollectBaseExperts::test_identity_base_expert_excluded` | identity is_base=true 排除（不重複）| 1 | ✅ |
+| `TestCollectBaseExperts::test_installed_non_identity_base_expert_included` | 非 identity is_base=true 納入 | 1 | ✅ |
+| `TestCollectBaseExperts::test_dependency_base_expert_included` | dependency is_base=true 納入 | 1 | ✅ |
+| `TestCollectBaseExperts::test_transitive_dependency_base_expert_included` | 遞迴依賴（A→B→C(is_base=true)）納入 | 1 | ✅ |
+| `TestCollectBaseExperts::test_no_duplicates_in_result` | diamond dependency 去重 | 1 | ✅ |
+| `TestGenerateClaudeMdMulti::test_default_base_expert_section_present` | ## Base Experts 區段存在 | 1 | ✅ |
+| `TestGenerateClaudeMdMulti::test_default_base_expert_has_all_four_files` | 顯式安裝 is_base=true：四份文件 | 1 | ✅ |
+| `TestGenerateClaudeMdMulti::test_default_dep_base_expert_has_all_four_files` | 依賴 is_base=true：四份文件 | 1 | ✅ |
+| `TestGenerateClaudeMdMulti::test_with_all_experts_base_not_duplicated_in_capabilities` | Base Expert 不重複出現在 Capabilities | 1 | ✅ |
+
+---
+
 ## 缺陷記錄
 
 | 缺陷 ID | 嚴重性 | 描述 | 狀態 |
@@ -373,13 +421,15 @@ $ cd connsys-jarvis && python3 -m pytest scripts/tests/test_setup.py -v
 | FR-03 環境變數 | TC-04, TC-06 | ✅ |
 | FR-04-6/8 Skill test/ | TC-09 | ✅ |
 | FR-05-2/3 CLAUDE.md | TC-01, TC-02, TC-05, TC-13 | ✅ |
+| FR-05-7 Base Expert 四份文件 | TC-19 | ✅ |
+| FR-05-8 依賴樹遞迴掃描 | TC-19 | ✅ |
 | US-01 Agent First | TC-01, TC-04 | ✅ |
 | US-02 Legacy | TC-06 | ✅ |
 | US-06 --add / --with-all-experts | TC-02, TC-13 | ✅ |
 | US-07 --remove | TC-05 | ✅ |
 | --debug logging | TC-14 | ✅ |
 
-**覆蓋率：21/21 需求項目（全通過）**
+**覆蓋率：23/23 需求項目（全通過）**
 
 ---
 

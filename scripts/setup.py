@@ -74,7 +74,7 @@ INSTALLED_EXPERTS_FILE = ".installed-experts.json"  # 安裝狀態持久化檔
 CLAUDE_MD           = "CLAUDE.md"             # Claude Code 啟動時載入的 context 設定
 ENV_FILE            = ".env"                  # 環境變數輸出檔
 SCHEMA_VERSION      = "1.0"                   # .installed-experts.json 的 schema 版本
-SETUP_VERSION       = "1.4"                  # setup.py 版本（用於 --doctor 顯示）
+SETUP_VERSION       = "1.5"                  # setup.py 版本（用於 --doctor 顯示）
 
 # --doctor 環境變數驗證常數
 REQUIRED_ENV_VARS = [
@@ -698,8 +698,89 @@ def clear_claude_symlinks(workspace: Path) -> None:
 #
 #   --with-all-experts（include_all_experts = True）：
 #     Identity 區段：identity Expert 的 soul / rules / duties
-#     Capabilities 區段：所有已安裝 Expert 的 expert.md
+#     Base Experts 區段：is_base=True Expert 的四份文件（不含 identity）
+#     Capabilities 區段：非 base Expert 的 expert.md
 #     適合需要 Claude 同時了解多個 Expert 能力的場景。
+#
+# **Base Experts 特殊規則**：
+#   任何 expert.json 中 is_base=True 的 Expert（含依賴樹中間接觸發者），
+#   其 soul.md / rules.md / duties.md / expert.md 均必須寫入 CLAUDE.md，
+#   無論它是否為 identity expert（identity 已由主區段覆蓋）。
+#   collect_base_experts() 執行 DFS 遍歷，找出所有需要完整展示的 base experts。
+
+
+def collect_base_experts(workspace: Path, installed: dict) -> list:
+    """收集所有需要在 CLAUDE.md 中完整展示四份文件的 base experts（不含 identity）。
+
+    遍歷所有已安裝 expert 的完整 dependency 樹（DFS），
+    任何 expert.json 中 is_base=True 的 expert（不含 identity），
+    其 soul.md/rules.md/duties.md/expert.md 四份文件都需寫入 CLAUDE.md。
+
+    **遍歷規則**：
+      - 從每個已安裝 expert 出發，遞迴遍歷 dependencies
+      - 遇到 is_base=True 且非 identity 的 expert 即加入結果
+      - visited set 防止重複遍歷（應對 diamond dependency）
+
+    Args:
+        workspace: workspace 根目錄
+        installed: load_installed_experts 的回傳值
+
+    Returns:
+        list of Path（相對於 jarvis_dir 的目錄路徑），維持 DFS 遍歷順序，已去重
+    """
+    jarvis_dir = get_jarvis_dir(workspace)
+    experts    = installed.get("experts", [])
+
+    if not experts:
+        return []
+
+    # 找出 identity expert 的目錄（用來排除，identity 已在主區段處理）
+    identity_expert = None
+    for e in experts:
+        if e.get("is_identity", False):
+            identity_expert = e
+    if identity_expert is None:
+        identity_expert = experts[-1]
+    identity_dir = str(Path(identity_expert["path"]).parent)
+
+    base_paths: list = []   # 有序，維持 DFS 遍歷順序
+    seen_dirs: set   = set()  # 防止重複遍歷（diamond dependency / cycle）
+
+    def _traverse(expert_dir_rel: str) -> None:
+        if expert_dir_rel in seen_dirs:
+            return
+        seen_dirs.add(expert_dir_rel)
+
+        expert_json_path = jarvis_dir / expert_dir_rel / "expert.json"
+        if not expert_json_path.exists():
+            logger.debug("collect_base_experts: expert.json not found: %s", expert_json_path)
+            return
+
+        try:
+            data = load_expert_json(expert_json_path)
+        except Exception as exc:
+            logger.warning("collect_base_experts: failed to read %s: %s", expert_json_path, exc)
+            return
+
+        # 若此 expert is_base=True 且不是 identity，加入結果
+        if data.get("is_base", False) and expert_dir_rel != identity_dir:
+            ep = Path(expert_dir_rel)
+            if ep not in base_paths:
+                base_paths.append(ep)
+
+        # 遞迴處理 dependencies
+        for dep in data.get("dependencies", []):
+            dep_rel = dep.get("expert", "") if isinstance(dep, dict) else str(dep)
+            if dep_rel:
+                _traverse(dep_rel)
+
+    for e in experts:
+        _traverse(str(Path(e["path"]).parent))
+
+    logger.debug("collect_base_experts: found %d base experts: %s",
+                 len(base_paths), [str(p) for p in base_paths])
+    return base_paths
+
 
 def generate_claude_md(workspace: Path, installed: dict) -> str:
     """生成 CLAUDE.md 的文字內容。
@@ -764,8 +845,12 @@ def generate_claude_md(workspace: Path, installed: dict) -> str:
     except Exception:
         display_name = identity_expert["name"]
 
+    # 收集需要完整展示四份文件的 base experts（is_base=True，不含 identity）
+    base_experts     = collect_base_experts(workspace, installed)
+    base_expert_dirs = {str(p) for p in base_experts}
+
     if not include_all or len(experts) == 1:
-        # ── 預設格式：只有 identity expert 的四份文件 ──
+        # ── 預設格式：identity expert 的四份文件 + Base Experts 區段 ──
         # len(experts) == 1 時強制使用此格式（--with-all-experts 在單 expert 無意義）
         lines = [
             f"# Consys Expert: {display_name}",
@@ -774,12 +859,20 @@ def generate_claude_md(workspace: Path, installed: dict) -> str:
             f"@connsys-jarvis/{ep}/rules.md",
             f"@connsys-jarvis/{ep}/duties.md",
             f"@connsys-jarvis/{ep}/expert.md",
-            "",
-            "@CLAUDE.local.md",
-            "",
         ]
+        # Base Experts 區段：is_base=True 的 expert 額外輸出四份文件
+        if base_experts:
+            lines += ["", "## Base Experts"]
+            for bp in base_experts:
+                lines += [
+                    f"@connsys-jarvis/{bp}/soul.md",
+                    f"@connsys-jarvis/{bp}/rules.md",
+                    f"@connsys-jarvis/{bp}/duties.md",
+                    f"@connsys-jarvis/{bp}/expert.md",
+                ]
+        lines += ["", "@CLAUDE.local.md", ""]
     else:
-        # ── --with-all-experts 格式：Identity + 所有 Expert 的 expert.md ──
+        # ── --with-all-experts 格式：Identity + Base Experts + Capabilities ──
         n = len(experts)
         lines = [f"# Consys Experts（{n} Experts 已安裝）", ""]
 
@@ -792,12 +885,25 @@ def generate_claude_md(workspace: Path, installed: dict) -> str:
             "",
         ]
 
-        # Capabilities 區段：所有已安裝 Expert 的 expert.md（能力概覽）
-        # 讓 Claude 了解系統中有哪些 Expert 可以被呼叫或切換
+        # Base Experts 區段：is_base=True Expert 的四份文件（不含 identity）
+        if base_experts:
+            lines.append("## Base Experts")
+            for bp in base_experts:
+                lines += [
+                    f"@connsys-jarvis/{bp}/soul.md",
+                    f"@connsys-jarvis/{bp}/rules.md",
+                    f"@connsys-jarvis/{bp}/duties.md",
+                    f"@connsys-jarvis/{bp}/expert.md",
+                ]
+            lines.append("")
+
+        # Capabilities 區段：非 base Expert 的 expert.md（能力概覽）
+        # base expert 已在上一區段完整輸出，此處跳過以避免重複
         lines.append("## Expert Capabilities")
         for e in experts:
             ep_e = Path(e["path"]).parent
-            lines.append(f"@connsys-jarvis/{ep_e}/expert.md")
+            if str(ep_e) not in base_expert_dirs:
+                lines.append(f"@connsys-jarvis/{ep_e}/expert.md")
         lines += ["", "@CLAUDE.local.md", ""]
 
     content = "\n".join(lines)
