@@ -1,6 +1,6 @@
 # Connsys Jarvis — 測試計畫
 
-**文件版本**：v1.7
+**文件版本**：v1.8
 **日期**：2026-03-30
 **依據**：agents-requirements.md v3.6, agents-design.md v3.6
 **變更說明**：
@@ -11,6 +11,7 @@
 - v1.5 — TC-01 補充 Step 10（--init memory 保留驗證）；新增 TC-18（--reset 整合測試）
 - v1.6 — TC-12 更新（三層金字塔架構，239 tests）；新增 TC-E01~E06（E2E subprocess 測試）
 - v1.7 — TC-12 更新（unit 50 / integration 71 / e2e 18）；更新 TC-02 Step 6（Base Experts 區段）；更新 TC-13（Base Experts 區段說明）；新增 TC-19（Base Expert is_base=true 特殊規則）
+- v1.8 — TC-12 更新（integration 74）；TC-17 新增 D2. Base Expert Inclusion 子項驗證（3 tests）
 
 ---
 
@@ -251,11 +252,11 @@ scripts/tests/
 |---|------|---------|
 | 1 | `cd /Users/swchen.tw/git/testing/agents/connsys-jarvis` | 進入 jarvis 目錄 |
 | 2 | `uvx pytest scripts/tests/unit/ -v` | `50 passed`（< 0.2s） |
-| 3 | `uvx pytest scripts/tests/integration/ -v` | `71 passed`（< 1s） |
+| 3 | `uvx pytest scripts/tests/integration/ -v` | `74 passed`（< 1s） |
 | 4 | `uvx pytest scripts/tests/e2e/ -v` | `18 passed`（< 3s） |
-| 5 | `uvx pytest scripts/tests/ -v` | `139 passed` |
+| 5 | `uvx pytest scripts/tests/ -v` | `252 passed` |
 | 6 | 確認 unit/：TC-U01~U08 各類均 passed | 50 passed |
-| 7 | 確認 integration/：TC-U09~U22 各類均 passed | 71 passed |
+| 7 | 確認 integration/：TC-U09~U22 各類均 passed | 74 passed |
 | 8 | 確認 e2e/：TC-E01~E06 各類均 passed | 18 passed |
 
 ---
@@ -349,13 +350,15 @@ scripts/tests/
 | 8 | 區段 D — 刪除 CLAUDE.md | 輸出「CLAUDE.md 不存在」|
 | 9 | 區段 D — 修改 CLAUDE.md（缺 include） | 輸出「缺少 @include」|
 | 10 | 區段 D — 修改 CLAUDE.md（多 include） | 輸出「多餘 @include」|
+| 10a | 區段 D2 — Base Expert Inclusion（正常） | 輸出「Base Expert Inclusion」+ 各 base expert 名稱 + `expert.md ✓` |
+| 10b | 區段 D2 — Base Expert Inclusion（缺 include） | 輸出「expert.md missing in CLAUDE.md」+ `Fix: re-run --add` |
 | 11 | 區段 F1 — 刪除 soul.md | 輸出「soul.md」+ 缺少提示 |
 | 12 | 區段 F2 — 刪除 owner 欄位 | 輸出「owner」|
 | 13 | 區段 F2 — 刪除 internal.skills | 輸出「internal.skills」|
 | 14 | 區段 F3 — skill 無 SKILL.md | 輸出「SKILL.md」|
 | 15 | 區段 F4 — orphan skill folder | 輸出「未被任何 expert.json 引用」|
 
-**pytest 覆蓋**：TC-U16（3）+ TC-U17（4）+ TC-U18（4）+ TC-U19（4）+ TC-U20（6）= 21 tests
+**pytest 覆蓋**：TC-U16（3）+ TC-U17（4）+ TC-U18（4）+ TC-U19（9）+ TC-U20（6）= 26 tests（其中 TC-U19 新增 3 tests 驗證 D2. Base Expert Inclusion）
 
 ---
 

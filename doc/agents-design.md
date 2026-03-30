@@ -958,7 +958,7 @@ uvx pytest scripts/tests/test_setup.py -v          # 110 tests
 | Integration | `TestScanAvailableExperts` | `scan_available_experts()` | 6 |
 | Integration | `TestCmdQuery` | `cmd_query()` | 8 |
 | Integration | `TestCmdListUpdated` | `cmd_list()` | 6 |
-| Integration | `TestDoctorSystemInfo/EnvVars/Symlink/ClaudeMd/ExpertStructure` | `cmd_doctor()` A~F 區段 | 21 |
+| Integration | `TestDoctorSystemInfo/EnvVars/Symlink/ClaudeMd/ExpertStructure` | `cmd_doctor()` A~F 區段 | 24 |
 | E2E | `TestE2EInit` | `--init` CLI 完整流程 | 6 |
 | E2E | `TestE2EAdd` | `--add` CLI 流程 | 2 |
 | E2E | `TestE2EUninstall` | `--uninstall` CLI 流程 | 3 |

@@ -16,12 +16,12 @@
 | **bash 整合測試通過** | **65** |
 | bash 整合測試失敗 | 0 |
 | pytest unit（`scripts/tests/unit/`）| **50/50 pass** |
-| pytest integration（`scripts/tests/integration/`）| **71/71 pass** |
+| pytest integration（`scripts/tests/integration/`）| **74/74 pass** |
 | pytest e2e（`scripts/tests/e2e/`）| **18/18 pass** |
 | pytest 舊版 monolith（`test_setup.py`）| **110/110 pass** |
-| **pytest 全部（`scripts/tests/`）** | **249/249 pass** |
+| **pytest 全部（`scripts/tests/`）** | **252/252 pass** |
 
-**整體結論：65/65 bash 整合測試通過，249/249 pytest 測試通過**
+**整體結論：65/65 bash 整合測試通過，252/252 pytest 測試通過**
 
 > 新增 `TestCollectBaseExperts`（6 tests）、擴充 `TestGenerateClaudeMdMulti`（+4 tests）
 > 新增 `collect_base_experts()` 函式：DFS 遍歷依賴樹，收集 is_base=true 的 Base Expert
@@ -285,9 +285,9 @@ $ uvx pytest scripts/tests/e2e/ -v
 | `TestDoctorSystemInfo` | 3 | ✅ |
 | `TestDoctorEnvVars` | 4 | ✅ |
 | `TestDoctorSymlinkIntegrity` | 4 | ✅ |
-| `TestDoctorClaudeMd` | 6 | ✅ |
+| `TestDoctorClaudeMd` | 9 | ✅ |
 | `TestDoctorExpertStructure` | 6 | ✅ |
-| **Integration 合計** | **71** | **✅** |
+| **Integration 合計** | **74** | **✅** |
 
 #### E2E 層（18 tests）
 

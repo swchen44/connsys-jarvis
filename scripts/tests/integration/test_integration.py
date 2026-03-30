@@ -563,10 +563,13 @@ class TestDoctorSymlinkIntegrity:
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TestDoctorClaudeMd:
-    """--doctor 區段 D — CLAUDE.md 內容驗證（@include 正確性、目標存在性）。"""
+    """--doctor 區段 D — CLAUDE.md 內容驗證（@include 正確性、目標存在性、Base Expert inclusion）。"""
 
     def _fw_json(self, workspace):
         return workspace / "connsys-jarvis/framework/framework-base-expert/expert.json"
+
+    def _slim_json(self, workspace):
+        return workspace / "connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/expert.json"
 
     def test_correct_claude_md_shows_ok(self, workspace, capsys):
         inst.cmd_init(workspace, self._fw_json(workspace))
@@ -620,6 +623,41 @@ class TestDoctorClaudeMd:
         inst.cmd_doctor(workspace)
         out = capsys.readouterr().out
         assert "extra @include" in out
+
+    def test_base_expert_inclusion_section_present(self, workspace, capsys):
+        # framework-base-expert is identity (is_base=True) → no base expert section needed
+        inst.cmd_init(workspace, self._fw_json(workspace))
+        capsys.readouterr()
+        inst.cmd_doctor(workspace)
+        out = capsys.readouterr().out
+        assert "Base Expert Inclusion" in out
+
+    def test_base_expert_included_shows_ok(self, workspace, capsys):
+        # wifi-bora-memory-slim-expert depends on framework-base-expert (is_base=True)
+        inst.cmd_init(workspace, self._slim_json(workspace))
+        capsys.readouterr()
+        inst.cmd_doctor(workspace)
+        out = capsys.readouterr().out
+        assert "Base Expert Inclusion" in out
+        # framework-base-expert and wifi-bora-base-expert should be included
+        assert "framework-base-expert" in out
+        assert "wifi-bora-base-expert" in out
+        assert "expert.md missing" not in out
+
+    def test_base_expert_missing_shows_error(self, workspace, capsys):
+        # Install slim expert, then remove base expert references from CLAUDE.md
+        inst.cmd_init(workspace, self._slim_json(workspace))
+        claude_md = workspace / "CLAUDE.md"
+        # Remove all base expert lines from CLAUDE.md to simulate stale/old CLAUDE.md
+        lines = [l for l in claude_md.read_text().splitlines()
+                 if "framework-base-expert" not in l and "wifi-bora-base-expert" not in l
+                 and "sys-bora-base-expert" not in l]
+        claude_md.write_text("\n".join(lines))
+        capsys.readouterr()
+        inst.cmd_doctor(workspace)
+        out = capsys.readouterr().out
+        assert "expert.md missing in CLAUDE.md" in out
+        assert "Fix" in out
 
 
 # ─────────────────────────────────────────────────────────────────────────────

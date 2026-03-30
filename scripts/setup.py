@@ -1839,6 +1839,28 @@ def cmd_doctor(workspace: Path) -> None:
             if missing_inc or extra_inc:
                 print(f"     → Fix: re-run --init or --add <expert.json>")
 
+        # ── D2. Base Expert inclusion 驗證 ──
+        # 收集所有 is_base=True 的 Expert（已安裝及依賴樹），確認 expert.md 在 CLAUDE.md 中
+        print("  Base Expert Inclusion:")
+        base_experts = collect_base_experts(workspace, installed)
+        if not base_experts:
+            print("    (no base experts in installed dependency tree)")
+        else:
+            base_all_ok = True
+            for bp in base_experts:
+                expected_line = f"@connsys-jarvis/{bp}/expert.md"
+                if expected_line in actual_includes:
+                    print(f"    ✅ {bp}  →  expert.md ✓")
+                    logger.debug("cmd_doctor: base expert OK: %s", bp)
+                else:
+                    print(f"    ❌ {bp}  →  expert.md missing in CLAUDE.md")
+                    print(f"       → Fix: re-run --add <expert.json>, or --reset then reinstall")
+                    all_ok = False
+                    base_all_ok = False
+                    logger.debug("cmd_doctor: base expert missing: %s", bp)
+            if base_all_ok:
+                print(f"    All {len(base_experts)} base expert(s) included ✅")
+
         # 驗證 CLAUDE.md 中每個 @include 目標檔案存在
         # 只檢查實際存在於 CLAUDE.md 的 @-行（actual_includes），排除 @CLAUDE.local.md
         if actual_includes:
