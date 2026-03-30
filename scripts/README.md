@@ -607,24 +607,6 @@ ls -la .connsys-jarvis/log/setup.log
 tail -20 .connsys-jarvis/log/setup.log
 ```
 
-### 7.4 Skill test-basic.sh 驗證
-
-每個 skill 目錄下有 `test/test-basic.sh`，可獨立執行：
-
-```bash
-# 執行單一 skill 測試
-bash connsys-jarvis/framework/framework-base-expert/skills/\
-framework-expert-discovery-knowhow/test/test-basic.sh
-
-# 執行所有 skill 測試
-find connsys-jarvis -name "test-basic.sh" | sort | while read f; do
-    echo "--- $f ---"
-    bash "$f"
-done
-# 預期: 16 個腳本，41 個 checks，全部 PASS
-```
-
----
 
 ## 8. 常見錯誤排查
 

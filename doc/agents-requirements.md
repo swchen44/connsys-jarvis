@@ -710,7 +710,7 @@ git -C "$CONNSYS_JARVIS_MEMORY_PATH" push origin main
 | FR-04-5 | External skills 透過 registry 聲明，setup.py 自動建立 link | Should | 整合社群工具 |
 | FR-04-6 | 每個 Skill 資料夾除 `SKILL.md` 外，還需含 `README.md`、`test/`、`report/` | Must | 統一 Skill 資料夾標準，支援測試驗證與執行記錄 |
 | FR-04-7 | Skill `README.md` 記錄：History、使用說明、人工安裝說明、Design、目的；開發說明亦可寫於此（如何新增 case、測試覆蓋率目標、已知問題）。Skill README 範本與最佳實踐詳見 Future Work FW-03 | Must | 讓維護者了解 skill 的脈絡與演進，開發者不需另開文件 |
-| FR-04-8 | Skill `test/` 以 **Shell 腳本（`test-basic.sh`）為主**；需 Python 時使用 pytest，測試檔命名 `test_xxx.py` | Must | Shell 腳本覆蓋基本驗證；pytest 負責結構化 unit test，CI 可自動執行 |
+| FR-04-8 | Skill `test/` 需 Python 時使用 pytest，測試檔命名 `test_xxx.py` | Should | pytest 負責結構化 unit test，CI 可自動執行 |
 | FR-04-9 | Skill `report/` 記錄執行過程、結果、token 用量 | Should | 追蹤 Skill 品質與 AI 成本 |
 | FR-04-10 | Skill 內的 script 語言優先順序：**Shell（預設）→ Python（複雜邏輯）**，與 hook 策略一致 | Must | 一致的語言策略降低維護認知負擔 |
 | FR-04-11 | Skill / Hook 內的所有 **Python 腳本須採用 PEP 723 Inline Script Metadata**，在腳本頂端宣告 `requires-python` 與 `dependencies` | Must | 免除 `requirements.txt` 與 venv 管理；每個腳本自帶依賴宣告，可直接用 `uv run` 執行；參考：[PEP 723](https://peps.python.org/pep-0723/) |
@@ -826,9 +826,8 @@ git -C "$CONNSYS_JARVIS_MEMORY_PATH" push origin main
 
 | 編號 | 需求 | 優先級 | 理由 |
 |------|------|--------|------|
-| FR-07-1 | **`framework-skill-create-flow`**：互動式引導工程師建立符合規範的 Skill。接收使用者對 Skill 用途的描述，輸出完整的 SKILL.md（含 YAML frontmatter、必要章節）、README.md、`test/test-basic.sh` 初版，並放置於正確的五層目錄結構 | Must | 降低建立 Skill 的門檻；確保每個 Skill 包含所有必要章節（觸發條件、How it works、範例、限制），避免遺漏造成 AI 誤用 |
+| FR-07-1 | **`framework-skill-create-flow`**：互動式引導工程師建立符合規範的 Skill。接收使用者對 Skill 用途的描述，輸出完整的 SKILL.md（含 YAML frontmatter、必要章節）、README.md，並放置於正確的五層目錄結構 | Must | 降低建立 Skill 的門檻；確保每個 Skill 包含所有必要章節（觸發條件、How it works、範例、限制），避免遺漏造成 AI 誤用 |
 | FR-07-2 | `framework-skill-create-flow` 輸出的 SKILL.md 須包含以下章節：**① YAML frontmatter**（name/description/version/domain/type/scope/tags）、**② Trigger**（觸發詞與條件）、**③ How it works**（步驟說明）、**④ 範例**（至少 1 個）、**⑤ 相依 Skills**（若有）、**⑥ 限制與邊界** | Must | 完整的 SKILL.md 讓 AI 準確理解何時呼叫、如何執行 |
-| FR-07-3 | `framework-skill-create-flow` 建立 Skill 後，詢問是否要執行 `test/test-basic.sh` 驗證基本結構完整性 | Should | 即時確認 Skill 結構正確，避免安裝後才發現問題 |
 | FR-07-4 | **`framework-expert-create-flow`**：互動式引導工程師建立符合規範的 Expert 資料夾結構。接收使用者對 Expert 角色、職責、適用場景的描述，輸出高品質的 `soul.md`、`rules.md`、`duties.md`、`expert.md`、`expert.json` 初稿，並建立標準資料夾骨架 | Must | 降低建立 Expert 的門檻；確保四個核心文件（soul/rules/duties/expert）結構完整、語意清晰，避免 Expert 定義模糊導致 AI 行為不一致 |
 | FR-07-5 | `framework-expert-create-flow` 輸出的四個核心文件須符合：**soul.md**（Identity / Values & Principles / Communication Style / Personality）、**rules.md**（Must Always / Must Never / Boundaries / Conflict Resolution）、**duties.md**（Primary Duties / Segregation of Duties / KPIs）、**expert.md**（Overview / Key Behaviors / Tools Available / Skills 表格 / Hooks 表格） | Must | 四個文件各有明確的結構責任；結構一致才能讓 framework-base-expert 的 hand-off 和 discovery 機制正確運作 |
 | FR-07-6 | `framework-expert-create-flow` 產生的 `expert.json` 初稿含正確的 schema 欄位（name/version/description/domain/type/dependencies/internal/exclude_symlink），dependencies 預設包含 `framework-base-expert` | Must | 減少工程師手動填寫 expert.json 的錯誤；新 Expert 預設繼承 framework-base-expert 的 hooks 和 commands |

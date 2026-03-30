@@ -21,7 +21,7 @@ framework-team
 
 1. **命名正確** — skill 在各 domain 中可被一致地搜尋和識別
 2. **註冊才生效** — 沒有登錄在 `expert.json` 的 skill 不會被 `setup.py` symlink，永遠不會觸發
-3. **測試品質** — 每個 skill 至少完成一輪 eval 迭代與 `test-basic.sh`
+3. **測試品質** — 每個 skill 至少完成一輪 eval 迭代
 4. **Trigger 調校** — description 經過優化，Claude 在正確時機呼叫此 skill
 
 ## 設計理念與開發方法
@@ -35,9 +35,6 @@ framework-team
 
 ### 如何加 Test Case 與驗證
 
-**test/test-basic.sh**（所有 skill 必備）：驗證 skill 的檔案結構與 frontmatter 是否正確。
-執行：`bash test/test-basic.sh`
-
 **Eval cases（evals/evals.json）**：針對真實使用情境的功能性 test prompt。加入步驟：
 1. 在 `evals/evals.json` 新增 `id`、`prompt`、`expected_output`
 2. 執行 eval loop 後，補充 `assertions`（格式見 `references/schemas.md`）
@@ -45,7 +42,6 @@ framework-team
 
 | 驗證項目 | 方法 | 時機 |
 |---------|------|------|
-| 檔案結構與 frontmatter | `bash test/test-basic.sh` | 每次 commit 前 |
 | Skill 行為 | Eval loop（SKILL.md Step 6–7） | 建立時、重大修改後 |
 | Trigger 準確度 | `scripts/run_loop.py`（SKILL.md Step 9） | 行為穩定後 |
 
@@ -120,6 +116,6 @@ Trigger 優化流程：產生 20 組 query（10 should-trigger、10 should-not-t
 此 skill 在上游基礎上新增的 connsys-jarvis 專屬步驟：
 - Prerequisite Check（目標 expert、用途、命名確認）
 - 命名規則區段（`{domain}-{name}-{type}` 強制規範）
-- Layer 5 目錄結構建立（含 `test/test-basic.sh`）
+- Layer 5 目錄結構建立（SKILL.md + README.md）
 - `expert.json` 和 `expert.md` 的 skill 註冊
 - README.md 台灣繁體中文模板（含完整章節結構）

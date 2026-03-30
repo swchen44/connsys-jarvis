@@ -182,20 +182,6 @@
 
 ---
 
-## TC-09：Skill test-basic.sh 全部通過
-
-**目的**：驗證所有 16 個 skill 的 test-basic.sh 執行無錯誤
-**對應需求**：FR-04-6, FR-04-8
-
-### Steps
-
-| # | 步驟 | 預期結果 |
-|---|------|---------|
-| 1 | `find connsys-jarvis -name "test-basic.sh" \| sort` | 列出 16 個測試腳本 |
-| 2 | 逐一執行每個 test-basic.sh | 各自輸出 Results: N passed, 0 failed |
-| 3 | 統計總 PASS 數 | 41 PASS, 0 FAIL |
-
----
 
 ## TC-10：exclude_symlink patterns 過濾
 

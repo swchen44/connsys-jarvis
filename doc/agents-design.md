@@ -293,7 +293,6 @@ sys-bora-cicd-tool
 ├── SKILL.md                     ← Skill 主體（YAML frontmatter + 內容）
 ├── README.md                    ← History、使用說明、人工安裝說明、Design、目的、開發說明
 ├── test/                        ← Skill 測試腳本（Shell 優先）
-│   ├── test-basic.sh            ← Shell：基本功能驗證（必要）
 │   ├── test_{skill_name}.py     ← Python pytest：unit test（有複雜邏輯時加）
 │   ├── conftest.py              ← pytest fixtures（可選）
 │   └── test-data.json           ← 測試輸入資料（可選）
@@ -306,7 +305,6 @@ sys-bora-cicd-tool
 |-----------|------|---------|
 | `SKILL.md` | Skill 主體，Claude 在執行時讀取 | 人工撰寫，`framework-learn-expert` 未來可自動更新 |
 | `README.md` | History、使用說明、人工安裝說明、Design、目的；**開發說明也寫在這裡** | 人工維護 |
-| `test/test-basic.sh` | Shell 驗證 skill 主要功能，所有 skill 必備 | 人工撰寫，CI 可自動執行 |
 | `test/test_xxx.py` | pytest unit test，適用有 Python helper 的 skill | 人工撰寫，`pytest test/` 自動執行 |
 | `report/` | 每次執行的過程記錄、結果摘要、token 用量統計 | 人工或 hook 自動寫入 |
 
@@ -1052,9 +1050,7 @@ tags: [internal]
    ├── {skill-dir}/SKILL.md         ← 含完整 frontmatter + 各章節
    ├── {skill-dir}/README.md        ← 歷史、目的、開發說明
    └── {skill-dir}/test/
-       └── test-basic.sh            ← 驗證 SKILL.md 基本結構的 shell 腳本
 
-4. 確認路徑後，詢問是否執行 test-basic.sh 驗證
 ```
 
 **SKILL.md 章節標準**（framework-skill-create-flow 確保全部存在）：
@@ -1143,7 +1139,7 @@ tags: [internal]
 |--|-------------------------------|-------------------------------|
 | **建立對象** | 單一 Skill（SKILL.md + test）| 整個 Expert 資料夾（4 個文件 + expert.json）|
 | **互動深度** | 中（著重 trigger / steps / 範例）| 深（著重身分、職責、邊界的精確定義）|
-| **輸出物** | SKILL.md / README.md / test-basic.sh | soul.md / rules.md / duties.md / expert.md / expert.json / 資料夾骨架 |
+| **輸出物** | SKILL.md / README.md | soul.md / rules.md / duties.md / expert.md / expert.json / 資料夾骨架 |
 | **後續動作** | 加入 expert.json 的 internal.skills 清單 | 執行 `setup.py --init` 安裝 |
 
 ---
@@ -1179,7 +1175,6 @@ tags: [internal]
 | 純 Shell hook | `{name}.sh` | `session-start.sh` |
 | Shell + Python helper | `{name}.sh` + `{name}-helper.py` | `session-end.sh` + `session-end-helper.py` |
 | 複雜邏輯獨立為 Python | `{name}.py`（由 Shell wrapper 呼叫）| `compress-memory.py` |
-| Skill 基本測試 | `test-basic.sh` | Shell 驗證 skill 主要功能 |
 | Skill pytest | `test_{name}.py` | Python unit test，放 `test/` 下 |
 
 ### 8.3 Python 規範：PEP 723

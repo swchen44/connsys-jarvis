@@ -190,31 +190,6 @@ tmux kill-session -t cj_test
 
 ---
 
-### TC-09：Skill test-basic.sh 全部通過
-
-**結果：✅ PASS（16/16 scripts, 41/41 checks）**（沿用前次測試結果）
-
-| Skill | Checks | 結果 |
-|-------|--------|------|
-| framework-expert-discovery-knowhow | 3 | ✅ |
-| framework-handoff-flow | 4 | ✅ |
-| framework-memory-tool | 2 | ✅ |
-| sys-bora-gerrit-tool | 2 | ✅ |
-| sys-bora-repo-tool | 2 | ✅ |
-| sys-bora-gerrit-commit-flow | 2 | ✅ |
-| sys-bora-preflight-flow | 2 | ✅ |
-| wifi-bora-arch-knowhow | 3 | ✅ |
-| wifi-bora-build-flow | 3 | ✅ |
-| wifi-bora-linkerscript-knowhow | 3 | ✅ |
-| wifi-bora-memory-knowhow | 3 | ✅ |
-| wifi-bora-protocol-knowhow | 3 | ✅ |
-| wifi-bora-symbolmap-knowhow | 3 | ✅ |
-| wifi-bora-ast-tool | 2 | ✅ |
-| wifi-bora-lsp-tool | 2 | ✅ |
-| wifi-bora-memslim-flow | 2 | ✅ |
-| **合計** | **41** | **✅** |
-
----
 
 ### TC-10：exclude_symlink patterns 過濾
 
@@ -396,7 +371,6 @@ $ uvx pytest scripts/tests/e2e/ -v
 |---------|--------|------|------|
 | BUG-01 | Critical | `find_workspace()` 使用 `resolve()` 跟隨 symlink，workspace 指向錯誤路徑 | ✅ 已修復 |
 | BUG-02 | High | `--remove` 接受路徑參數但比對 `name` 欄位，永遠找不到 Expert | ✅ 已修復 |
-| BUG-03 | Medium | `test-basic.sh` 的 `((PASS++))` 在 `set -e` 模式下值為 0 時觸發退出 | ✅ 已修復 |
 | BUG-04 | Low | `framework-expert-discovery-knowhow` 的 test 路徑計算多 2 層 | ✅ 已修復 |
 
 ---

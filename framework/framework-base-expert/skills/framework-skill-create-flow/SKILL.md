@@ -225,9 +225,7 @@ After writing the SKILL.md, scaffold the full Layer 5 directory structure:
 ```
 {expert}/skills/{domain}-{name}-{type}/
 ├── SKILL.md           ← (just written)
-├── README.md          ← 台灣繁體中文撰寫的說明文件（見下方模板）
-└── test/
-    └── test-basic.sh  ← basic functional verification (required for all skills)
+└── README.md          ← 台灣繁體中文撰寫的說明文件（見下方模板）
 ```
 
 **README.md** — every skill must have this. Write in **Traditional Chinese (Taiwan)**. Use the following template:
@@ -256,9 +254,6 @@ After writing the SKILL.md, scaffold the full Layer 5 directory structure:
 
 ### 如何加 Test Case 與驗證
 
-**test/test-basic.sh**（所有 skill 必備）：驗證檔案結構和 frontmatter。
-執行：`bash test/test-basic.sh`
-
 **Eval cases（evals/evals.json）**：功能性 test prompt，加入步驟：
 1. 在 `evals/evals.json` 新增 `id`、`prompt`、`expected_output`
 2. 執行 eval loop 後，補充 `assertions`（格式見 `references/schemas.md`）
@@ -266,7 +261,6 @@ After writing the SKILL.md, scaffold the full Layer 5 directory structure:
 
 | 驗證項目 | 方法 | 時機 |
 |---------|------|------|
-| 檔案結構與 frontmatter | `bash test/test-basic.sh` | 每次 commit 前 |
 | Skill 行為 | Eval loop | 建立時、重大修改後 |
 | Trigger 準確度 | `scripts/run_loop.py` | 行為穩定後 |
 
@@ -320,20 +314,6 @@ Trigger 優化流程：產生 20 組 query（10 should-trigger / 10 should-not-t
 ## 來源
 
 {說明此 skill 的靈感來源或上游參考，例如基於哪個 plugin 或文件}
-```
-
-**test/test-basic.sh** — every skill must have this. It verifies the file structure and frontmatter are correct:
-
-```bash
-#!/bin/bash
-set -e
-SKILL_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-echo "[test] Checking SKILL.md exists..."
-[ -f "$SKILL_DIR/SKILL.md" ] || { echo "FAIL: SKILL.md missing"; exit 1; }
-for field in name domain type; do
-  grep -q "^${field}:" "$SKILL_DIR/SKILL.md" || { echo "FAIL: missing '$field'"; exit 1; }
-done
-echo "[test] PASS"
 ```
 
 ### [connsys-jarvis] Register in expert.json
