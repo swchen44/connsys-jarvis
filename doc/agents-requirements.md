@@ -710,7 +710,7 @@ git -C "$CONNSYS_JARVIS_MEMORY_PATH" push origin main
 | FR-04-5 | External skills 透過 registry 聲明，setup.py 自動建立 link | Should | 整合社群工具 |
 | FR-04-6 | 每個 Skill 資料夾除 `SKILL.md` 外，還需含 `README.md`、`test/`、`report/` | Must | 統一 Skill 資料夾標準，支援測試驗證與執行記錄 |
 | FR-04-7 | Skill `README.md` 記錄：History、使用說明、人工安裝說明、Design、目的；開發說明亦可寫於此（如何新增 case、測試覆蓋率目標、已知問題）。Skill README 範本與最佳實踐詳見 Future Work FW-03 | Must | 讓維護者了解 skill 的脈絡與演進，開發者不需另開文件 |
-| FR-04-8 | Skill `test/` 需 Python 時使用 pytest，測試檔命名 `test_xxx.py` | Should | pytest 負責結構化 unit test，CI 可自動執行 |
+| FR-04-8 | Skill 的 `test/`、`report/` 目前**非必要**；有 Python 邏輯時使用 pytest，測試檔命名 `test_xxx.py`。當 Skill 品質管理機制啟用（eval loop、CI 驗證）後，兩者將成為**必要** | Should（未來 Must） | 現階段不強制；品質管理啟用後由 CI 自動執行 |
 | FR-04-9 | Skill `report/` 記錄執行過程、結果、token 用量 | Should | 追蹤 Skill 品質與 AI 成本 |
 | FR-04-10 | Skill 內的 script 語言優先順序：**Shell（預設）→ Python（複雜邏輯）**，與 hook 策略一致 | Must | 一致的語言策略降低維護認知負擔 |
 | FR-04-11 | Skill / Hook 內的所有 **Python 腳本須採用 PEP 723 Inline Script Metadata**，在腳本頂端宣告 `requires-python` 與 `dependencies` | Must | 免除 `requirements.txt` 與 venv 管理；每個腳本自帶依賴宣告，可直接用 `uv run` 執行；參考：[PEP 723](https://peps.python.org/pep-0723/) |

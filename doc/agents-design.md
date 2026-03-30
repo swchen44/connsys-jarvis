@@ -290,23 +290,25 @@ sys-bora-cicd-tool
 
 ```
 {domain}-{name}-{type}/          Layer 5：skill 資料夾
-├── SKILL.md                     ← Skill 主體（YAML frontmatter + 內容）
-├── README.md                    ← History、使用說明、人工安裝說明、Design、目的、開發說明
-├── test/                        ← Skill 測試腳本（Shell 優先）
+├── SKILL.md                     ← Skill 主體（YAML frontmatter + 內容）【必要】
+├── README.md                    ← 台灣繁體中文；介紹/Owner/功能/目標/設計理念/風險 【必要】
+├── test/                        ← Skill 測試【非必要，品質管理啟用後成為必要】
 │   ├── test_{skill_name}.py     ← Python pytest：unit test（有複雜邏輯時加）
 │   ├── conftest.py              ← pytest fixtures（可選）
 │   └── test-data.json           ← 測試輸入資料（可選）
-└── report/                      ← 執行過程、結果、token 用量
+└── report/                      ← 執行過程、結果、token 用量【非必要，品質管理啟用後成為必要】
     ├── execution-report.md      ← 人工維護
     └── test-report.md           ← 人工或 CI 自動生成
 ```
 
-| 檔案/資料夾 | 用途 | 維護方式 |
-|-----------|------|---------|
-| `SKILL.md` | Skill 主體，Claude 在執行時讀取 | 人工撰寫，`framework-learn-expert` 未來可自動更新 |
-| `README.md` | History、使用說明、人工安裝說明、Design、目的；**開發說明也寫在這裡** | 人工維護 |
-| `test/test_xxx.py` | pytest unit test，適用有 Python helper 的 skill | 人工撰寫，`pytest test/` 自動執行 |
-| `report/` | 每次執行的過程記錄、結果摘要、token 用量統計 | 人工或 hook 自動寫入 |
+> **`test/` 與 `report/` 目前非必要**，但當 Skill 品質管理機制啟用（eval loop、CI 驗證）時將成為必要。建立 Skill 時可預先建立空目錄，待有內容時再填入。
+
+| 檔案/資料夾 | 用途 | 必要性 | 維護方式 |
+|-----------|------|-------|---------|
+| `SKILL.md` | Skill 主體，Claude 在執行時讀取 | **必要** | 人工撰寫，`framework-learn-expert` 未來可自動更新 |
+| `README.md` | 台灣繁體中文；介紹、Owner、功能、目標、設計理念、風險、替代方案 | **必要** | 人工維護 |
+| `test/test_xxx.py` | pytest unit test，適用有 Python helper 的 skill | 非必要，未來必要 | 人工撰寫，`pytest test/` 自動執行 |
+| `report/` | 每次執行的過程記錄、結果摘要、token 用量統計 | 非必要，未來必要 | 人工或 hook 自動寫入 |
 
 **Command 命名規則**（同 Skill，type 固定為 `tool`）：
 ```
