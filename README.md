@@ -110,6 +110,83 @@ python connsys-jarvis/setup.py --uninstall
 
 `--doctor` 的 F2 區段會驗證以上欄位是否齊全。
 
+## 建立新 Expert
+
+使用 `framework-expert-create-flow` skill 互動式引導建立。觸發方式：在對話中說「create expert」或「新增 expert」。
+
+### 步驟概覽
+
+| 步驟 | 說明 |
+|------|------|
+| Step 0 | 確認 domain、命名、owner、dependencies、is_base |
+| Step 1 | 建立目錄骨架（expert.json、soul.md、rules.md、duties.md、expert.md、README.md） |
+| Step 2 | 填寫 expert.json（含完整 schema） |
+| Step 3 | 撰寫 soul.md — Expert 身份、價值觀、溝通風格 |
+| Step 4 | 撰寫 rules.md — 必做 / 禁止 / 輸出規範 / 職責邊界 |
+| Step 5 | 撰寫 duties.md — 主要職責、職責分界 |
+| Step 6 | 撰寫 expert.md — 公開能力說明（每 session 被讀取） |
+| Step 7 | 建立 skills/、hooks/、agents/、commands/ 內容 |
+| Step 8 | 撰寫 README.md（台灣繁體中文） |
+| Step 9 | 安裝 `setup.py --init` / `--add`，驗證 `--doctor` |
+| Step 10 | 執行 A–F Checklist（26 項）確認完整性 |
+
+### 命名規則
+
+```
+{domain}-{purpose}-expert
+```
+
+- Base expert：每個 domain 恰好一個，設 `is_base: true`，無 dependencies
+- 目錄路徑：`connsys-jarvis/{domain}/{domain}-{purpose}-expert/`
+
+### 常見 Tips
+
+- **expert.json 是最高風險**：格式錯誤會讓 `setup.py` 無法解析，且無明確錯誤訊息。依 schema 逐欄填寫，完成後立即跑 `--doctor`
+- **soul.md Identity 要精確**：一句話，不能模糊。AI 讀這份文件時會直接決定行為傾向
+- **duties.md Segregation 明確**：把「這個 expert 不做什麼」寫清楚，避免多 expert 協作時職責重疊
+- **不要跳過 Checklist**：26 項裡有幾項（如 `is_base` 和 `dependencies` 互斥）很容易忽略卻會造成安裝警告
+
+---
+
+## 建立新 Skill
+
+使用 `framework-skill-create-flow` skill 互動式引導建立。觸發方式：在對話中說「create skill」或「新增 skill」。
+
+### 步驟概覽
+
+| 步驟 | 說明 |
+|------|------|
+| Step 0 | 確認 domain、skill 名稱（type: flow/knowhow/tool）、隸屬 expert |
+| Step 1 | 撰寫 SKILL.md frontmatter（name、description、type、scope、tags） |
+| Step 2 | 撰寫 SKILL.md 主體（觸發條件、SOP 步驟、輸出格式） |
+| Step 3 | 建立目錄 `skills/{domain}-{name}-{type}/` + SKILL.md、README.md |
+| Step 4 | 在 expert.json `internal.skills` 註冊 skill 名稱 |
+| Step 5 | 跑 eval 驗證（對話測試 skill 是否如預期觸發與執行） |
+
+### 命名規則
+
+```
+{domain}-{name}-{type}
+```
+
+類型說明：
+
+| 類型 | 用途 |
+|------|------|
+| `flow` | 標準作業程序（SOP）、多步驟互動引導 |
+| `knowhow` | 領域知識、架構參考、protocol 規範 |
+| `tool` | 外部工具操作指南（git、CLI、API 等） |
+
+### 常見 Tips
+
+- **description 欄位決定觸發**：SKILL.md frontmatter 的 `description` 要含觸發關鍵字，Claude 靠這欄判斷何時載入此 skill
+- **SKILL.md 全英文**：frontmatter 和主體都用英文，README.md 才用繁體中文
+- **Scope 要填對**：`scope` 填隸屬的 expert name（如 `framework-base-expert`），否則 symlink 安裝對象錯誤
+- **建完立刻在 expert.json 註冊**：`internal.skills` 沒加就不會被 `setup.py` 掃到，`--doctor` 會報 orphan skill
+- **eval 要對話測試**：skill 是否被正確觸發，只能透過實際對話驗證，沒有自動化測試替代
+
+---
+
 ## 場景支援
 
 - **Agent First**：workspace 根目錄有 `codespace/` 子目錄，AI 在獨立環境操作
