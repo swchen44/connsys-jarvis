@@ -26,6 +26,7 @@ Framework Base Expert 是 Connsys Jarvis 生態系的基礎框架層，負責協
 | `framework-expert-discovery-knowhow` | knowhow | 了解可用 Expert 的清單與能力說明 |
 | `framework-handoff-flow` | flow | Expert 交接的標準作業程序（SOP） |
 | `framework-memory-tool` | tool | 操作本地記憶系統（讀/寫/搜尋） |
+| `framework-skill-create-flow` | flow | 互動式建立符合規範的 Skill（SKILL.md + 目錄結構 + expert.json 註冊） |
 
 ## Hooks
 

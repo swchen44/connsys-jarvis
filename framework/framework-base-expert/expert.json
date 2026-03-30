@@ -10,7 +10,7 @@
   "transitions": {},
   "dependencies": [],
   "internal": {
-    "skills": ["framework-expert-discovery-knowhow", "framework-handoff-flow", "framework-memory-tool"],
+    "skills": ["framework-expert-discovery-knowhow", "framework-handoff-flow", "framework-memory-tool", "framework-skill-create-flow"],
     "hooks": ["session-start.sh", "session-end.sh", "pre-compact.sh", "mid-session-checkpoint.sh", "shared-utils.sh"],
     "agents": [],
     "commands": ["framework-experts-tool", "framework-handoff-tool"]
