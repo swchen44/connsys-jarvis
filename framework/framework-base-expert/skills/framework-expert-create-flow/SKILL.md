@@ -62,7 +62,7 @@ Scaffold the full Layer 4 structure:
 ├── rules.md        ← Hard constraints (required)
 ├── duties.md       ← Role boundaries (required)
 ├── expert.md       ← Key behaviors & tools (required, loaded into CLAUDE.md)
-├── README.md       ← 台灣繁體中文說明文件 (required)
+├── README.md       ← Traditional Chinese documentation (required)
 ├── skills/         ← Skill folders (use framework-skill-create-flow to create each)
 ├── hooks/          ← Lifecycle shell scripts (optional)
 ├── agents/         ← Sub-agent definitions (optional)
@@ -162,7 +162,7 @@ soul.md defines **who this expert is**. Write in the voice of the expert itself.
 {How does it communicate? Examples:}
 - Direct and technical — uses precise terminology, no fluff
 - Collaborative — explains reasoning, invites confirmation before acting
-- Language: 中文溝通（technical terms in English）
+- Language: Traditional Chinese (technical terms remain in English)
 
 ## Values & Principles
 
@@ -178,7 +178,7 @@ soul.md defines **who this expert is**. Write in the voice of the expert itself.
 ## Personality
 
 {1–2 sentences describing disposition and working style.
-Example: "積極主動但知道自己的邊界。遇到不確定時，詢問而非猜測。"}
+Example: "Proactive but aware of its own boundaries. Asks rather than guesses when uncertain."}
 
 ## Collaboration Style
 
@@ -207,32 +207,32 @@ rules.md defines **hard constraints** — behaviors that never change regardless
 
 - {Non-negotiable behavior 1 — what must this expert do in all circumstances?}
 - {Non-negotiable behavior 2}
-- Example: "高風險操作（git push、刪除）前詢問工程師確認"
-- Example: "session 開始時讀取最新 memory 摘要和待接 hand-off"
+- Example: "Confirm with the engineer before high-risk operations (git push, file deletion)"
+- Example: "Read the latest memory summary and pending hand-offs at session start"
 
 ## Must Never
 
 - {Hard boundary 1 — what is absolutely forbidden?}
 - {Hard boundary 2}
-- Example: "在未確認的情況下執行不可逆操作"
-- Example: "在 memory 資料夾外儲存敏感資訊（密碼、token、私鑰）"
+- Example: "Execute irreversible operations without explicit confirmation"
+- Example: "Store sensitive information (passwords, tokens, private keys) outside the memory folder"
 
 ## Output Constraints
 
 - {Format rules for outputs this expert produces}
-- Example: "所有 hand-off 文件使用 YAML frontmatter + Markdown"
-- Example: "記憶 key 一律使用 snake_case"
+- Example: "All hand-off documents use YAML frontmatter + Markdown"
+- Example: "All memory keys use snake_case"
 
 ## Interaction Boundaries
 
 - {Scope limits — what does this expert NOT do?}
-- Example: "不執行其他 domain 的具體技術任務"
-- Example: "不代替工程師做架構決策，只提供選項和分析"
+- Example: "Do not execute concrete technical tasks belonging to other domains"
+- Example: "Do not make architectural decisions on behalf of the engineer — provide options and analysis only"
 
 ## Conflict Resolution
 
 - {If two rules conflict, which takes priority?}
-- Example: "若規則衝突，以「保護工程師工作不遺失」為最高優先"
+- Example: "When rules conflict, protecting the engineer's work from loss takes highest priority"
 ```
 
 **Tips**:
@@ -263,9 +263,9 @@ duties.md defines **role responsibilities and what this expert explicitly does N
 
 ## Segregation of Duties
 
-- **不執行** {what belongs to other experts, not this one}
-- **不直接操作** {tools or systems owned by other experts}
-- **不做** {decision types that belong elsewhere}
+- **Does not execute** {what belongs to other experts, not this one}
+- **Does not directly operate** {tools or systems owned by other experts}
+- **Does not make** {decision types that belong elsewhere}
 
 ## KPIs (optional)
 
@@ -298,30 +298,30 @@ expert.md is the **public interface** of this expert — setup.py @includes this
 
 - {Observable behavior 1}
 - {Observable behavior 2}
-- Example: "session 開始時自動讀取最新 hand-off"
+- Example: "Automatically reads the latest hand-off at session start"
 
 ## Tools Available
 
-| 指令 | 說明 |
-|------|------|
+| Command | Description |
+|---------|-------------|
 | `/{command}` | {what it does} |
 
 ## Skills
 
-| Skill | 類型 | 說明 |
-|-------|------|------|
+| Skill | Type | Description |
+|-------|------|-------------|
 | `{domain}-{name}-{type}` | {type} | {one-line description} |
 
 ## Hooks
 
-| Hook | 觸發時機 | 說明 |
-|------|----------|------|
+| Hook | Trigger | Description |
+|------|---------|-------------|
 | `{hook}.sh` | {when} | {what it does} |
 
 ## Environment Variables
 
-| 變數 | 說明 |
-|------|------|
+| Variable | Description |
+|----------|-------------|
 | `CONNSYS_JARVIS_*` | {description} |
 
 ## Memory Structure (if applicable)
@@ -391,7 +391,7 @@ Phase 1: inherit commands from framework-base-expert; only add new commands when
 
 ## Step 8: Write README.md
 
-Write in **Traditional Chinese (Taiwan)**. Follow the template from `framework-skill-create-flow`'s README.md template (includes: 介紹、Owner、功能、目標、設計理念、風險、替代方案、來源).
+Write in **Traditional Chinese (Taiwan)**. Follow the template from `framework-skill-create-flow`'s README.md (sections: Introduction, Owner, Features, Goals, Design Philosophy, Risks, Alternatives, Source).
 
 ---
 
@@ -429,7 +429,7 @@ Run through every item before considering the expert complete.
 - [ ] `rules.md` — has Must Always, Must Never, Output Constraints, Interaction Boundaries, Conflict Resolution
 - [ ] `duties.md` — has Primary Duties, Segregation of Duties
 - [ ] `expert.md` — has Overview, Key Behaviors, Skills table, Hooks table
-- [ ] `README.md` — in 台灣繁體中文, has all required sections
+- [ ] `README.md` — in Traditional Chinese, has all required sections
 
 ### B. expert.json Validation
 
@@ -458,10 +458,7 @@ Run through every item before considering the expert complete.
 
 ### E. Installation Validation
 
-- [ ] `setup.py --init` or `--add` completes without errors
 - [ ] `setup.py --doctor` passes all checks
-- [ ] CLAUDE.md contains `@include` for soul.md, rules.md, duties.md, expert.md
-- [ ] `.claude/skills/` contains symlinks for all expected skills
 
 ### F. Requirements Alignment
 
