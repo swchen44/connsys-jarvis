@@ -139,6 +139,18 @@ class TestResolveItems:
         result = inst.resolve_items(tmp_path, "skills", ["all"])
         assert result == ["skill-x"]
 
+    def test_all_uppercase_string(self, tmp_path):
+        skills_dir = tmp_path / "skills"
+        (skills_dir / "skill-a").mkdir(parents=True)
+        result = inst.resolve_items(tmp_path, "skills", "ALL")
+        assert result == ["skill-a"]
+
+    def test_all_uppercase_list(self, tmp_path):
+        skills_dir = tmp_path / "skills"
+        (skills_dir / "skill-b").mkdir(parents=True)
+        result = inst.resolve_items(tmp_path, "skills", ["ALL"])
+        assert result == ["skill-b"]
+
     def test_missing_dir_returns_empty(self, tmp_path):
         result = inst.resolve_items(tmp_path, "skills", "all")
         assert result == []
@@ -486,14 +498,14 @@ class TestIntegrationAdd:
         self._run_init(workspace, "framework/framework-base-expert/expert.json")
         self._run_add(workspace, "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
         count = len(list((workspace / ".claude" / "skills").iterdir()))
-        assert count == 14
+        assert count == 15
 
     def test_add_idempotent_second_call_no_error(self, workspace):
         self._run_init(workspace, "framework/framework-base-expert/expert.json")
         self._run_add(workspace, "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
         self._run_add(workspace, "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
         count = len(list((workspace / ".claude" / "skills").iterdir()))
-        assert count == 14
+        assert count == 15
 
     def test_add_installs_experts_json_has_two(self, workspace):
         self._run_init(workspace, "framework/framework-base-expert/expert.json")

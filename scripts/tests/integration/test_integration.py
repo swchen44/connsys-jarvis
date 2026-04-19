@@ -110,14 +110,14 @@ class TestIntegrationAdd:
         self._run_init(workspace, "framework/framework-base-expert/expert.json")
         self._run_add(workspace, "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
         count = len(list((workspace / ".claude" / "skills").iterdir()))
-        assert count == 14
+        assert count == 15
 
     def test_add_idempotent_second_call_no_error(self, workspace):
         self._run_init(workspace, "framework/framework-base-expert/expert.json")
         self._run_add(workspace, "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
         self._run_add(workspace, "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
         count = len(list((workspace / ".claude" / "skills").iterdir()))
-        assert count == 14
+        assert count == 15
 
     def test_add_installed_json_has_two(self, workspace):
         self._run_init(workspace, "framework/framework-base-expert/expert.json")

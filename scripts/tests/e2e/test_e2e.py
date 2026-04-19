@@ -104,7 +104,7 @@ class TestE2EAdd:
         run_setup(ws, "--init", "framework/framework-base-expert/expert.json")
         run_setup(ws, "--add", "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
         count = len(list((ws / ".claude" / "skills").iterdir()))
-        assert count == 14
+        assert count == 15
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -208,7 +208,7 @@ class TestE2EMultiExpertWorkflow:
         # 2. add
         r = run_setup(ws, "--add", "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
         assert r.returncode == 0
-        assert len(list((ws / ".claude/skills").iterdir())) == 14
+        assert len(list((ws / ".claude/skills").iterdir())) == 15
 
         # 3. list → 兩個 installed
         r = run_setup(ws, "--list", "--format", "json")

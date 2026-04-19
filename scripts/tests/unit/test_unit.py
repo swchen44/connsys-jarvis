@@ -89,6 +89,18 @@ class TestResolveItems:
         result = inst.resolve_items(tmp_path, "skills", ["all"])
         assert result == ["skill-x"]
 
+    def test_all_uppercase_string(self, tmp_path):
+        skills_dir = tmp_path / "skills"
+        (skills_dir / "skill-a").mkdir(parents=True)
+        result = inst.resolve_items(tmp_path, "skills", "ALL")
+        assert result == ["skill-a"]
+
+    def test_all_uppercase_list(self, tmp_path):
+        skills_dir = tmp_path / "skills"
+        (skills_dir / "skill-b").mkdir(parents=True)
+        result = inst.resolve_items(tmp_path, "skills", ["ALL"])
+        assert result == ["skill-b"]
+
     def test_missing_dir_returns_empty(self, tmp_path):
         result = inst.resolve_items(tmp_path, "skills", "all")
         assert result == []

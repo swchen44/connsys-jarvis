@@ -19,40 +19,23 @@
   "dependencies": [
     {
       "expert": "framework/framework-base-expert",
-      "skills": [
-        "framework-expert-discovery-knowhow",
-        "framework-memory-tool"
-      ],
-      "hooks": "all",
-      "agents": [],
-      "commands": [
-        "framework-experts-tool"
-      ]
+      "skills": "ALL",
+      "hooks": "ALL",
+      "commands": "ALL",
+      "agents": "ALL",
+      "rules": "ALL"
     },
     {
       "expert": "wifi-bora/wifi-bora-base-expert",
-      "skills": [
-        "wifi-bora-arch-knowhow",
-        "wifi-bora-memory-knowhow",
-        "wifi-bora-linkerscript-knowhow",
-        "wifi-bora-symbolmap-knowhow",
-        "wifi-bora-build-flow"
-      ]
+      "skills": "ALL"
     },
     {
       "expert": "sys-bora/sys-bora-preflight-expert",
-      "skills": [
-        "sys-bora-gerrit-commit-flow",
-        "sys-bora-preflight-flow"
-      ]
+      "skills": "ALL"
     }
   ],
   "internal": {
-    "skills": [
-      "wifi-bora-memslim-flow",
-      "wifi-bora-ast-tool",
-      "wifi-bora-lsp-tool"
-    ],
+    "skills": ["ALL"],
     "hooks": [],
     "agents": [],
     "commands": [],

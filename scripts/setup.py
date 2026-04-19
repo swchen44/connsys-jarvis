@@ -422,7 +422,7 @@ def resolve_items(expert_dir: Path, kind: str, spec) -> list:
 
     **spec 格式對照**：
       - None 或省略 key  → [] （不繼承此 kind）
-      - "all" 或 ["all"] → 目錄中所有 item（hooks 為 .sh/.py 檔；其他為子目錄）
+      - "all"/"ALL"/"All" 或 ["ALL"] → 目錄中所有 item（大小寫不敏感）
       - ["name1","name2"] → 指定名稱清單（精確控制）
 
     **各 kind 的檔案結構差異**：
@@ -433,7 +433,7 @@ def resolve_items(expert_dir: Path, kind: str, spec) -> list:
     Args:
         expert_dir: Expert 根目錄（expert.json 所在目錄）
         kind:       "skills" / "hooks" / "agents" / "commands" / "rules"
-        spec:       None、"all"、["all"]、或 ["name1", "name2"]
+        spec:       None、"all"/"ALL"、["ALL"]、或 ["name1", "name2"]
 
     Returns:
         item 名稱的 list（已解析，但尚未套用 exclude patterns）
@@ -444,7 +444,13 @@ def resolve_items(expert_dir: Path, kind: str, spec) -> list:
         logger.debug("resolve_items: spec is None → []")
         return []
 
-    if spec == "all" or spec == ["all"]:
+    # "all" / "ALL" / "All" 或 ["all"] / ["ALL"] — 大小寫不敏感
+    _is_all = (
+        (isinstance(spec, str) and spec.lower() == "all") or
+        (isinstance(spec, list) and len(spec) == 1
+         and isinstance(spec[0], str) and spec[0].lower() == "all")
+    )
+    if _is_all:
         kind_dir = expert_dir / kind
         if kind == "hooks":
             # hooks 執行檔位於 hooks/scripts/ 子目錄
