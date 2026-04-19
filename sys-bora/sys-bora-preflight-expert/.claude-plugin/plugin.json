@@ -1,0 +1,22 @@
+{
+  "name": "sys-bora-preflight-expert",
+  "version": "1.0.0",
+  "description": "gerrit commit/preflight 操作；CI/CD label 定義；preflight 結果分析",
+  "author": {
+    "name": "sys-team"
+  },
+  "keywords": [
+    "gerrit",
+    "preflight",
+    "CR",
+    "code review",
+    "CI/CD",
+    "submit"
+  ],
+  "skills": [
+    "./../sys-bora-base-expert/skills"
+  ],
+  "dependencies": [
+    "sys-bora-base-expert"
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "name": "connsys-jarvis",
+  "owner": {
+    "name": "connsys-team"
+  },
+  "plugins": [
+    {
+      "name": "bt-bora-base-expert",
+      "source": "./bt-bora/bt-bora-base-expert",
+      "version": "1.0.0",
+      "description": "Bluetooth Bora domain 共用基礎知識與工具"
+    },
+    {
+      "name": "framework-base-expert",
+      "source": "./framework/framework-base-expert",
+      "version": "1.0.0",
+      "description": "管理 connsys expert 生態系；提供跨所有 domain 共用的 skill/hook/command"
+    },
+    {
+      "name": "lrwpan-bora-base-expert",
+      "source": "./lrwpan-bora/lrwpan-bora-base-expert",
+      "version": "1.0.0",
+      "description": "LR-WPAN (802.15.4/Zigbee/Thread) Bora domain 基礎知識與工具"
+    },
+    {
+      "name": "sys-bora-base-expert",
+      "source": "./sys-bora/sys-bora-base-expert",
+      "version": "1.0.0",
+      "description": "SoC/OS/build system 基礎知識；manifest 下載與 build 流程"
+    },
+    {
+      "name": "sys-bora-preflight-expert",
+      "source": "./sys-bora/sys-bora-preflight-expert",
+      "version": "1.0.0",
+      "description": "gerrit commit/preflight 操作；CI/CD label 定義；preflight 結果分析"
+    },
+    {
+      "name": "wifi-bora-base-expert",
+      "source": "./wifi-bora/wifi-bora-base-expert",
+      "version": "1.0.0",
+      "description": "wifi-bora domain 共用 skill/hook/command/agent 的容器"
+    },
+    {
+      "name": "wifi-bora-memory-slim-expert",
+      "source": "./wifi-bora/wifi-bora-memory-slim-expert",
+      "version": "1.0.0",
+      "description": "分析 Wi-Fi Bora ROM/RAM footprint，協助精簡記憶體用量"
+    },
+    {
+      "name": "wifi-gen4m-base-expert",
+      "source": "./wifi-gen4m/wifi-gen4m-base-expert",
+      "version": "1.0.0",
+      "description": "WiFi Gen4M domain 共用基礎知識與工具"
+    },
+    {
+      "name": "wifi-logan-base-expert",
+      "source": "./wifi-logan/wifi-logan-base-expert",
+      "version": "1.0.0",
+      "description": "WiFi Logan domain 共用基礎知識與工具"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "description": "Connsys Jarvis Expert Plugins for Claude Code"
+  }
+}

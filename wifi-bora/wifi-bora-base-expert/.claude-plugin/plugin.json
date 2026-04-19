@@ -1,0 +1,8 @@
+{
+  "name": "wifi-bora-base-expert",
+  "version": "1.0.0",
+  "description": "wifi-bora domain 共用 skill/hook/command/agent 的容器",
+  "author": {
+    "name": "wifi-bora-team"
+  }
+}

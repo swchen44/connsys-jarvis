@@ -1,0 +1,12 @@
+{
+  "name": "wifi-logan-base-expert",
+  "version": "1.0.0",
+  "description": "WiFi Logan domain 共用基礎知識與工具",
+  "author": {
+    "name": "wifi-logan-team"
+  },
+  "keywords": [
+    "logan",
+    "wifi-logan"
+  ]
+}

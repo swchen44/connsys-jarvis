@@ -1,0 +1,14 @@
+{
+  "name": "bt-bora-base-expert",
+  "version": "1.0.0",
+  "description": "Bluetooth Bora domain 共用基礎知識與工具",
+  "author": {
+    "name": "bt-bora-team"
+  },
+  "keywords": [
+    "bluetooth",
+    "BT",
+    "BLE",
+    "bt-bora"
+  ]
+}

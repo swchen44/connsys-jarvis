@@ -1,0 +1,8 @@
+{
+  "name": "framework-base-expert",
+  "version": "1.0.0",
+  "description": "管理 connsys expert 生態系；提供跨所有 domain 共用的 skill/hook/command",
+  "author": {
+    "name": "framework-team"
+  }
+}

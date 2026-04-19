@@ -1,0 +1,15 @@
+{
+  "name": "lrwpan-bora-base-expert",
+  "version": "1.0.0",
+  "description": "LR-WPAN (802.15.4/Zigbee/Thread) Bora domain 基礎知識與工具",
+  "author": {
+    "name": "lrwpan-bora-team"
+  },
+  "keywords": [
+    "zigbee",
+    "Thread",
+    "802.15.4",
+    "lrwpan",
+    "LR-WPAN"
+  ]
+}

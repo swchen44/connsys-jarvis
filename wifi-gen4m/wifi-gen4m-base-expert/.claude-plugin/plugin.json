@@ -1,0 +1,12 @@
+{
+  "name": "wifi-gen4m-base-expert",
+  "version": "1.0.0",
+  "description": "WiFi Gen4M domain 共用基礎知識與工具",
+  "author": {
+    "name": "wifi-gen4m-team"
+  },
+  "keywords": [
+    "gen4m",
+    "wifi-gen4m"
+  ]
+}

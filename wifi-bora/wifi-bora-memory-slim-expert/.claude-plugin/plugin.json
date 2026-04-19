@@ -1,0 +1,25 @@
+{
+  "name": "wifi-bora-memory-slim-expert",
+  "version": "1.0.0",
+  "description": "分析 Wi-Fi Bora ROM/RAM footprint，協助精簡記憶體用量",
+  "author": {
+    "name": "wifi-bora-team"
+  },
+  "keywords": [
+    "memory slim",
+    "ROM 優化",
+    "RAM 分析",
+    "footprint",
+    "記憶體"
+  ],
+  "skills": [
+    "./../../framework/framework-base-expert/skills",
+    "./../wifi-bora-base-expert/skills",
+    "./../../sys-bora/sys-bora-preflight-expert/skills"
+  ],
+  "dependencies": [
+    "framework-base-expert",
+    "wifi-bora-base-expert",
+    "sys-bora-preflight-expert"
+  ]
+}
