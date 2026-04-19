@@ -21,14 +21,12 @@
       "expert": "framework/framework-base-expert",
       "skills": [
         "framework-expert-discovery-knowhow",
-        "framework-handoff-flow",
         "framework-memory-tool"
       ],
       "hooks": "all",
       "agents": [],
       "commands": [
-        "framework-experts-tool",
-        "framework-handoff-tool"
+        "framework-experts-tool"
       ]
     },
     {

@@ -35,7 +35,7 @@ class TestIntegrationInit:
     def test_skills_symlinks_created(self, workspace, framework_expert_json):
         self._run_init(workspace, "framework/framework-base-expert/expert.json")
         skills = list((workspace / ".claude" / "skills").iterdir())
-        assert len(skills) == 3
+        assert len(skills) == 4
 
     def test_hooks_symlinks_created(self, workspace):
         self._run_init(workspace, "framework/framework-base-expert/expert.json")
@@ -45,7 +45,7 @@ class TestIntegrationInit:
     def test_commands_symlinks_created(self, workspace):
         self._run_init(workspace, "framework/framework-base-expert/expert.json")
         cmds = list((workspace / ".claude" / "commands").iterdir())
-        assert len(cmds) == 2
+        assert len(cmds) == 1  # framework-experts-tool only (handoff-tool removed)
 
     def test_claude_md_is_generated(self, workspace):
         self._run_init(workspace, "framework/framework-base-expert/expert.json")
@@ -72,18 +72,18 @@ class TestIntegrationInit:
         self._run_init(workspace, "framework/framework-base-expert/expert.json")
         self._run_init(workspace, "framework/framework-base-expert/expert.json")
         skills = list((workspace / ".claude" / "skills").iterdir())
-        assert len(skills) == 3
+        assert len(skills) == 4
 
     def test_memory_preserved_after_init(self, workspace):
-        """--init 不觸碰 memory/（handoff 效果）。"""
+        """--init 不觸碰 memory/。"""
         self._run_init(workspace, "framework/framework-base-expert/expert.json")
         memory_note = workspace / ".connsys-jarvis/memory/test/note.md"
         memory_note.parent.mkdir(parents=True, exist_ok=True)
-        memory_note.write_text("handoff note")
+        memory_note.write_text("preserved note")
         # 再次 --init
         self._run_init(workspace, "framework/framework-base-expert/expert.json")
         assert memory_note.exists()
-        assert memory_note.read_text() == "handoff note"
+        assert memory_note.read_text() == "preserved note"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -110,14 +110,14 @@ class TestIntegrationAdd:
         self._run_init(workspace, "framework/framework-base-expert/expert.json")
         self._run_add(workspace, "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
         count = len(list((workspace / ".claude" / "skills").iterdir()))
-        assert count == 13
+        assert count == 14
 
     def test_add_idempotent_second_call_no_error(self, workspace):
         self._run_init(workspace, "framework/framework-base-expert/expert.json")
         self._run_add(workspace, "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
         self._run_add(workspace, "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
         count = len(list((workspace / ".claude" / "skills").iterdir()))
-        assert count == 13
+        assert count == 14
 
     def test_add_installed_json_has_two(self, workspace):
         self._run_init(workspace, "framework/framework-base-expert/expert.json")
@@ -148,14 +148,14 @@ class TestIntegrationRemove:
         self._setup(workspace)
         inst.cmd_remove(workspace, "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
         count = len(list((workspace / ".claude" / "skills").iterdir()))
-        assert count == 3
+        assert count == 4
 
     def test_shared_skills_preserved(self, workspace):
         self._setup(workspace)
         inst.cmd_remove(workspace, "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
         skills = [p.name for p in (workspace / ".claude" / "skills").iterdir()]
         assert "framework-expert-discovery-knowhow" in skills
-        assert "framework-handoff-flow" in skills
+        assert "framework-expert-create-flow" in skills
         assert "framework-memory-tool" in skills
 
     def test_private_skills_removed(self, workspace):
@@ -177,7 +177,7 @@ class TestIntegrationRemove:
         inst.cmd_remove(workspace, "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
         content = (workspace / "CLAUDE.md").read_text()
         assert "framework-base-expert" in content
-        assert "Experts" not in content or "Expert:" in content
+        assert "wifi-bora-memory-slim-expert" not in content
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -254,23 +254,6 @@ class TestIntegrationReset:
         self._setup(workspace)
         inst.cmd_reset(workspace)
         assert (workspace / ".connsys-jarvis/log/setup.log").exists()
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# TC-U22  --init memory preservation
-# ─────────────────────────────────────────────────────────────────────────────
-
-class TestInitMemoryPreservation:
-    """--init 切換 Expert 時 memory/ 應保留（handoff 效果）。"""
-
-    def test_memory_preserved_after_init(self, workspace):
-        inst.cmd_init(workspace, workspace / "connsys-jarvis/framework/framework-base-expert/expert.json")
-        memory_note = workspace / ".connsys-jarvis/memory/test/note.md"
-        memory_note.parent.mkdir(parents=True, exist_ok=True)
-        memory_note.write_text("handoff note")
-        inst.cmd_init(workspace, workspace / "connsys-jarvis/framework/framework-base-expert/expert.json")
-        assert memory_note.exists()
-        assert memory_note.read_text() == "handoff note"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -563,13 +546,10 @@ class TestDoctorSymlinkIntegrity:
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TestDoctorClaudeMd:
-    """--doctor 區段 D — CLAUDE.md 內容驗證（@include 正確性、目標存在性、Base Expert inclusion）。"""
+    """--doctor 區段 D — CLAUDE.md 內容驗證（@include 正確性、目標存在性）。"""
 
     def _fw_json(self, workspace):
         return workspace / "connsys-jarvis/framework/framework-base-expert/expert.json"
-
-    def _slim_json(self, workspace):
-        return workspace / "connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/expert.json"
 
     def test_correct_claude_md_shows_ok(self, workspace, capsys):
         inst.cmd_init(workspace, self._fw_json(workspace))
@@ -624,41 +604,6 @@ class TestDoctorClaudeMd:
         out = capsys.readouterr().out
         assert "extra @include" in out
 
-    def test_base_expert_inclusion_section_present(self, workspace, capsys):
-        # framework-base-expert is identity (is_base=True) → no base expert section needed
-        inst.cmd_init(workspace, self._fw_json(workspace))
-        capsys.readouterr()
-        inst.cmd_doctor(workspace)
-        out = capsys.readouterr().out
-        assert "Base Expert Inclusion" in out
-
-    def test_base_expert_included_shows_ok(self, workspace, capsys):
-        # wifi-bora-memory-slim-expert depends on framework-base-expert (is_base=True)
-        inst.cmd_init(workspace, self._slim_json(workspace))
-        capsys.readouterr()
-        inst.cmd_doctor(workspace)
-        out = capsys.readouterr().out
-        assert "Base Expert Inclusion" in out
-        # framework-base-expert and wifi-bora-base-expert should be included
-        assert "framework-base-expert" in out
-        assert "wifi-bora-base-expert" in out
-        assert "expert.md missing" not in out
-
-    def test_base_expert_missing_shows_error(self, workspace, capsys):
-        # Install slim expert, then remove base expert references from CLAUDE.md
-        inst.cmd_init(workspace, self._slim_json(workspace))
-        claude_md = workspace / "CLAUDE.md"
-        # Remove all base expert lines from CLAUDE.md to simulate stale/old CLAUDE.md
-        lines = [l for l in claude_md.read_text().splitlines()
-                 if "framework-base-expert" not in l and "wifi-bora-base-expert" not in l
-                 and "sys-bora-base-expert" not in l]
-        claude_md.write_text("\n".join(lines))
-        capsys.readouterr()
-        inst.cmd_doctor(workspace)
-        out = capsys.readouterr().out
-        assert "expert.md missing in CLAUDE.md" in out
-        assert "Fix" in out
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TC-U20  --doctor: Expert 結構完整性
@@ -677,9 +622,9 @@ class TestDoctorExpertStructure:
         assert "mini-expert" in out
 
     def test_missing_required_file_shows_error(self, mini_workspace, capsys):
-        (mini_workspace / "connsys-jarvis/framework/mini-expert/soul.md").unlink()
+        (mini_workspace / "connsys-jarvis/framework/mini-expert/expert.json").unlink()
         out = self._run_doctor(mini_workspace, capsys)
-        assert "soul.md" in out
+        assert "expert.json" in out
         assert "missing" in out
 
     def test_missing_owner_field_shows_error(self, mini_workspace, capsys):

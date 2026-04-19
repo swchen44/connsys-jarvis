@@ -75,8 +75,8 @@ assert_exists   "$WS/CLAUDE.md"
 assert_exists   "$WS/.connsys-jarvis/.env"
 assert_exists   "$WS/.connsys-jarvis/.installed-experts.json"
 assert_contains "TC-01-2 CLAUDE.md has soul.md"     "$(cat "$WS/CLAUDE.md")" "soul.md"
-assert_contains "TC-01-3 CLAUDE.md has rules.md"    "$(cat "$WS/CLAUDE.md")" "rules.md"
-assert_contains "TC-01-4 CLAUDE.md has duties.md"   "$(cat "$WS/CLAUDE.md")" "duties.md"
+assert_contains "TC-01-3 CLAUDE.md has Identity"    "$(cat "$WS/CLAUDE.md")" "## Identity"
+assert_contains "TC-01-4 CLAUDE.md has TechRef"     "$(cat "$WS/CLAUDE.md")" "## Technical Reference"
 assert_contains "TC-01-5 CLAUDE.md has expert.md"   "$(cat "$WS/CLAUDE.md")" "expert.md"
 assert_contains "TC-01-6 .env has CONNSYS_JARVIS_PATH" "$(cat "$WS/.connsys-jarvis/.env")" "CONNSYS_JARVIS_PATH"
 assert_contains "TC-01-7 .installed-experts.json"   "$(cat "$WS/.connsys-jarvis/.installed-experts.json")" "framework-base-expert"
@@ -98,8 +98,7 @@ assert_eq "TC-02-4 2 experts installed" "$installed" "2"
 is_id=$(python3 -c "import json; d=json.load(open('$WS/.connsys-jarvis/.installed-experts.json')); e=[x for x in d['experts'] if x['name']=='wifi-bora-memory-slim-expert'][0]; print(e['is_identity'])")
 assert_contains "TC-02-5 wifi-bora is identity"      "$is_id" "True"
 
-inc_all=$(python3 -c "import json; d=json.load(open('$WS/.connsys-jarvis/.installed-experts.json')); print(d.get('include_all_experts', False))")
-assert_contains "TC-02-6 include_all_experts=False"  "$inc_all" "False"
+# v2.0: include_all_experts removed
 
 # ============================================================
 hr "TC-03: --doctor (正常狀態)"
@@ -196,22 +195,19 @@ assert_contains "TC-11-2 overall not healthy"        "$out" "Overall: ❌"
 rm -f "$WS/.claude/skills/fake-dangling-skill"
 
 # ============================================================
-hr "TC-13: --with-all-experts"
+hr "TC-13: CLAUDE.md v2.0 format (## Identity + ## Technical Reference)"
 # ============================================================
 rm -rf "$WS" && mkdir -p "$WS"
 ln -sfn "$JARVIS_DIR" "$WS/connsys-jarvis"
 cd "$WS" && $SETUP --init framework/framework-base-expert/expert.json > /dev/null 2>&1
-out=$(cd "$WS" && $SETUP --add --with-all-experts wifi-bora/wifi-bora-memory-slim-expert/expert.json 2>&1)
-assert_contains "TC-13-1 success"                    "$out" "Done! Expert 'wifi-bora-memory-slim-expert' added"
+cd "$WS" && $SETUP --add wifi-bora/wifi-bora-memory-slim-expert/expert.json > /dev/null 2>&1
 
 claude_content=$(cat "$WS/CLAUDE.md")
-assert_contains "TC-13-2 Identity section"           "$claude_content" "Expert Identity"
-assert_contains "TC-13-3 Capabilities section"       "$claude_content" "Expert Capabilities"
-assert_contains "TC-13-4 soul.md present"            "$claude_content" "soul.md"
-assert_contains "TC-13-5 framework expert.md"        "$claude_content" "framework-base-expert/expert.md"
-
-inc_all=$(python3 -c "import json; d=json.load(open('$WS/.connsys-jarvis/.installed-experts.json')); print(d['include_all_experts'])")
-assert_contains "TC-13-6 include_all_experts=True"   "$inc_all" "True"
+assert_contains "TC-13-1 Identity section"           "$claude_content" "## Identity"
+assert_contains "TC-13-2 Technical Reference"        "$claude_content" "## Technical Reference"
+assert_contains "TC-13-3 soul.md present"            "$claude_content" "soul.md"
+assert_contains "TC-13-4 framework expert.md"        "$claude_content" "framework-base-expert/expert.md"
+assert_contains "TC-13-5 HTML comment header"        "$claude_content" "<!-- connsys-jarvis CLAUDE.md"
 
 # ============================================================
 hr "TC-14: --debug 日誌"

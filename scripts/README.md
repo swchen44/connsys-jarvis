@@ -200,7 +200,6 @@ Step 1 — 全清：移除 .claude/ 下所有 symlinks（不論哪個 expert 聲
 Step 2 — 重建：依剩餘 experts（framework-base-expert）的 declared_symlinks 重新建立
 
   framework-expert-discovery-knowhow  [+] 重建
-  framework-handoff-flow              [+] 重建
   session-start.sh                    [+] 重建
   wifi-bora-memslim-flow              ← 不再重建（wifi-bora 已移除）
   wifi-bora-lsp-tool                  ← 不再重建

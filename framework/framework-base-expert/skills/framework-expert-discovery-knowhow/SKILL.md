@@ -20,7 +20,7 @@ tags: [framework, discovery, expert-selection]
 
 | Expert | 功能 | 觸發關鍵字 |
 |--------|------|-----------|
-| `framework-base-expert` | 生態系管理、記憶管理、hand-off 協調 | （框架層，預設載入） |
+| `framework-base-expert` | 生態系管理、記憶管理 | （框架層，預設載入） |
 
 ### WiFi Bora Domain
 

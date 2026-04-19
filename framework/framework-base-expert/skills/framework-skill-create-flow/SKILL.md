@@ -68,14 +68,14 @@ Propose a full skill name following the naming rules, then confirm with the user
 | Part | Source | Example |
 |------|--------|---------|
 | `domain` | Same as the target expert's domain prefix | `wifi-bora`, `sys-bora`, `framework` |
-| `skill-name` | Short kebab-case description | `build`, `handoff`, `memory` |
+| `skill-name` | Short kebab-case description | `build`, `memory`, `preflight` |
 | `type` | One of `flow` / `knowhow` / `tool` | `flow` |
 
 **Type definitions**:
 
 | Type | When to use | Examples |
 |------|-------------|---------|
-| `flow` | Step-by-step SOP or interactive workflow | `framework-handoff-flow`, `wifi-bora-build-flow` |
+| `flow` | Step-by-step SOP or interactive workflow | `framework-expert-create-flow`, `wifi-bora-build-flow` |
 | `knowhow` | Reference knowledge and background | `wifi-bora-protocol-knowhow`, `framework-expert-discovery-knowhow` |
 | `tool` | External tool operation guide | `sys-bora-gerrit-tool`, `framework-memory-tool` |
 

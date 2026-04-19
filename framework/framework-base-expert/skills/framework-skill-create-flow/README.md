@@ -102,7 +102,7 @@ Trigger 優化流程：產生 20 組 query（10 should-trigger、10 should-not-t
 
 ### 替代方案
 
-- **手動建立**：複製現有 skill 目錄（例如 `framework-handoff-flow`），更名後手動編輯。適合簡單 skill；不含 eval loop。
+- **手動建立**：複製現有 skill 目錄（例如 `framework-memory-tool`），更名後手動編輯。適合簡單 skill；不含 eval loop。
 - **上游 `skill-creator`**：直接使用 `~/.claude/plugins/marketplaces/claude-plugins-official/plugins/skill-creator/`。無 connsys-jarvis 整合，但適合與 framework 無關的通用 skill。
 - **Template 複製**（規劃中）：未來的 `--template` 選項，預填 domain 專屬內容，不需執行完整互動流程。
 

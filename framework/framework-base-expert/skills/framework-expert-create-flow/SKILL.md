@@ -101,10 +101,10 @@ Create the directory, then proceed file by file.
   "dependencies": [
     {
       "expert": "framework/framework-base-expert",
-      "skills": ["framework-expert-discovery-knowhow", "framework-handoff-flow", "framework-memory-tool"],
+      "skills": ["framework-expert-discovery-knowhow", "framework-memory-tool"],
       "hooks": ["all"],
       "agents": [],
-      "commands": ["framework-experts-tool", "framework-handoff-tool"]
+      "commands": ["framework-experts-tool"]
     }
     // Add domain base-expert dependency if applicable
   ],
@@ -208,7 +208,7 @@ rules.md defines **hard constraints** — behaviors that never change regardless
 - {Non-negotiable behavior 1 — what must this expert do in all circumstances?}
 - {Non-negotiable behavior 2}
 - Example: "Confirm with the engineer before high-risk operations (git push, file deletion)"
-- Example: "Read the latest memory summary and pending hand-offs at session start"
+- Example: "Read the latest memory summary at session start"
 
 ## Must Never
 
@@ -220,7 +220,7 @@ rules.md defines **hard constraints** — behaviors that never change regardless
 ## Output Constraints
 
 - {Format rules for outputs this expert produces}
-- Example: "All hand-off documents use YAML frontmatter + Markdown"
+- Example: "All memory documents use YAML frontmatter + Markdown"
 - Example: "All memory keys use snake_case"
 
 ## Interaction Boundaries
@@ -298,7 +298,7 @@ expert.md is the **public interface** of this expert — setup.py @includes this
 
 - {Observable behavior 1}
 - {Observable behavior 2}
-- Example: "Automatically reads the latest hand-off at session start"
+- Example: "Automatically reads the latest memory summary at session start"
 
 ## Tools Available
 
@@ -358,7 +358,7 @@ Shell scripts that run at lifecycle events. Shell-first; complex logic in `{name
 
 ```
 hooks/
-├── session-start.sh      ← Load memory, detect hand-offs
+├── session-start.sh      ← Load memory
 ├── session-end.sh        ← Save session summary
 ├── pre-compact.sh        ← Snapshot before context compression
 └── mid-session-checkpoint.sh  ← Periodic save (every ~20 messages)

@@ -12,7 +12,7 @@ tags: [framework, memory, persistence, context]
 
 ## 用途
 
-提供操作 Connsys Jarvis 本地三區記憶系統的標準介面，確保跨 session 和跨 Expert 的知識持久化。
+提供操作 Connsys Jarvis 本地二區記憶系統的標準介面，確保跨 session 和跨 Expert 的知識持久化。
 
 ## 記憶系統架構
 
@@ -26,8 +26,6 @@ $CONNSYS_JARVIS_MEMORY_PATH/
 │   └── <expert>/
 │       └── <YYYY-MM-DD>/
 │           └── <task-name>.md
-├── handoffs/        ← Expert 交接文件
-│   └── <timestamp>-<from>-to-<to>.md
 └── .last-session    ← 最後 session 的時間戳記
 ```
 
@@ -107,5 +105,4 @@ tags: [tag1, tag2]           # 標籤（可選）
 - Memory 路徑由 `CONNSYS_JARVIS_MEMORY_PATH` 環境變數決定
 - 若環境變數未設定，hooks 會跳過記憶操作（不報錯）
 - `shared/` 下的文件被所有 Expert 共享，修改時需謹慎
-- `handoffs/` 下的文件由 framework-handoff-flow 管理，不要手動修改
 - 記憶文件不儲存密碼、token 等敏感資訊

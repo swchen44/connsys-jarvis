@@ -18,7 +18,7 @@ def build_mini_jarvis(root: Path) -> Path:
       root/connsys-jarvis/
         framework/mini-expert/
           expert.json  (完整欄位：name, domain, owner, internal.skills)
-          expert.md, rules.md, duties.md, soul.md
+          expert.md, soul.md
           skills/mini-skill-a/SKILL.md
           hooks/session-start.sh
 
@@ -39,7 +39,7 @@ def build_mini_jarvis(root: Path) -> Path:
         "internal": {"skills": ["mini-skill-a"], "hooks": []},
         "exclude_symlink": {"patterns": []}
     }))
-    for f in ["expert.md", "rules.md", "duties.md", "soul.md"]:
+    for f in ["expert.md", "soul.md"]:
         (exp_dir / f).write_text(f"# {f}\n")
     skill_dir = exp_dir / "skills" / "mini-skill-a"
     skill_dir.mkdir(parents=True)

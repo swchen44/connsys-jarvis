@@ -15,7 +15,7 @@ connsys-jarvis repo 中 Expert 的 skills / hooks / agents / commands，
 **執行方式（從 workspace 根目錄）**：
     python ./connsys-jarvis/scripts/setup.py --init   <expert.json>
     python ./connsys-jarvis/scripts/setup.py --add    <expert.json>
-    python ./connsys-jarvis/scripts/setup.py --add    <expert.json> --with-all-experts
+    python ./connsys-jarvis/scripts/setup.py --add    <expert.json>
     python ./connsys-jarvis/scripts/setup.py --remove <expert-name>
     python ./connsys-jarvis/scripts/setup.py --uninstall
     python ./connsys-jarvis/scripts/setup.py --list
@@ -31,11 +31,10 @@ connsys-jarvis repo 中 Expert 的 skills / hooks / agents / commands，
   --query <name>      查詢指定 Expert 的完整 metadata
   --query <name> --format json  回傳 JSON 格式 metadata（供 LLM 使用）
 
-**CLAUDE.md 多 Expert 模式**：
-  - 預設（不加旗標）：CLAUDE.md 只包含最後安裝的 Expert 的
-    soul.md / rules.md / duties.md / expert.md（單 Expert 格式）
-  - --with-all-experts：在 Identity 區段後加入所有已安裝 Expert 的 expert.md
-    （Capabilities 區段），讓 Claude 了解多個 Expert 的能力
+**CLAUDE.md 生成模式**（v2.0）：
+  - 所有已安裝 Expert 的 soul.md 先輸出（Identity 區段）
+  - 再輸出所有 expert.md（Technical Reference 區段）
+  - soul.md / expert.md 為可選，不存在則跳過
 
 **Debug 模式**：加 --debug 旗標後，console 顯示 DEBUG 層級訊息；
 同時寫入 .connsys-jarvis/log/setup.log（不論是否加 --debug）。
@@ -74,7 +73,7 @@ INSTALLED_EXPERTS_FILE = ".installed-experts.json"  # 安裝狀態持久化檔
 CLAUDE_MD           = "CLAUDE.md"             # Claude Code 啟動時載入的 context 設定
 ENV_FILE            = ".env"                  # 環境變數輸出檔
 SCHEMA_VERSION      = "1.0"                   # .installed-experts.json 的 schema 版本
-SETUP_VERSION       = "1.5"                  # setup.py 版本（用於 --doctor 顯示）
+SETUP_VERSION       = "2.0"                  # setup.py 版本（用於 --doctor 顯示）
 
 # --doctor 環境變數驗證常數
 REQUIRED_ENV_VARS = [
@@ -360,10 +359,9 @@ def detect_scenario(workspace: Path) -> str:
     """偵測 workspace 屬於 Agent First 還是 Legacy 場景。
 
     判斷規則：
-      - workspace 根目錄存在 .repo/  → Legacy
-        （.repo 是 Android repo tool 的 manifest 目錄，代表已手動 clone）
-      - 其他情況                     → Agent First
-        （空白 workspace 或已有 codespace/ 目錄）
+      - workspace 根目錄存在 .repo/ 或 .git/  → Legacy（程式碼已下載）
+      - workspace 根目錄存在其他資料夾（排除 .connsys-jarvis、connsys-jarvis）→ Legacy
+      - 其他情況（空白 workspace）              → Agent First
 
     **為何需要區分**：
       兩種場景的 CONNSYS_JARVIS_CODE_SPACE_PATH 不同（見 get_codespace_path）。
@@ -375,13 +373,19 @@ def detect_scenario(workspace: Path) -> str:
     Returns:
         "legacy" 或 "agent-first"
     """
-    if (workspace / ".repo").exists():
-        logger.debug("detect_scenario: .repo found → legacy")
+    if (workspace / ".repo").exists() or (workspace / ".git").exists():
+        logger.debug("detect_scenario: .repo or .git found → legacy")
         return "legacy"
-    if (workspace / "codespace").exists():
-        logger.debug("detect_scenario: codespace/ found → agent-first")
-        return "agent-first"
-    logger.debug("detect_scenario: no .repo, no codespace/ → agent-first (default)")
+    # 排除 jarvis 自身的目錄，檢查是否有其他資料夾存在
+    ignored_dirs = {DOT_DIR_NAME, JARVIS_DIR_NAME, ".claude", "codespace"}
+    try:
+        for item in workspace.iterdir():
+            if item.is_dir() and item.name not in ignored_dirs:
+                logger.debug("detect_scenario: found dir '%s' → legacy", item.name)
+                return "legacy"
+    except OSError:
+        pass
+    logger.debug("detect_scenario: empty workspace → agent-first (default)")
     return "agent-first"
 
 
@@ -690,221 +694,90 @@ def clear_claude_symlinks(workspace: Path) -> None:
 # ─── CLAUDE.md Generation ─────────────────────────────────────────────────────
 # CLAUDE.md 是 Claude Code 啟動時自動載入的 context 檔。
 #
-# **兩種生成模式**（由 installed["include_all_experts"] 控制）：
+# v2.0 生成邏輯（化簡版）：
+#   1. 按 install_order 排序所有已安裝 experts
+#   2. 先輸出所有存在的 soul.md（Identity 區段）
+#   3. 再輸出所有存在的 expert.md（Technical Reference 區段）
+#   4. soul.md / expert.md 均為可選，不存在則跳過
+#   5. 結尾加上 @CLAUDE.local.md
 #
-#   預設（include_all_experts = False）：
-#     不論安裝幾個 Expert，CLAUDE.md 都只包含最後安裝（identity）Expert 的
-#     soul / rules / duties / expert.md。Claude 以單一角色運作，不感知其他 Expert。
-#
-#   --with-all-experts（include_all_experts = True）：
-#     Identity 區段：identity Expert 的 soul / rules / duties
-#     Base Experts 區段：is_base=True Expert 的四份文件（不含 identity）
-#     Capabilities 區段：非 base Expert 的 expert.md
-#     適合需要 Claude 同時了解多個 Expert 能力的場景。
-#
-# **Base Experts 特殊規則**：
-#   任何 expert.json 中 is_base=True 的 Expert（含依賴樹中間接觸發者），
-#   其 soul.md / rules.md / duties.md / expert.md 均必須寫入 CLAUDE.md，
-#   無論它是否為 identity expert（identity 已由主區段覆蓋）。
-#   collect_base_experts() 執行 DFS 遍歷，找出所有需要完整展示的 base experts。
+# 不再區分 base expert / identity expert / --with-all-experts 模式。
 
 
-def collect_base_experts(workspace: Path, installed: dict) -> list:
-    """收集所有需要在 CLAUDE.md 中完整展示四份文件的 base experts（不含 identity）。
+def generate_claude_md(workspace: Path, installed: dict) -> str:
+    """生成 CLAUDE.md 的文字內容（v2.0 化簡版）。
 
-    遍歷所有已安裝 expert 的完整 dependency 樹（DFS），
-    任何 expert.json 中 is_base=True 的 expert（不含 identity），
-    其 soul.md/rules.md/duties.md/expert.md 四份文件都需寫入 CLAUDE.md。
+    **格式**：
+        <!-- connsys-jarvis CLAUDE.md — Auto-generated by setup.py v2.0 -->
 
-    **遍歷規則**：
-      - 從每個已安裝 expert 出發，遞迴遍歷 dependencies
-      - 遇到 is_base=True 且非 identity 的 expert 即加入結果
-      - visited set 防止重複遍歷（應對 diamond dependency）
+        # Connsys Experts
+
+        ## Identity
+        @connsys-jarvis/.../soul.md    ← 所有 expert 的 soul.md（按安裝順序）
+
+        ## Technical Reference
+        @connsys-jarvis/.../expert.md  ← 所有 expert 的 expert.md（按安裝順序）
+
+        @CLAUDE.local.md
+
+    **設計考量**：
+      - soul.md / expert.md 均為可選；不存在時不產生 @-行
+      - 先讀所有 soul.md（方法論），再讀所有 expert.md（技術約束）
+      - 按 install_order 排序，先裝的先讀
+      - HTML 註解記錄生成時間，方便追蹤
 
     Args:
         workspace: workspace 根目錄
         installed: load_installed_experts 的回傳值
 
     Returns:
-        list of Path（相對於 jarvis_dir 的目錄路徑），維持 DFS 遍歷順序，已去重
-    """
-    jarvis_dir = get_jarvis_dir(workspace)
-    experts    = installed.get("experts", [])
-
-    if not experts:
-        return []
-
-    # 找出 identity expert 的目錄（用來排除，identity 已在主區段處理）
-    identity_expert = None
-    for e in experts:
-        if e.get("is_identity", False):
-            identity_expert = e
-    if identity_expert is None:
-        identity_expert = experts[-1]
-    identity_dir = str(Path(identity_expert["path"]).parent)
-
-    base_paths: list = []   # 有序，維持 DFS 遍歷順序
-    seen_dirs: set   = set()  # 防止重複遍歷（diamond dependency / cycle）
-
-    def _traverse(expert_dir_rel: str) -> None:
-        if expert_dir_rel in seen_dirs:
-            return
-        seen_dirs.add(expert_dir_rel)
-
-        expert_json_path = jarvis_dir / expert_dir_rel / "expert.json"
-        if not expert_json_path.exists():
-            logger.debug("collect_base_experts: expert.json not found: %s", expert_json_path)
-            return
-
-        try:
-            data = load_expert_json(expert_json_path)
-        except Exception as exc:
-            logger.warning("collect_base_experts: failed to read %s: %s", expert_json_path, exc)
-            return
-
-        # 若此 expert is_base=True 且不是 identity，加入結果
-        if data.get("is_base", False) and expert_dir_rel != identity_dir:
-            ep = Path(expert_dir_rel)
-            if ep not in base_paths:
-                base_paths.append(ep)
-
-        # 遞迴處理 dependencies
-        for dep in data.get("dependencies", []):
-            dep_rel = dep.get("expert", "") if isinstance(dep, dict) else str(dep)
-            if dep_rel:
-                _traverse(dep_rel)
-
-    for e in experts:
-        _traverse(str(Path(e["path"]).parent))
-
-    logger.debug("collect_base_experts: found %d base experts: %s",
-                 len(base_paths), [str(p) for p in base_paths])
-    return base_paths
-
-
-def generate_claude_md(workspace: Path, installed: dict) -> str:
-    """生成 CLAUDE.md 的文字內容。
-
-    **預設格式**（不論 1 或 N 個 Expert，只呈現最後安裝的 Expert）：
-        # Consys Expert: WiFi Bora Memory Slim Expert
-        @connsys-jarvis/wifi-bora/.../soul.md
-        @connsys-jarvis/wifi-bora/.../rules.md
-        @connsys-jarvis/wifi-bora/.../duties.md
-        @connsys-jarvis/wifi-bora/.../expert.md
-        @CLAUDE.local.md
-
-    **--with-all-experts 格式**（多 Expert 時才有意義）：
-        # Consys Experts（N Experts 已安裝）
-        ## Expert Identity（以最後安裝的 Expert 為主）
-        @connsys-jarvis/.../soul.md   ← identity expert 的身份定義
-        @connsys-jarvis/.../rules.md
-        @connsys-jarvis/.../duties.md
-        ## Expert Capabilities
-        @connsys-jarvis/.../expert.md  ← 所有 Expert 的能力描述
-        @connsys-jarvis/.../expert.md
-        @CLAUDE.local.md
-
-    **設計考量**：
-      預設不加入其他 Expert 的 expert.md，避免 context 膨脹造成
-      Claude 注意力稀釋。只有明確需要跨 Expert 能力感知時才用 --with-all-experts。
-
-    **@CLAUDE.local.md**：workspace 本地個人化設定，不存在時 Claude Code 會忽略。
-
-    Args:
-        workspace: workspace 根目錄（用來讀取 expert.json 取得 display_name）
-        installed: load_installed_experts 的回傳值；
-                   installed["include_all_experts"] 決定輸出格式
-
-    Returns:
         CLAUDE.md 的完整文字內容（string）
     """
-    experts      = installed.get("experts", [])
-    include_all  = installed.get("include_all_experts", False)
-    logger.debug("generate_claude_md: %d experts, include_all=%s", len(experts), include_all)
+    experts = installed.get("experts", [])
+    logger.debug("generate_claude_md: %d experts", len(experts))
 
     if not experts:
         return "# Connsys Jarvis\n\n（未安裝任何 Expert）\n\n@CLAUDE.local.md\n"
 
-    # 找出 identity expert（最後一個 is_identity=True 的 expert）
-    # 若無明確標記，fallback 為清單中最後一個
-    identity_expert = None
+    jarvis_dir = get_jarvis_dir(workspace)
+    now_str = datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
+    expert_names = ", ".join(e["name"] for e in experts)
+
+    # HTML 註解 header
+    lines = [
+        f"<!-- connsys-jarvis CLAUDE.md — Auto-generated by setup.py v{SETUP_VERSION}",
+        f"     Experts: {expert_names}",
+        f"     Generated: {now_str} -->",
+        "",
+        "# Connsys Experts",
+        "",
+    ]
+
+    # Identity 區段：所有 experts 的 soul.md（按 install_order）
+    soul_lines = []
     for e in experts:
-        if e.get("is_identity", False):
-            identity_expert = e
-    if identity_expert is None:
-        identity_expert = experts[-1]
-    logger.debug("generate_claude_md: identity_expert=%s", identity_expert["name"])
+        ep = Path(e["path"]).parent
+        soul_path = jarvis_dir / ep / "soul.md"
+        if soul_path.exists():
+            soul_lines.append(f"@connsys-jarvis/{ep}/soul.md")
+    if soul_lines:
+        lines.append("## Identity")
+        lines.extend(soul_lines)
+        lines.append("")
 
-    # identity expert 的資料夾路徑（相對於 connsys-jarvis 根目錄）
-    ep = Path(identity_expert["path"]).parent
+    # Technical Reference 區段：所有 experts 的 expert.md（按 install_order）
+    expert_lines = []
+    for e in experts:
+        ep = Path(e["path"]).parent
+        expert_path = jarvis_dir / ep / "expert.md"
+        if expert_path.exists():
+            expert_lines.append(f"@connsys-jarvis/{ep}/expert.md")
+    if expert_lines:
+        lines.append("## Technical Reference")
+        lines.extend(expert_lines)
+        lines.append("")
 
-    # 嘗試讀取 display_name；expert.json 不可讀時 fallback 為 name
-    try:
-        id_data      = load_expert_json(get_jarvis_dir(workspace) / identity_expert["path"])
-        display_name = id_data.get("display_name", identity_expert["name"])
-    except Exception:
-        display_name = identity_expert["name"]
-
-    # 收集需要完整展示四份文件的 base experts（is_base=True，不含 identity）
-    base_experts     = collect_base_experts(workspace, installed)
-    base_expert_dirs = {str(p) for p in base_experts}
-
-    if not include_all or len(experts) == 1:
-        # ── 預設格式：identity expert 的四份文件 + Base Experts 區段 ──
-        # len(experts) == 1 時強制使用此格式（--with-all-experts 在單 expert 無意義）
-        lines = [
-            f"# Consys Expert: {display_name}",
-            "",
-            f"@connsys-jarvis/{ep}/soul.md",
-            f"@connsys-jarvis/{ep}/rules.md",
-            f"@connsys-jarvis/{ep}/duties.md",
-            f"@connsys-jarvis/{ep}/expert.md",
-        ]
-        # Base Experts 區段：is_base=True 的 expert 額外輸出四份文件
-        if base_experts:
-            lines += ["", "## Base Experts"]
-            for bp in base_experts:
-                lines += [
-                    f"@connsys-jarvis/{bp}/soul.md",
-                    f"@connsys-jarvis/{bp}/rules.md",
-                    f"@connsys-jarvis/{bp}/duties.md",
-                    f"@connsys-jarvis/{bp}/expert.md",
-                ]
-        lines += ["", "@CLAUDE.local.md", ""]
-    else:
-        # ── --with-all-experts 格式：Identity + Base Experts + Capabilities ──
-        n = len(experts)
-        lines = [f"# Consys Experts（{n} Experts 已安裝）", ""]
-
-        # Identity 區段：identity Expert 的 soul/rules/duties（角色、規範、職責）
-        lines += [
-            "## Expert Identity（以最後安裝的 Expert 為主）",
-            f"@connsys-jarvis/{ep}/soul.md",
-            f"@connsys-jarvis/{ep}/rules.md",
-            f"@connsys-jarvis/{ep}/duties.md",
-            "",
-        ]
-
-        # Base Experts 區段：is_base=True Expert 的四份文件（不含 identity）
-        if base_experts:
-            lines.append("## Base Experts")
-            for bp in base_experts:
-                lines += [
-                    f"@connsys-jarvis/{bp}/soul.md",
-                    f"@connsys-jarvis/{bp}/rules.md",
-                    f"@connsys-jarvis/{bp}/duties.md",
-                    f"@connsys-jarvis/{bp}/expert.md",
-                ]
-            lines.append("")
-
-        # Capabilities 區段：非 base Expert 的 expert.md（能力概覽）
-        # base expert 已在上一區段完整輸出，此處跳過以避免重複
-        lines.append("## Expert Capabilities")
-        for e in experts:
-            ep_e = Path(e["path"]).parent
-            if str(ep_e) not in base_expert_dirs:
-                lines.append(f"@connsys-jarvis/{ep_e}/expert.md")
-        lines += ["", "@CLAUDE.local.md", ""]
+    lines += ["@CLAUDE.local.md", ""]
 
     content = "\n".join(lines)
     logger.debug("generate_claude_md: generated %d lines", len(lines))
@@ -1135,7 +1008,7 @@ def cmd_init(workspace: Path, expert_json_rel: str) -> None:
     print(f"\nDone! Expert '{expert_data['name']}' installed.")
 
 
-def cmd_add(workspace: Path, expert_json_rel: str, include_all: bool = False) -> None:
+def cmd_add(workspace: Path, expert_json_rel: str) -> None:
     """--add：疊加安裝，在既有 Expert 基礎上加入新的 Expert。
 
     **與 --init 的差異**：
@@ -1145,24 +1018,15 @@ def cmd_add(workspace: Path, expert_json_rel: str, include_all: bool = False) ->
 
     **冪等性**：若 expert 已安裝，先移除再重新加入（支援 update）。
 
-    **Identity 更新**：每次 --add 後，最後加入的 Expert 成為新的 identity，
-    其 soul/rules/duties 會出現在 CLAUDE.md 的 Identity 區段。
-
-    **CLAUDE.md 生成模式**（由 include_all 決定）：
-      - include_all=False（預設）：CLAUDE.md 只包含 identity Expert 的四份文件
-      - include_all=True（--with-all-experts）：加入所有 Expert 的 expert.md
+    **Identity 更新**：每次 --add 後，最後加入的 Expert 成為新的 identity。
 
     Args:
         workspace:       workspace 根目錄
         expert_json_rel: expert.json 路徑（相對於 workspace 或 connsys-jarvis 目錄）
-        include_all:     True = 啟用 --with-all-experts 模式，CLAUDE.md 包含所有 expert.md
     """
     print(f"\n=== Connsys Jarvis Add ===")
     print(f"Expert: {expert_json_rel}")
-    if include_all:
-        print("Mode: --with-all-experts (CLAUDE.md will include expert.md for all Experts)")
-    logger.info("cmd_add: workspace=%s, expert=%s, include_all=%s",
-                workspace, expert_json_rel, include_all)
+    logger.info("cmd_add: workspace=%s, expert=%s", workspace, expert_json_rel)
 
     expert_json_path = workspace / expert_json_rel
     if not expert_json_path.exists():
@@ -1221,16 +1085,12 @@ def cmd_add(workspace: Path, expert_json_rel: str, include_all: bool = False) ->
         declared_symlinks=symlinks
     )
     installed["experts"].append(entry)
-    # 儲存 include_all_experts 旗標，讓後續 write_claude_md 使用相同模式
-    # 這也讓 --remove 後重建 CLAUDE.md 時維持一致的格式
-    installed["include_all_experts"] = include_all
     save_installed_experts(workspace, installed)
 
     write_claude_md(workspace, installed)
     write_env_file(workspace, expert_data["name"])
 
-    logger.info("cmd_add: completed successfully for %s (include_all=%s)",
-                expert_data["name"], include_all)
+    logger.info("cmd_add: completed successfully for %s", expert_data["name"])
     print(f"\nDone! Expert '{expert_data['name']}' added.")
 
 
@@ -1820,10 +1680,8 @@ def cmd_doctor(workspace: Path) -> None:
             if stripped.startswith('@') and stripped != '@CLAUDE.local.md':
                 expected_includes.add(stripped)
 
-        mode = "with-all-experts" if installed.get("include_all_experts") else "identity-only"
-
         if actual_includes == expected_includes:
-            print(f"  ✅ Content matches expected ({mode}, {len(expected_includes)} @include lines)")
+            print(f"  ✅ Content matches expected ({len(expected_includes)} @include lines)")
             logger.debug("cmd_doctor: CLAUDE.md OK, %d includes", len(expected_includes))
         else:
             missing_inc = expected_includes - actual_includes
@@ -1838,28 +1696,6 @@ def cmd_doctor(workspace: Path) -> None:
                 logger.debug("cmd_doctor: CLAUDE.md extra include: %s", inc)
             if missing_inc or extra_inc:
                 print(f"     → Fix: re-run --init or --add <expert.json>")
-
-        # ── D2. Base Expert inclusion 驗證 ──
-        # 收集所有 is_base=True 的 Expert（已安裝及依賴樹），確認 expert.md 在 CLAUDE.md 中
-        print("  Base Expert Inclusion:")
-        base_experts = collect_base_experts(workspace, installed)
-        if not base_experts:
-            print("    (no base experts in installed dependency tree)")
-        else:
-            base_all_ok = True
-            for bp in base_experts:
-                expected_line = f"@connsys-jarvis/{bp}/expert.md"
-                if expected_line in actual_includes:
-                    print(f"    ✅ {bp}  →  expert.md ✓")
-                    logger.debug("cmd_doctor: base expert OK: %s", bp)
-                else:
-                    print(f"    ❌ {bp}  →  expert.md missing in CLAUDE.md")
-                    print(f"       → Fix: re-run --add <expert.json>, or --reset then reinstall")
-                    all_ok = False
-                    base_all_ok = False
-                    logger.debug("cmd_doctor: base expert missing: %s", bp)
-            if base_all_ok:
-                print(f"    All {len(base_experts)} base expert(s) included ✅")
 
         # 驗證 CLAUDE.md 中每個 @include 目標檔案存在
         # 只檢查實際存在於 CLAUDE.md 的 @-行（actual_includes），排除 @CLAUDE.local.md
@@ -1902,18 +1738,25 @@ def cmd_doctor(workspace: Path) -> None:
         print("  (no expert folders found)")
     else:
         # F1: 必要檔案
-        REQUIRED_EXPERT_FILES = ["expert.json", "expert.md", "rules.md", "duties.md", "soul.md"]
+        REQUIRED_EXPERT_FILES = ["expert.json"]
+        OPTIONAL_EXPERT_FILES = ["soul.md", "expert.md"]
         print(f"  F1 Required Files ({', '.join(REQUIRED_EXPERT_FILES)}):")
         for exp_dir in expert_dirs:
             rel = str(exp_dir.relative_to(jarvis_dir))
-            missing_files = [f for f in REQUIRED_EXPERT_FILES if not (exp_dir / f).exists()]
-            if missing_files:
-                print(f"    ❌ {rel} missing: {', '.join(missing_files)}")
+            missing_required = [f for f in REQUIRED_EXPERT_FILES if not (exp_dir / f).exists()]
+            if missing_required:
+                print(f"    ❌ {rel} missing: {', '.join(missing_required)}")
                 print(f"       → Fix: add the missing files listed above")
                 all_ok = False
-                logger.debug("cmd_doctor: expert missing files %s: %s", rel, missing_files)
+                logger.debug("cmd_doctor: expert missing files %s: %s", rel, missing_required)
             else:
-                print(f"    ✅ {rel}")
+                # 檢查 soul.md/expert.md 是否都不存在（警告但不失敗）
+                has_optional = any((exp_dir / f).exists() for f in OPTIONAL_EXPERT_FILES)
+                if not has_optional:
+                    print(f"    ⚠️  {rel} (no soul.md or expert.md — skills-only expert)")
+                    logger.debug("cmd_doctor: expert has no soul.md/expert.md: %s", rel)
+                else:
+                    print(f"    ✅ {rel}")
 
         # F2: expert.json 必要欄位
         REQUIRED_JSON_FIELDS = ["name", "domain", "owner"]
@@ -2016,10 +1859,6 @@ Usage (run from workspace root):
   python connsys-jarvis/scripts/setup.py --query <expert-name> --format json
   python connsys-jarvis/scripts/setup.py --doctor                 Health check
 
-CLAUDE.md mode options (used with --add):
-  --with-all-experts  Include expert.md for all installed Experts in CLAUDE.md
-                      (default: only the four files of the last installed Expert)
-
 Output format options:
   --format table      Human-readable format (default)
   --format json       JSON format (for framework-expert-discovery skill / LLM use)
@@ -2030,7 +1869,6 @@ Debug options (can be placed anywhere):
 Examples:
   python connsys-jarvis/scripts/setup.py --init wifi-bora/wifi-bora-memory-slim-expert/expert.json
   python connsys-jarvis/scripts/setup.py --add  sys-bora/sys-bora-preflight-expert/expert.json
-  python connsys-jarvis/scripts/setup.py --add  sys-bora/sys-bora-preflight-expert/expert.json --with-all-experts
   python connsys-jarvis/scripts/setup.py --remove framework-base-expert
   python connsys-jarvis/scripts/setup.py --list --format json
   python connsys-jarvis/scripts/setup.py --query wifi-bora-memory-slim-expert
@@ -2056,7 +1894,7 @@ def main() -> None:
     **全域旗標設計**：
       所有旗標允許放在任何位置，方便靈活組合：
         --debug --init ...                ← debug 放前面
-        --add expert.json --with-all-experts --debug  ← 旗標放後面
+        --add expert.json --debug  ← 旗標放後面
     """
     script_path = Path(sys.argv[0])
     # 先取得 workspace 才能設定 log file 路徑
@@ -2065,14 +1903,13 @@ def main() -> None:
     # ── 步驟 1：擷取全域旗標（可放任意位置）──
     raw_args     = sys.argv[1:]
     debug        = "--debug" in raw_args
-    include_all  = "--with-all-experts" in raw_args
     # --format json / --format table（預設 table）
     fmt_idx      = next((i for i, a in enumerate(raw_args) if a == "--format"), None)
     output_format = raw_args[fmt_idx + 1] if fmt_idx is not None and fmt_idx + 1 < len(raw_args) else "table"
     if output_format not in ("json", "table"):
         output_format = "table"
     # 移除旗標後，剩餘的才是 command 和其參數
-    GLOBAL_FLAGS = {"--debug", "--with-all-experts", "--format",
+    GLOBAL_FLAGS = {"--debug", "--format",
                     "json", "table"}          # 移除 --format 及其值
     # 更精確地移除 --format 及緊接的值
     args_clean: list = []
@@ -2084,7 +1921,7 @@ def main() -> None:
         if a == "--format":
             skip_next = True
             continue
-        if a in {"--debug", "--with-all-experts"}:
+        if a in {"--debug"}:
             continue
         args_clean.append(a)
     args = args_clean
@@ -2114,7 +1951,7 @@ def main() -> None:
             logger.error("--add requires expert.json path")
             print("ERROR: --add requires an expert.json path", file=sys.stderr)
             sys.exit(1)
-        cmd_add(workspace, args[1], include_all=include_all)
+        cmd_add(workspace, args[1])
 
     elif cmd == "--remove":
         if len(args) < 2:

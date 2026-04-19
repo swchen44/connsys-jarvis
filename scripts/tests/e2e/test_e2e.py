@@ -85,7 +85,7 @@ class TestE2EInit:
         run_setup(ws, "--init", "framework/framework-base-expert/expert.json")
         skills_dir = ws / ".claude" / "skills"
         assert skills_dir.exists()
-        assert len(list(skills_dir.iterdir())) == 3
+        assert len(list(skills_dir.iterdir())) == 4
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -104,7 +104,7 @@ class TestE2EAdd:
         run_setup(ws, "--init", "framework/framework-base-expert/expert.json")
         run_setup(ws, "--add", "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
         count = len(list((ws / ".claude" / "skills").iterdir()))
-        assert count == 13
+        assert count == 14
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -208,7 +208,7 @@ class TestE2EMultiExpertWorkflow:
         # 2. add
         r = run_setup(ws, "--add", "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
         assert r.returncode == 0
-        assert len(list((ws / ".claude/skills").iterdir())) == 13
+        assert len(list((ws / ".claude/skills").iterdir())) == 14
 
         # 3. list → 兩個 installed
         r = run_setup(ws, "--list", "--format", "json")
@@ -219,7 +219,7 @@ class TestE2EMultiExpertWorkflow:
         # 4. remove wifi-bora expert
         r = run_setup(ws, "--remove", "wifi-bora-memory-slim-expert")
         assert r.returncode == 0
-        assert len(list((ws / ".claude/skills").iterdir())) == 3
+        assert len(list((ws / ".claude/skills").iterdir())) == 4
 
         # 5. list → 一個 installed
         r = run_setup(ws, "--list", "--format", "json")
