@@ -66,15 +66,27 @@ npx skills add swchen44/connsys-jarvis --agent claude-code
 ## Expert 結構
 
 ```
-{domain}-{purpose}-expert/
-├── expert.json          ← 必要：metadata 和依賴宣告
-├── soul.md              ← 可選：方法論和做事方式
-├── expert.md            ← 可選：技術約束和常被遺忘的重要規則
-├── skills/              ← 主要：跨工具通用的知識技能
-├── hooks/               ← 可選：生命週期 hook 腳本
-├── commands/            ← 可選：自定義指令
-└── agents/              ← 可選：子 agent 定義
+{domain}/{expert-name}/
+├── .claude-plugin/plugin.json   # Plugin manifest（由腳本生成）
+├── expert.json                  # 必要
+├── soul.md / expert.md          # 可選
+├── skills/                      # 主要（跨工具通用）
+├── commands/                    # 扁平 .md（slash commands）
+├── hooks/hooks.json + scripts/  # 生命週期 hooks
+├── rules/                       # 扁平 .md → .claude/rules/
+├── agents/                      # 扁平 .md
+└── scripts/                     # 輔助腳本
 ```
+
+> **Skills 為主要機制（跨工具通用）。commands/hooks/rules/agents 為 Claude Code Plugin 相容層。**
+
+### 命名規則
+
+| 類型 | 命名格式 | 範例 |
+|------|---------|------|
+| commands | `{expert-name}-{action}-cmd.md` | `wifi-bora-memory-slim-build-cmd.md` |
+| hooks | `hooks/scripts/{expert-name}-{action}-hook.sh` | `hooks/scripts/wifi-bora-memory-slim-precompact-hook.sh` |
+| rules | `{expert-name}-{topic}-rule.md` | `wifi-bora-memory-slim-coding-rule.md` |
 
 ### expert.json 必要欄位
 
@@ -85,7 +97,7 @@ npx skills add swchen44/connsys-jarvis --agent claude-code
 | `owner` | 負責維護的團隊（例如 `wifi-team`）|
 | `internal.skills` | 此 Expert 自身提供的 skill 清單（可為空 `[]`）|
 
-### 命名規則
+### Expert 命名規則
 
 ```
 {domain}-{purpose}-expert

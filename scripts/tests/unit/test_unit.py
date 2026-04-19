@@ -75,13 +75,13 @@ class TestResolveItems:
         assert sorted(result) == ["skill-a", "skill-b"]
 
     def test_all_hooks_returns_sh_files(self, tmp_path):
-        hooks_dir = tmp_path / "hooks"
-        hooks_dir.mkdir()
-        (hooks_dir / "session-start.sh").touch()
-        (hooks_dir / "helper.py").touch()
-        (hooks_dir / "README.md").touch()   # should be excluded
+        scripts_dir = tmp_path / "hooks" / "scripts"
+        scripts_dir.mkdir(parents=True)
+        (scripts_dir / "session-start-hook.sh").touch()
+        (scripts_dir / "helper.py").touch()
+        (scripts_dir / "README.md").touch()   # should be excluded
         result = inst.resolve_items(tmp_path, "hooks", "all")
-        assert sorted(result) == ["helper.py", "session-start.sh"]
+        assert sorted(result) == ["helper.py", "session-start-hook.sh"]
 
     def test_all_list_notation(self, tmp_path):
         skills_dir = tmp_path / "skills"

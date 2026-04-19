@@ -3,7 +3,7 @@
 # 每 20 訊息存一次
 
 set -euo pipefail
-source "$(dirname "$0")/shared-utils.sh"
+source "$(dirname "$0")/framework-base-expert-shared-utils.sh"
 
 MEMORY_PATH="${CONNSYS_JARVIS_MEMORY_PATH:-}"
 ACTIVE_EXPERT="${CONNSYS_JARVIS_ACTIVE_EXPERT:-unknown}"

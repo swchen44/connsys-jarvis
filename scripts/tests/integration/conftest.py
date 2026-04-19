@@ -44,9 +44,9 @@ def build_mini_jarvis(root: Path) -> Path:
     skill_dir = exp_dir / "skills" / "mini-skill-a"
     skill_dir.mkdir(parents=True)
     (skill_dir / "SKILL.md").write_text("# mini-skill-a\n")
-    hooks_dir = exp_dir / "hooks"
-    hooks_dir.mkdir()
-    (hooks_dir / "session-start.sh").write_text("#!/bin/bash\n")
+    scripts_dir = exp_dir / "hooks" / "scripts"
+    scripts_dir.mkdir(parents=True)
+    (scripts_dir / "mini-expert-session-start-hook.sh").write_text("#!/bin/bash\n")
     return root
 
 

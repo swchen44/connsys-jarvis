@@ -12,11 +12,6 @@
     "footprint",
     "記憶體"
   ],
-  "skills": [
-    "./../../framework/framework-base-expert/skills",
-    "./../wifi-bora-base-expert/skills",
-    "./../../sys-bora/sys-bora-preflight-expert/skills"
-  ],
   "dependencies": [
     "framework-base-expert",
     "wifi-bora-base-expert",

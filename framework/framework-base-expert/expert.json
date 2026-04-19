@@ -11,9 +11,10 @@
   "dependencies": [],
   "internal": {
     "skills": ["framework-expert-discovery-knowhow", "framework-memory-tool", "framework-skill-create-flow", "framework-expert-create-flow"],
-    "hooks": ["session-start.sh", "session-end.sh", "pre-compact.sh", "mid-session-checkpoint.sh", "shared-utils.sh"],
+    "hooks": ["framework-base-expert-session-start-hook.sh", "framework-base-expert-session-end-hook.sh", "framework-base-expert-pre-compact-hook.sh", "framework-base-expert-mid-checkpoint-hook.sh", "framework-base-expert-shared-utils.sh"],
     "agents": [],
-    "commands": ["framework-experts-tool"]
+    "commands": ["framework-base-expert-list-cmd"],
+    "rules": []
   },
   "exclude_symlink": {"patterns": []}
 }

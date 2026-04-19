@@ -13,9 +13,6 @@
     "CI/CD",
     "submit"
   ],
-  "skills": [
-    "./../sys-bora-base-expert/skills"
-  ],
   "dependencies": [
     "sys-bora-base-expert"
   ]

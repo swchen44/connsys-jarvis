@@ -1,6 +1,6 @@
 # Consys Experts — 需求書
 
-**文件版本**：v3.7
+**文件版本**：v3.8
 **狀態**：Draft
 **目標讀者**：架構師、開發者、產品負責人
 **改版說明**：
@@ -22,6 +22,7 @@
 - v3.5：更新 FR-02-17（測試架構升級為三層金字塔：unit/integration/e2e，共 239 tests）
 - v3.6：新增 FR-05-7、FR-05-8（Base Expert 特殊規則：expert.json is_base=true 的 Expert 其 soul.md + expert.md（可選）必須寫入 CLAUDE.md，含依賴樹遞迴掃描）；更新測試數 unit 50 / integration 71 / e2e 18
 - v3.7：Expert 檔案結構簡化（expert.json 必要，soul.md/expert.md 可選）；CLAUDE.md 改為 soul→expert 排序，移除 base-expert DFS 規則；移除 FR-05-7/FR-05-8；新增 Skill 使用分析（Future）與 Plugin 生成需求
+- v3.8：新增 plugin 結構（.claude-plugin/plugin.json）、rules/ 目錄；commands/hooks/rules 統一命名規則（FR-01-9/FR-01-10）；hooks 改為 hooks.json + scripts/ 格式；plugin.json 不使用 `..` 路徑（FW-07-4）；新增 `${CLAUDE_PLUGIN_ROOT}` 環境變數（FW-07-5）
 
 > **注意**：文件中所列的 expert、skill 名稱均為**示例**，用於說明命名規則與架構設計。實際規劃以團隊討論為準。
 
@@ -611,12 +612,14 @@ workspace/                                       ← $CONNSYS_JARVIS_WORKSPACE_R
 | 編號 | 需求 | 優先級 | 理由 |
 |------|------|--------|------|
 | FR-01-1 | repo 命名為 `connsys-jarvis`，Expert 直接放在 `{domain}/` 下（無 `experts/` 中間層） | Must | 減少目錄層數，Expert 命名已含 domain prefix 可自識別 |
-| FR-01-2 | 每個 Expert 資料夾**必要**：`expert.json`；**可選**：`soul.md`（identity & personality）、`expert.md`（key behaviors & tools，setup.py @include 進 CLAUDE.md）；Skills 為主要實作機制。另含 `skills/`、`hooks/`、`agents/`、`commands/`（相容層）、`test/`、`report/`、`README.md`；**不含 `install.sh` 和 `CLAUDE.md`**（由頂層 `setup.py` 統一管理） | Must | 簡化 Expert 結構，以 Skill 為主要能力載體；expert.json 為唯一必要檔案；安裝管理集中在根目錄 |
+| FR-01-2 | 每個 Expert 資料夾**必要**：`expert.json`、`.claude-plugin/plugin.json`（由腳本生成）；**可選**：`soul.md`（identity & personality）、`expert.md`（key behaviors & tools，setup.py @include 進 CLAUDE.md）；Skills 為主要實作機制（跨工具通用）。另含 `skills/`、`hooks/`（hooks.json + scripts/）、`agents/`（扁平 .md）、`commands/`（扁平 .md，Claude Code Plugin 相容層）、`rules/`（扁平 .md → .claude/rules/，可選）、`scripts/`（輔助腳本，可選）、`test/`、`report/`、`README.md`；**不含 `install.sh` 和 `CLAUDE.md`**（由頂層 `setup.py` 統一管理） | Must | 簡化 Expert 結構，以 Skill 為主要能力載體；expert.json 為唯一必要檔案；安裝管理集中在根目錄 |
 | FR-01-3 | `expert.json` 含名稱、描述、觸發詞、skills、transitions、dependencies | Must | 資訊越完整，expert-discovery 越有用 |
 | FR-01-4 | `framework-base-expert` 存放跨所有 domain 共用的 skills / hooks / commands；各 domain 的 `{domain}-base-expert` 存放該 domain 共用內容 | Must | 三層依賴（framework → domain → internal）對應 Expert 定義的三個組件 |
 | FR-01-5 | `external/` 存放社群工具，以工具名稱為資料夾名（git submodule） | Should | 整合優質社群工具，避免重造輪子 |
 | FR-01-7 | Expert 資料夾新增 `agents/` 子資料夾，存放 Claude subagent 的 prompt 定義文件（`{agent-name}.md`） | Should | 支援 subagent 功能，可讓主 Expert 呼叫子任務 Agent（如 log 分析、文件查找）；參考 gitagent 設計 |
 | FR-01-8 | 開發 SOP：先在各 domain expert 的 internal skills/hooks 中獨立實作；若發現多個 expert 共用，再移至該 domain 的 base expert；初期無法判斷歸屬時，可先當 internal，之後再移入 base | Should | 避免過早抽象化；base expert 是有機成長的 |
+| FR-01-9 | commands/hooks/rules 命名規則：commands 使用 `{expert-name}-{action}-cmd.md`（扁平 .md）；hooks 使用 `hooks/scripts/{expert-name}-{action}-hook.sh`（搭配 `hooks/hooks.json`）；rules 使用 `{expert-name}-{topic}-rule.md`（扁平 .md）。所有檔名以 `{expert-name}-` 為前綴，確保全域唯一 | Must | 統一命名慣例，避免跨 Expert 檔名衝突；前綴機制讓合併安裝時不會覆蓋 |
+| FR-01-10 | Skills 為主要機制（跨工具通用）。commands/hooks/rules/agents 為 Claude Code Plugin 相容層 | Must | 確保跨 AI 工具（Claude Code / Cursor / Windsurf）可攜性，Plugin 相容層僅供 Claude Code 專屬功能使用 |
 
 #### Expert 清單（初始規劃）
 
@@ -997,9 +1000,11 @@ AI Agent 生態系統的安全威脅已有實際案例：
 
 | 編號 | 需求 | 優先級 |
 |------|------|--------|
-| FW-07-1 | 提供 `create_plugin_from_expert.py` 工具，讀取 Expert 的 `expert.json`、`soul.md`、`expert.md`，自動生成 `plugin.json`（plugin 描述）和 `marketplace.json`（發布 metadata） | Should |
+| FW-07-1 | 提供 `create_plugin_from_expert.py` 工具，讀取 Expert 的 `expert.json`、`soul.md`、`expert.md`，自動生成 `.claude-plugin/plugin.json`（plugin 描述）和 `marketplace.json`（發布 metadata） | Should |
 | FW-07-2 | 生成的 `plugin.json` 包含：name、description、version、capabilities、dependencies | Should |
 | FW-07-3 | `marketplace.json` 包含：display_name、tags、category、author、screenshots（placeholder） | Should |
+| FW-07-4 | plugin.json 內**不使用 `..` 相對路徑**，所有路徑必須為相對於 plugin 根目錄的正向路徑；跨 Expert 引用透過 `expert.json` 的 `dependencies` 機制處理 | Must |
+| FW-07-5 | Hook 腳本可透過 `${CLAUDE_PLUGIN_ROOT}` 環境變數取得 plugin 根目錄絕對路徑，避免 hardcode 路徑或使用 `..` 向上跳層 | Must |
 
 ---
 

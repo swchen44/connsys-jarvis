@@ -13,7 +13,8 @@
     "skills": [],
     "hooks": [],
     "agents": [],
-    "commands": []
+    "commands": [],
+    "rules": []
   },
   "exclude_symlink": {"patterns": []}
 }

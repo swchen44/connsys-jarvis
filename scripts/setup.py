@@ -9,7 +9,7 @@ connsys-jarvis/scripts/setup.py — Connsys Jarvis 安裝管理程式
 
 **用途**：管理 Connsys Expert 在 workspace 中的安裝、更新與移除。
 核心工作是在 workspace 的 `.claude/` 目錄建立 symlinks，指向
-connsys-jarvis repo 中 Expert 的 skills / hooks / agents / commands，
+connsys-jarvis repo 中 Expert 的 skills / hooks / agents / commands / rules，
 並生成 CLAUDE.md 和 .connsys-jarvis/.env 等設定檔。
 
 **執行方式（從 workspace 根目錄）**：
@@ -425,13 +425,14 @@ def resolve_items(expert_dir: Path, kind: str, spec) -> list:
       - "all" 或 ["all"] → 目錄中所有 item（hooks 為 .sh/.py 檔；其他為子目錄）
       - ["name1","name2"] → 指定名稱清單（精確控制）
 
-    **hooks 與 skills 的差異**：
-      - hooks   是個別檔案（session-start.sh, memory-helper.py）
-      - skills / agents / commands 是子目錄（每個 skill 是一個資料夾）
+    **各 kind 的檔案結構差異**：
+      - hooks   是個別執行檔，位於 hooks/scripts/ 子目錄（.sh/.py）
+      - skills  是子目錄（每個 skill 是一個資料夾，含 SKILL.md）
+      - commands / agents / rules 是扁平 .md 檔案
 
     Args:
         expert_dir: Expert 根目錄（expert.json 所在目錄）
-        kind:       "skills" / "hooks" / "agents" / "commands"
+        kind:       "skills" / "hooks" / "agents" / "commands" / "rules"
         spec:       None、"all"、["all"]、或 ["name1", "name2"]
 
     Returns:
@@ -445,21 +446,35 @@ def resolve_items(expert_dir: Path, kind: str, spec) -> list:
 
     if spec == "all" or spec == ["all"]:
         kind_dir = expert_dir / kind
-        if not kind_dir.exists():
-            logger.debug("resolve_items: %s does not exist → []", kind_dir)
-            return []
         if kind == "hooks":
-            # hooks 是個別執行檔，只收 .sh 和 .py（排除 __pycache__ 等）
-            items = [f.name for f in kind_dir.iterdir()
+            # hooks 執行檔位於 hooks/scripts/ 子目錄
+            scripts_dir = kind_dir / "scripts"
+            if not scripts_dir.exists():
+                logger.debug("resolve_items: %s does not exist → []", scripts_dir)
+                return []
+            items = [f.name for f in scripts_dir.iterdir()
                      if f.is_file() and f.suffix in (".sh", ".py")]
-        else:
-            # skills / agents / commands 是子目錄，每個 item 為一個資料夾
+        elif kind == "skills":
+            # skills 是子目錄，每個 item 為一個資料夾（含 SKILL.md）
+            if not kind_dir.exists():
+                logger.debug("resolve_items: %s does not exist → []", kind_dir)
+                return []
             items = [d.name for d in kind_dir.iterdir() if d.is_dir()]
+        else:
+            # commands / agents / rules 是扁平 .md 檔案
+            if not kind_dir.exists():
+                logger.debug("resolve_items: %s does not exist → []", kind_dir)
+                return []
+            items = [f.name for f in kind_dir.iterdir()
+                     if f.is_file() and f.suffix == ".md"]
         logger.debug("resolve_items: 'all' resolved to %d items: %s", len(items), items)
         return items
 
     if isinstance(spec, list):
         # 明確指定的名稱清單
+        # 對 commands/agents/rules，補上 .md 副檔名（若未包含）
+        if kind in ("commands", "agents", "rules"):
+            spec = [s if s.endswith(".md") else s + ".md" for s in spec]
         logger.debug("resolve_items: explicit list=%r", spec)
         return spec
 
@@ -555,7 +570,7 @@ def build_symlinks_for_expert(
 
     **三步驟建立順序**：
       1. Dependencies：依序處理 expert.json["dependencies"] 中每個依賴 expert
-         的 skills/hooks/agents/commands 貢獻，依各自的 spec 規格解析
+         的 skills/hooks/agents/commands/rules 貢獻，依各自的 spec 規格解析
       2. Internal：處理 expert.json["internal"]，即此 Expert 自身提供的 items
       3. Exclude：套用 expert.json["exclude_symlink"]["patterns"] 全域 regex 過濾
 
@@ -574,7 +589,8 @@ def build_symlinks_for_expert(
           "skills":   [{"name": str, "link": Path, "target": Path}, ...],
           "hooks":    [...],
           "agents":   [...],
-          "commands": [...]
+          "commands": [...],
+          "rules":    [...]
         }
         link = .claude/<kind>/<name>，target = connsys-jarvis/.../skills/<name>/
     """
@@ -599,11 +615,16 @@ def build_symlinks_for_expert(
         items = apply_exclude_patterns(items, exclude_patterns)
         for item_name in items:
             # 根據 kind 決定目標路徑結構
-            # hooks 是個別檔案；skills/agents/commands 是子目錄
             if kind == "hooks":
-                target = expert_dir / "hooks" / item_name
+                # hooks 執行檔位於 hooks/scripts/ 子目錄
+                target = expert_dir / "hooks" / "scripts" / item_name
                 link   = claude_dir / "hooks" / item_name
+            elif kind == "skills":
+                # skills 是子目錄
+                target = expert_dir / kind / item_name
+                link   = claude_dir / kind / item_name
             else:
+                # commands / agents / rules 是扁平 .md 檔案
                 target = expert_dir / kind / item_name
                 link   = claude_dir / kind / item_name
 
@@ -628,7 +649,7 @@ def build_symlinks_for_expert(
             logger.warning("build_symlinks_for_expert: dep dir not found: %s", dep_expert_dir)
             print(f"  [WARN] Dependency expert dir not found: {dep_expert_dir}", file=sys.stderr)
             continue
-        for kind in ["skills", "hooks", "agents", "commands"]:
+        for kind in ["skills", "hooks", "agents", "commands", "rules"]:
             add_items_for_kind(dep_expert_dir, kind, dep.get(kind))
 
     # ── Step 2: Internal ──
@@ -636,13 +657,13 @@ def build_symlinks_for_expert(
     logger.debug("build_symlinks_for_expert: Step 2 - processing internal")
     expert_dir = expert_json_path.parent
     internal   = expert_data.get("internal", {})
-    for kind in ["skills", "hooks", "agents", "commands"]:
+    for kind in ["skills", "hooks", "agents", "commands", "rules"]:
         internal_spec = internal.get(kind, [])
         if internal_spec:
             add_items_for_kind(expert_dir, kind, internal_spec)
 
     # ── 將 symlink_map 轉回以 kind 分組的輸出格式 ──
-    result: dict[str, list] = {"skills": [], "hooks": [], "agents": [], "commands": []}
+    result: dict[str, list] = {"skills": [], "hooks": [], "agents": [], "commands": [], "rules": []}
     for (kind, _), entry in symlink_map.items():
         result[kind].append(entry)
 
@@ -670,7 +691,7 @@ def apply_symlinks(symlinks: dict) -> list:
 
 
 def clear_claude_symlinks(workspace: Path) -> None:
-    """清除 .claude/{skills,hooks,agents,commands}/ 中的所有 symlinks。
+    """清除 .claude/{skills,hooks,agents,commands,rules}/ 中的所有 symlinks。
 
     **注意**：只刪 symlink，不刪一般檔案（保護使用者自己建立的設定）。
 
@@ -679,7 +700,7 @@ def clear_claude_symlinks(workspace: Path) -> None:
     """
     claude_dir = get_claude_dir(workspace)
     total_removed = 0
-    for kind in ["skills", "hooks", "agents", "commands"]:
+    for kind in ["skills", "hooks", "agents", "commands", "rules"]:
         kind_dir = claude_dir / kind
         if not kind_dir.exists():
             continue
@@ -1342,7 +1363,7 @@ def cmd_list(workspace: Path, output_format: str = "table") -> None:
 
     # ── Symlink 清單 ──
     print("\n=== Symlinks in .claude/ ===\n")
-    for kind in ["skills", "agents", "commands", "hooks"]:
+    for kind in ["skills", "agents", "commands", "hooks", "rules"]:
         kind_dir = claude_dir / kind
         if not kind_dir.exists():
             continue
@@ -1597,7 +1618,7 @@ def cmd_doctor(workspace: Path) -> None:
             for kind, names in e.get("declared_symlinks", {}).items():
                 expected_by_kind.setdefault(kind, set()).update(names)
 
-        for kind in ["skills", "agents", "commands", "hooks"]:
+        for kind in ["skills", "agents", "commands", "hooks", "rules"]:
             kind_dir = claude_dir / kind
             expected = expected_by_kind.get(kind, set())
 

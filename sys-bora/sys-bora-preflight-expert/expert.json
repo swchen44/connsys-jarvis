@@ -18,7 +18,8 @@
     "skills": ["sys-bora-preflight-flow", "sys-bora-gerrit-commit-flow"],
     "hooks": [],
     "agents": [],
-    "commands": []
+    "commands": [],
+    "rules": []
   },
   "exclude_symlink": {"patterns": []}
 }

@@ -13,7 +13,8 @@
     "skills": ["sys-bora-gerrit-tool", "sys-bora-repo-tool"],
     "hooks": [],
     "agents": [],
-    "commands": []
+    "commands": [],
+    "rules": []
   },
   "exclude_symlink": {"patterns": []}
 }

@@ -55,7 +55,8 @@
     ],
     "hooks": [],
     "agents": [],
-    "commands": []
+    "commands": [],
+    "rules": []
   },
   "scenarios": [
     "agent-first",

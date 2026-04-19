@@ -21,9 +21,9 @@ Usage:
 
 Design:
   - Expert = Claude Code Plugin (1:1 mapping)
-  - plugin.json `skills` field lists ADDITIONAL skill directories from dependencies
-    (the expert's own skills/ directory is auto-detected by Claude Code)
-  - All paths in plugin.json use ./ prefix (relative to plugin root)
+  - plugin.json lists metadata + dependency plugin names only
+  - Claude Code auto-detects skills/, commands/, agents/ from the plugin directory
+  - Dependency plugins are resolved via the `dependencies` array
   - marketplace.json uses relative paths from repo root to each expert directory
 
 Dependencies: Python stdlib only (no pip install required)
@@ -32,7 +32,6 @@ Dependencies: Python stdlib only (no pip install required)
 import argparse
 import json
 import logging
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -64,91 +63,15 @@ def scan_expert_jsons(repo_root: Path) -> list:
     return results
 
 
-# ─── Dependency Resolution ────────────────────────────────────────────────────
-
-def resolve_dependency_skill_paths(expert_json_path: Path, expert_data: dict,
-                                    repo_root: Path, visited: set = None) -> list:
-    """Resolve all dependency skill directory paths (relative to expert root).
-
-    Returns list of relative paths like "../../framework/framework-base-expert/skills/"
-    that need to be added to plugin.json `skills` field.
-    """
-    if visited is None:
-        visited = set()
-
-    expert_dir = expert_json_path.parent
-    expert_name = expert_data.get("name", "")
-
-    if expert_name in visited:
-        return []
-    visited.add(expert_name)
-
-    skill_paths = []
-    for dep in expert_data.get("dependencies", []):
-        dep_expert_rel = dep.get("expert", "") if isinstance(dep, dict) else str(dep)
-        if not dep_expert_rel:
-            continue
-
-        dep_expert_dir = repo_root / dep_expert_rel
-        dep_json_path = dep_expert_dir / "expert.json"
-
-        if not dep_json_path.exists():
-            logger.warning("Dependency expert.json not found: %s", dep_json_path)
-            continue
-
-        # Add this dependency's skills/ directory if it exists
-        dep_skills_dir = dep_expert_dir / "skills"
-        if dep_skills_dir.is_dir() and any(dep_skills_dir.iterdir()):
-            # Calculate relative path from expert_dir to dep_skills_dir
-            try:
-                rel_path = os.path.relpath(dep_skills_dir, expert_dir)
-                # Normalize: ensure ./ prefix for plugin.json spec
-                if not rel_path.startswith(".."):
-                    rel_path = "./" + rel_path
-                # ../foo → ./../foo (plugin.json requires ./ prefix)
-                if rel_path.startswith(".."):
-                    rel_path = "./" + rel_path
-                skill_paths.append(rel_path)
-            except ValueError:
-                logger.warning("Cannot compute relative path: %s -> %s",
-                             expert_dir, dep_skills_dir)
-
-        # Recurse into dependency's dependencies
-        try:
-            with open(dep_json_path) as f:
-                dep_data = json.load(f)
-            sub_paths = resolve_dependency_skill_paths(
-                dep_json_path, dep_data, repo_root, visited
-            )
-            # Re-relativize sub_paths from dep_expert_dir to expert_dir
-            for sp in sub_paths:
-                # sp is relative to dep_expert_dir, convert to relative to expert_dir
-                abs_path = (dep_expert_dir / sp.lstrip("./")).resolve()
-                if not abs_path.is_dir():
-                    continue
-                try:
-                    rel = os.path.relpath(abs_path, expert_dir)
-                    if rel.startswith(".."):
-                        normalized = "./" + rel
-                    else:
-                        normalized = "./" + rel
-                    if normalized not in skill_paths:
-                        skill_paths.append(normalized)
-                except ValueError:
-                    pass
-        except (json.JSONDecodeError, OSError) as exc:
-            logger.warning("Failed to read dependency: %s: %s", dep_json_path, exc)
-
-    return skill_paths
-
-
 # ─── Plugin.json Generation ──────────────────────────────────────────────────
 
 def generate_plugin_json(expert_json_path: Path, expert_data: dict,
                           repo_root: Path) -> dict:
-    """Generate a Claude Code plugin.json manifest from expert.json."""
-    expert_dir = expert_json_path.parent
+    """Generate a Claude Code plugin.json manifest from expert.json.
 
+    Only emits metadata and dependency plugin names.
+    Claude Code auto-detects skills/, commands/, agents/ directories.
+    """
     plugin = {
         "name": expert_data["name"],
     }
@@ -165,15 +88,7 @@ def generate_plugin_json(expert_json_path: Path, expert_data: dict,
     if expert_data.get("triggers"):
         plugin["keywords"] = expert_data["triggers"]
 
-    # Skills: only list ADDITIONAL dependency skill paths
-    # (the expert's own skills/ is auto-detected by Claude Code)
-    dep_skill_paths = resolve_dependency_skill_paths(
-        expert_json_path, expert_data, repo_root
-    )
-    if dep_skill_paths:
-        plugin["skills"] = dep_skill_paths
-
-    # Dependencies: map to plugin dependency format
+    # Dependencies: map to plugin dependency names
     dep_names = []
     for dep in expert_data.get("dependencies", []):
         dep_expert_rel = dep.get("expert", "") if isinstance(dep, dict) else str(dep)
@@ -287,16 +202,17 @@ def run_doctor(repo_root: Path, expert_jsons: list) -> bool:
         else:
             print(f"  ✅ Name: {plugin_data['name']}")
 
-        # 4. Check skill paths exist
-        for sp in plugin_data.get("skills", []):
-            abs_sp = (expert_dir / sp).resolve()
-            if abs_sp.is_dir():
-                print(f"  ✅ Skill path: {sp}")
-            else:
-                print(f"  ❌ Skill path missing: {sp} → {abs_sp}")
-                all_ok = False
+        # 4. Check no stale skill paths remain in plugin.json
+        if plugin_data.get("skills"):
+            print(f"  ❌ plugin.json still has 'skills' field — regenerate to remove it")
+            all_ok = False
 
-        # 5. Internal skills directory
+        # 5. Check dependencies are listed
+        dep_names = plugin_data.get("dependencies", [])
+        if dep_names:
+            print(f"  ✅ Dependencies: {', '.join(dep_names)}")
+
+        # 6. Internal skills directory
         own_skills = expert_dir / "skills"
         if own_skills.is_dir():
             internal_skills = expert_data.get("internal", {}).get("skills", [])
@@ -355,7 +271,6 @@ Design rationale:
   Key mapping:
     expert.json name/version/description → plugin.json metadata
     expert.json internal.skills[]        → auto-detected from skills/ directory
-    expert.json dependencies[].skills[]  → plugin.json skills (additional paths)
     expert.json dependencies[].expert    → plugin.json dependencies
 """,
     )

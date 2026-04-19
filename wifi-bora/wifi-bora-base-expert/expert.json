@@ -14,7 +14,8 @@
                "wifi-bora-memory-knowhow", "wifi-bora-linkerscript-knowhow", "wifi-bora-symbolmap-knowhow"],
     "hooks": [],
     "agents": [],
-    "commands": []
+    "commands": [],
+    "rules": []
   },
   "exclude_symlink": {"patterns": []}
 }

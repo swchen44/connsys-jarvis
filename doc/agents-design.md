@@ -1,8 +1,8 @@
 # Consys Experts — 設計書
 
-**文件版本**：v3.7
+**文件版本**：v3.8
 **狀態**：Draft
-**依據**：agents-requirements.md v3.7
+**依據**：agents-requirements.md v3.8
 
 > **注意**：本文件中所列的 expert、skill 名稱均為**示例**，用於說明命名規則與架構設計。實際 expert 與 skill 的規劃以團隊討論為準。
 
@@ -166,6 +166,7 @@ connsys-jarvis/
 ```
 {expert}/
 │   # ── Core Identity (required) ────────────────────────────
+├── .claude-plugin/plugin.json  ← Plugin manifest（由 create_plugin_from_expert.py 生成）
 ├── expert.json    ← Manifest（必要）：name, version, owner, model, skills, tools,
 │                     transitions, dependencies, exclude_symlink
 │
@@ -176,39 +177,53 @@ connsys-jarvis/
 │                     （setup.py 讀此檔產生 CLAUDE.md @include）
 │
 │   # ── Content Folders ────────────────────────────────────
-├── skills/        ← Knowledge：多個 skill 資料夾（每個 skill 見 Layer 5）
+├── skills/        ← Knowledge（主要機制，跨工具通用）：多個 skill 資料夾（每個 skill 見 Layer 5）
 │   └── {domain}-{name}-{type}/
 │       ├── SKILL.md
 │       ├── README.md
 │       ├── test/
 │       └── report/
 │
-├── hooks/         ← Workflow：針對此 expert 的 hook（可選）
-│   └── {hook-name}.sh     ← Shell 優先；複雜邏輯用 {hook-name}-helper.py
+├── hooks/         ← Workflow：生命週期 hooks（可選）
+│   ├── hooks.json             ← Hook 定義（Claude Code Plugin 格式）
+│   └── scripts/               ← Hook 腳本
+│       └── {expert-name}-{action}-hook.sh  ← Shell 優先；複雜邏輯用 .py
 │
 ├── agents/        ← Sub-Agents：Claude subagent 定義（可選）
 │   └── {agent-name}.md    ← subagent 的 prompt / 描述
 │
-├── commands/      ← Tool（相容層，Phase 1 不新增）
-│   └── {domain}-{name}-tool/
-│       └── COMMAND.md
+├── commands/      ← Slash Commands（扁平 .md，Claude Code Plugin 相容層）
+│   └── {expert-name}-{action}-cmd.md
 │
+├── rules/         ← Rules（扁平 .md → .claude/rules/，可選）
+│   └── {expert-name}-{topic}-rule.md
+│
+├── scripts/       ← 輔助腳本（可選）
 ├── test/          ← Expert 層級測試腳本
 ├── report/        ← 執行過程、結果（人工維護）
 └── README.md      ← History、使用說明、設計說明
+
+> **Skills 為主要機制（跨工具通用）。commands/hooks/rules/agents 為 Claude Code Plugin 相容層。**
+>
+> Hook 腳本可透過 `${CLAUDE_PLUGIN_ROOT}` 環境變數取得 plugin 根目錄路徑，
+> 避免在路徑中使用 `..` 相對路徑。
 ```
 
 **`{domain}-base-expert` 的資料夾結構**（同上，作為共用資源容器）：
 
 ```
 {domain}-base-expert/
+├── .claude-plugin/plugin.json  ← Plugin manifest（由腳本生成）
 ├── expert.json    ← is_base: true
 ├── soul.md        ← （可選）
 ├── expert.md      ← （可選）
 ├── skills/        ← 此 domain 共用的 skills
 ├── hooks/         ← 此 domain 共用的 hooks（可選）
+│   ├── hooks.json
+│   └── scripts/
 ├── agents/        ← 此 domain 共用的 subagents（可選）
-├── commands/      ← 此 domain 共用的 commands（可選）
+├── commands/      ← 此 domain 共用的 commands（扁平 .md，可選）
+├── rules/         ← 此 domain 共用的 rules（扁平 .md，可選）
 ├── test/
 ├── report/
 └── README.md
@@ -302,14 +317,34 @@ sys-bora-cicd-tool
 | `test/test_xxx.py` | pytest unit test，適用有 Python helper 的 skill | 非必要，未來必要 | 人工撰寫，`pytest test/` 自動執行 |
 | `report/` | 每次執行的過程記錄、結果摘要、token 用量統計 | 非必要，未來必要 | 人工或 hook 自動寫入 |
 
-**Command 命名規則**（同 Skill，type 固定為 `tool`）：
+**Command 命名規則**（扁平 .md，命名含 expert-name）：
 ```
-{domain}-{name}-tool/
-  └── COMMAND.md
+{expert-name}-{action}-cmd.md
 
 範例：
-  framework-experts-tool/    ← /experts 指令
+  framework-base-experts-cmd.md    ← /experts 指令
 ```
+
+**Hook 命名規則**：
+```
+hooks/
+├── hooks.json                              ← Hook 定義（Claude Code Plugin 格式）
+└── scripts/
+    └── {expert-name}-{action}-hook.sh      ← Shell 優先
+
+範例：
+  hooks/scripts/framework-base-precompact-hook.sh
+```
+
+**Rule 命名規則**（扁平 .md → .claude/rules/）：
+```
+{expert-name}-{topic}-rule.md
+
+範例：
+  wifi-bora-base-coding-rule.md
+```
+
+> **命名慣例小結**：commands/hooks/rules 的檔名均以 `{expert-name}-` 為前綴，確保全域唯一，避免跨 Expert 衝突。
 
 ---
 
@@ -1087,11 +1122,16 @@ tags: [internal]
 
 5. 建立資料夾骨架
    {domain}/{expert-name}/
+   ├── .claude-plugin/plugin.json  ← 由 create_plugin_from_expert.py 生成
    ├── expert.json    ← 初稿（必要）
    ├── soul.md        ← 可選
    ├── expert.md      ← 可選
    ├── skills/        ← 主要實作機制（待建立 Skill）
-   ├── hooks/         ← 空資料夾（若需要 Expert-level hook）
+   ├── commands/      ← 扁平 .md（slash commands，可選）
+   ├── hooks/         ← hooks.json + scripts/（可選）
+   ├── rules/         ← 扁平 .md（可選）
+   ├── agents/        ← 扁平 .md（可選）
+   ├── scripts/       ← 輔助腳本（可選）
    └── README.md      ← 初稿（含安裝指令）
 ```
 
@@ -1552,7 +1592,17 @@ description: 列出所有可用的 Expert
 ---
 ```
 
-### 14.3 SKILL.md 遷移格式
+### 14.3 plugin.json 生成規則
+
+`create_plugin_from_expert.py` 從 `expert.json` 生成 `.claude-plugin/plugin.json`，需遵守以下規則：
+
+| 規則 | 說明 |
+|------|------|
+| **不使用 `..` 路徑** | plugin.json 內所有路徑必須為相對於 plugin 根目錄的正向路徑，不允許 `../` 向上跳層 |
+| **跨 Expert 引用用 dependencies** | 若需要其他 Expert 的資源，透過 `expert.json` 的 `dependencies` 機制，不在 plugin.json 中直接引用其他 Expert 的檔案 |
+| **`${CLAUDE_PLUGIN_ROOT}` 環境變數** | Hook 腳本中可使用 `${CLAUDE_PLUGIN_ROOT}` 取得 plugin 根目錄的絕對路徑，避免 hardcode 路徑或使用 `..` |
+
+### 14.4 SKILL.md 遷移格式
 
 加入 `metadata.openclaw` 區塊即可，內容不需修改：
 
