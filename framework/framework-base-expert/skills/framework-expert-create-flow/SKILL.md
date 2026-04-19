@@ -1,6 +1,6 @@
 ---
 name: framework-expert-create-flow
-description: "Interactively create a new connsys-jarvis Expert — covering expert.json, soul.md, rules.md, duties.md, expert.md, and folder scaffolding. Use whenever a developer wants to build a new Expert from scratch, add a new domain, or create a base expert. Triggers on: 'create expert', 'new expert', 'add expert', 'build expert', 'make expert', or when someone describes a new domain capability that needs its own Expert."
+description: "Interactively create a new connsys-jarvis Expert — covering expert.json, optional soul.md, optional expert.md, skills, and folder scaffolding. Use whenever a developer wants to build a new Expert from scratch, add a new domain, or create a base expert. Triggers on: 'create expert', 'new expert', 'add expert', 'build expert', 'make expert', or when someone describes a new domain capability that needs its own Expert."
 version: "1.0.0"
 domain: framework
 type: flow
@@ -10,9 +10,9 @@ tags: [framework, expert-creator, flow, development]
 
 # Framework Expert Create Flow
 
-An interactive wizard for creating a complete, standards-compliant connsys-jarvis Expert. This skill walks through every required file and folder, validates naming, and ends with a checklist against the requirements doc.
+An interactive wizard for creating a complete, standards-compliant connsys-jarvis Expert. The only required file is `expert.json`; `soul.md` and `expert.md` are optional. Skills are the primary mechanism for defining Expert capabilities. This skill walks through folder scaffolding, validates naming, and ends with a checklist.
 
-Reference: [gitagent SPECIFICATION](https://github.com/open-gitagent/gitagent/blob/main/spec/SPECIFICATION.md) — connsys-jarvis follows the same SOUL / RULES / DUTIES pattern.
+> **Key principle**: Skills should be the primary mechanism for Expert capabilities. `soul.md` and `expert.md` are optional identity/behavior files. Focus effort on creating well-structured Skills.
 
 ---
 
@@ -57,13 +57,11 @@ Scaffold the full Layer 4 structure:
 
 ```
 {domain}/{domain}-{purpose}-expert/
-├── expert.json     ← Manifest (required)
-├── soul.md         ← Identity & personality (required)
-├── rules.md        ← Hard constraints (required)
-├── duties.md       ← Role boundaries (required)
-├── expert.md       ← Key behaviors & tools (required, loaded into CLAUDE.md)
+├── expert.json     ← Manifest (REQUIRED — the only required file)
+├── soul.md         ← Identity & personality (optional)
+├── expert.md       ← Key behaviors & tools (optional, loaded into CLAUDE.md)
 ├── README.md       ← Traditional Chinese documentation (required)
-├── skills/         ← Skill folders (use framework-skill-create-flow to create each)
+├── skills/         ← Skill folders — PRIMARY mechanism (use framework-skill-create-flow)
 ├── hooks/          ← Lifecycle shell scripts (optional)
 ├── agents/         ← Sub-agent definitions (optional)
 └── commands/       ← Slash command definitions (optional)
@@ -144,11 +142,11 @@ Create the directory, then proceed file by file.
 
 ---
 
-## Step 3: Write soul.md
+## Step 3: Write soul.md (Optional)
 
-soul.md defines **who this expert is**. Write in the voice of the expert itself.
+soul.md defines **who this expert is**. Write in the voice of the expert itself. This file is optional — skip if the Expert's identity is sufficiently defined by its skills.
 
-**Required sections**:
+**Recommended sections** (if creating soul.md):
 
 ```markdown
 # {ExpertName} — Soul
@@ -194,94 +192,7 @@ Example: "Proactive but aware of its own boundaries. Asks rather than guesses wh
 
 ---
 
-## Step 4: Write rules.md
-
-rules.md defines **hard constraints** — behaviors that never change regardless of context.
-
-**Required sections**:
-
-```markdown
-# {ExpertName} — Rules
-
-## Must Always
-
-- {Non-negotiable behavior 1 — what must this expert do in all circumstances?}
-- {Non-negotiable behavior 2}
-- Example: "Confirm with the engineer before high-risk operations (git push, file deletion)"
-- Example: "Read the latest memory summary at session start"
-
-## Must Never
-
-- {Hard boundary 1 — what is absolutely forbidden?}
-- {Hard boundary 2}
-- Example: "Execute irreversible operations without explicit confirmation"
-- Example: "Store sensitive information (passwords, tokens, private keys) outside the memory folder"
-
-## Output Constraints
-
-- {Format rules for outputs this expert produces}
-- Example: "All memory documents use YAML frontmatter + Markdown"
-- Example: "All memory keys use snake_case"
-
-## Interaction Boundaries
-
-- {Scope limits — what does this expert NOT do?}
-- Example: "Do not execute concrete technical tasks belonging to other domains"
-- Example: "Do not make architectural decisions on behalf of the engineer — provide options and analysis only"
-
-## Conflict Resolution
-
-- {If two rules conflict, which takes priority?}
-- Example: "When rules conflict, protecting the engineer's work from loss takes highest priority"
-```
-
-**Tips**:
-- Must Always / Must Never should be short, concrete, and unambiguous
-- Avoid vague rules like "be helpful" — these aren't constraints
-- Output Constraints should match what this expert actually produces
-- Interaction Boundaries is where you define the segregation of duties
-
----
-
-## Step 5: Write duties.md
-
-duties.md defines **role responsibilities and what this expert explicitly does NOT do**.
-
-**Required sections**:
-
-```markdown
-# {ExpertName} — Duties
-
-## Primary Duties
-
-### 1. {Main responsibility name}
-- {Specific task 1}
-- {Specific task 2}
-
-### 2. {Second responsibility}
-- {Specific task 1}
-
-## Segregation of Duties
-
-- **Does not execute** {what belongs to other experts, not this one}
-- **Does not directly operate** {tools or systems owned by other experts}
-- **Does not make** {decision types that belong elsewhere}
-
-## KPIs (optional)
-
-{Measurable success indicators, if meaningful}
-- {KPI 1}: {target}
-- {KPI 2}: {target}
-```
-
-**Tips**:
-- Primary Duties = what this expert *does*; be specific, not generic
-- Segregation of Duties is critical for multi-expert systems — prevents overlap and confusion
-- KPIs are optional but useful for measurable domains (latency, accuracy, etc.)
-
----
-
-## Step 6: Write expert.md
+## Step 4: Write expert.md (Optional)
 
 expert.md is the **public interface** of this expert — setup.py @includes this into CLAUDE.md. Claude reads this every session. Keep it factual and current.
 
@@ -336,7 +247,7 @@ expert.md is the **public interface** of this expert — setup.py @includes this
 
 ---
 
-## Step 7: Set Up Content Folders
+## Step 5: Set Up Content Folders (Primary)
 
 ### skills/
 Each skill follows `{domain}-{name}-{type}/` naming. Use `framework-skill-create-flow` to create each skill interactively — it handles SKILL.md, README.md, expert.json registration, naming validation, and eval setup.
@@ -389,13 +300,13 @@ Phase 1: inherit commands from framework-base-expert; only add new commands when
 
 ---
 
-## Step 8: Write README.md
+## Step 6: Write README.md
 
 Write in **Traditional Chinese (Taiwan)**. Follow the template from `framework-skill-create-flow`'s README.md (sections: Introduction, Owner, Features, Goals, Design Philosophy, Risks, Alternatives, Source).
 
 ---
 
-## Step 9: Register and Install
+## Step 7: Register and Install
 
 After all files are written:
 
@@ -415,9 +326,15 @@ After all files are written:
    uv run ./connsys-jarvis/scripts/setup.py --doctor
    ```
 
+4. **Generate plugin** (if applicable):
+   ```bash
+   uv run ./connsys-jarvis/scripts/create_plugin_from_expert.py {domain}/{expert-name}/expert.json
+   ```
+   > Run `create_plugin_from_expert.py` after creating an expert to generate the corresponding plugin package.
+
 ---
 
-## Step 10: Create Expert Checklist
+## Step 8: Create Expert Checklist
 
 Run through every item before considering the expert complete.
 
@@ -425,10 +342,8 @@ Run through every item before considering the expert complete.
 
 - [ ] Expert directory at correct path: `connsys-jarvis/{domain}/{domain}-{purpose}-expert/`
 - [ ] `expert.json` — valid JSON, all required fields present
-- [ ] `soul.md` — has Identity, Communication Style, Values, Domain Expertise, Personality, Collaboration Style
-- [ ] `rules.md` — has Must Always, Must Never, Output Constraints, Interaction Boundaries, Conflict Resolution
-- [ ] `duties.md` — has Primary Duties, Segregation of Duties
-- [ ] `expert.md` — has Overview, Key Behaviors, Skills table, Hooks table
+- [ ] `soul.md` — (optional) has Identity, Communication Style, Values, Domain Expertise, Personality, Collaboration Style
+- [ ] `expert.md` — (optional) has Overview, Key Behaviors, Skills table, Hooks table
 - [ ] `README.md` — in Traditional Chinese, has all required sections
 
 ### B. expert.json Validation
@@ -444,11 +359,10 @@ Run through every item before considering the expert complete.
 
 ### C. Content Quality
 
-- [ ] soul.md Identity is one clear sentence (not vague)
-- [ ] rules.md Must Never items are concrete and unambiguous
-- [ ] duties.md Segregation of Duties explicitly names what other experts own
-- [ ] expert.md Skills table matches `expert.json internal.skills`
-- [ ] expert.md Hooks table matches `expert.json internal.hooks`
+- [ ] soul.md Identity is one clear sentence (not vague) — if soul.md exists
+- [ ] expert.md Skills table matches `expert.json internal.skills` — if expert.md exists
+- [ ] expert.md Hooks table matches `expert.json internal.hooks` — if expert.md exists
+- [ ] Skills are the primary mechanism for Expert capabilities
 
 ### D. Skills
 
@@ -463,7 +377,7 @@ Run through every item before considering the expert complete.
 ### F. Requirements Alignment
 
 - [ ] Expert follows naming rule from requirements §1.3 / design §2.4
-- [ ] Base expert has `is_base: true` (FR-05-7/FR-05-8)
+- [ ] Base expert has `is_base: true`
 - [ ] `human_in_the_loop` covers all operations flagged as risky in requirements
 - [ ] `transitions` defined if this expert has a natural successor in the workflow
 
@@ -473,5 +387,5 @@ Run through every item before considering the expert complete.
 
 - `connsys-jarvis/doc/agents-design.md` — §2.4 (Expert naming), §2.5 (Layer 4 structure), §4 (expert.json format)
 - `connsys-jarvis/doc/agents-requirements.md` — FR-01, FR-03, FR-05 (Expert rules)
-- [gitagent SPECIFICATION](https://github.com/open-gitagent/gitagent/blob/main/spec/SPECIFICATION.md) — SOUL/RULES/DUTIES pattern reference
 - `framework-skill-create-flow` — use this to create each skill inside the new expert
+- `create_plugin_from_expert.py` — run after creating an expert to generate the plugin package

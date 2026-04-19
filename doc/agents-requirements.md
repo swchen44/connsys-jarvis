@@ -1,6 +1,6 @@
 # Consys Experts — 需求書
 
-**文件版本**：v3.6
+**文件版本**：v3.7
 **狀態**：Draft
 **目標讀者**：架構師、開發者、產品負責人
 **改版說明**：
@@ -14,13 +14,14 @@
 - v2.7：專案更名 consys → connsys（雙 n），更新所有 repo/env var 名稱
 - v2.8：Skill/Hook scripts Shell 優先、Python 採 PEP 723 inline metadata、pytest test_xxx.py
 - v2.9：多 Expert 安裝/卸載需求、 setup.py --doctor、Python 版本檢查、Skill 與 Command 邊界釐清、限制補充（Skill 版本相容性、memory GC）、Future Work 補充（registry.json、Skill README 範本）
-- v3.0：架構重大重設計——install.sh 改為單一 setup.py（stdlib only）、expert 資料夾移除 CLAUDE.md 和 install.sh、新增 soul.md / rules.md / duties.md / agents/ 資料夾、記憶改用 .connsys-jarvis/memory/、環境變數輸出至 .connsys-jarvis/.env、新增 symlink 靈活性設計原則（因應 agent 生態快速演進）
+- v3.0：架構重大重設計——install.sh 改為單一 setup.py（stdlib only）、expert 資料夾移除 CLAUDE.md 和 install.sh、新增 soul.md / agents/ 資料夾、記憶改用 .connsys-jarvis/memory/、環境變數輸出至 .connsys-jarvis/.env、新增 symlink 靈活性設計原則（因應 agent 生態快速演進）
 - v3.1：expert.json dependencies 改為陣列格式（支援 all/正面表列/省略=不繼承）、exclude_symlink 改為全域 regex patterns（3-step 執行順序）、更新 domain 清單（wifi-bora/sys-bora/bt-bora/lrwpan-bora/wifi-gen4m/wifi-logan）、common 改為 base、加入新 expert 清單
 - v3.2：setup.py 路徑改為 `scripts/setup.py`；新增 FR-02-17（pytest 單元測試 `scripts/tests/test_setup.py`）；更新目錄結構加入 `scripts/` 子節
 - v3.3：移除 registry.json；setup.py 改為即時掃描 Expert 目錄；新增 --query 指令、--format json 輸出格式；--remove 改為全清再重建策略（與 --add 一致）；--add 重複安裝 = 重新安裝
 - v3.4：新增 FR-02-27（--reset 徹底重置，額外刪除 memory/）；更新 FR-02-2（--init memory 不受影響說明）；更新 FR-02-5（--uninstall 保留 memory 的適用場景說明）
 - v3.5：更新 FR-02-17（測試架構升級為三層金字塔：unit/integration/e2e，共 239 tests）
-- v3.6：新增 FR-05-7、FR-05-8（Base Expert 特殊規則：expert.json is_base=true 的 Expert 其四份文件必須寫入 CLAUDE.md，含依賴樹遞迴掃描）；更新測試數 unit 50 / integration 71 / e2e 18
+- v3.6：新增 FR-05-7、FR-05-8（Base Expert 特殊規則：expert.json is_base=true 的 Expert 其 soul.md + expert.md（可選）必須寫入 CLAUDE.md，含依賴樹遞迴掃描）；更新測試數 unit 50 / integration 71 / e2e 18
+- v3.7：Expert 檔案結構簡化（expert.json 必要，soul.md/expert.md 可選）；CLAUDE.md 改為 soul→expert 排序，移除 base-expert DFS 規則；移除 FR-05-7/FR-05-8；新增 Skill 使用分析（Future）與 Plugin 生成需求
 
 > **注意**：文件中所列的 expert、skill 名稱均為**示例**，用於說明命名規則與架構設計。實際規劃以團隊討論為準。
 
@@ -40,7 +41,7 @@
 | 組件 | 定義 | 對應本系統的設計 |
 |------|------|-----------------|
 | **上下文工程**（Context Engineering） | 持續維護知識庫，讓 Agent 能存取動態資料 | SKILL.md 技能庫、expert.md、expert.local.md |
-| **架構約束**（Architectural Constraints） | 加入確定性工具（Linter、測試），強制執行規範 | Hooks（pre-compact、write-guard）、hand-off 格式規範 |
+| **架構約束**（Architectural Constraints） | 加入確定性工具（Linter、測試），強制執行規範 | Hooks（pre-compact、write-guard）、Expert 行為規範 |
 | **垃圾回收**（Garbage Collection） | 定期執行 Agent 清理過時文件，對抗系統熵增 | session-end 自動整理記憶，push 至 connsys-memory |
 
 **文章關鍵結論**：隨著 AI Agent 的進化，軟體開發的嚴謹性（Rigor）正從「代碼細節」遷移到「系統架構與環境設計」。工程師的工作重點將從「打字寫代碼」轉向**「設計環境、反饋循環與控制系統」**。
@@ -117,7 +118,7 @@
 建立一套以 **Claude Code** 為執行環境、可跨平台遷移的 **Consys Expert Harness**，達成：
 
 1. 同仁可快速安裝對應領域的「專家」(Expert)，取得即用的 Skills（Knowledge）、Hooks（Workflow）與 Commands（Tool）
-2. Expert 之間透過結構化 Hand-off 傳遞上下文，避免 Context 爆炸
+2. Expert 之間透過 memory/shared/ 傳遞上下文，避免 Context 爆炸
 3. 使用資料自動收集至後臺 Git repo，供反思與大數據分析
 4. **未來目標**：Agent 可自行 install、自行運作；簡單任務由 Agent 自動完成，有風險時觸發 **Human in the Loop** 機制，請人類介入確認
 5. 架構不綁定特定 AI 平台，未來可平滑遷移至 OpenClaw 或 ADK/SDK
@@ -145,7 +146,7 @@
 ├─────────────────────────────────────────────────────────────────────┤
 │  Stage 3：Expert 之間可互相溝通（Multi-Agent Collaboration）          │
 │                                                                     │
-│  多個 Expert 可平行運作，透過結構化 Hand-off 與共享記憶互相協調。       │
+│  多個 Expert 可平行運作，透過共享記憶互相協調。                        │
 │  例如 build-expert 發現問題後，主動通知 debug-expert 接手。            │
 │  Expert 可透過 framework-memory-tool 讀寫共用記憶區。                │
 │  這是本系統的長期目標，對應 ADK/SDK 的 Multi-Agent 架構。             │
@@ -154,7 +155,7 @@
 
 **為什麼要定義三個階段**：
 - 讓團隊對「現在做什麼」與「未來走向哪裡」有共識
-- 記憶設計（本地三區）和交接流程設計，從 Stage 1 開始就要為 Stage 2/3 預留空間
+- 記憶設計（本地二區）從 Stage 1 開始就要為 Stage 2/3 預留空間
 - 每個階段的技術投資都有意義：記憶收集的資料，未來可用於 Stage 3 的 Expert 協調
 
 ---
@@ -198,7 +199,7 @@
 
 **驗收條件**：
 - setup.py 執行後，`.claude/skills/`、`.claude/hooks/`、`.claude/commands/` 均正確建立 symlink
-- `CLAUDE.md` 被生成，內容以 `@connsys-jarvis/{domain}/{expert}/` 路徑 @include `expert.md`、`soul.md`、`rules.md`、`duties.md`，末尾附加 `@CLAUDE.local.md`
+- `CLAUDE.md` 被生成，內容以 `@connsys-jarvis/{domain}/{expert}/` 路徑 @include `soul.md`、`expert.md`（若存在），末尾附加 `@CLAUDE.local.md`
 - 環境變數正確設定（見 FR-03）
 - `connsys-memory/` repo 被自動 clone，員工資料夾以 git username 命名
 
@@ -234,14 +235,13 @@
 **流程**：
 ```
 1. 執行 uv run ./connsys-jarvis/scripts/setup.py --init wifi-bora/wifi-bora-cr-robot-expert/expert.json && source .connsys-jarvis/.env
-2. 系統先觸發 hand-off，儲存當前 session 狀態
-3. 移除舊 Expert 的所有 symlinks（common + internal 全部替換）
+2. 移除舊 Expert 的所有 symlinks（common + internal 全部替換）
 4. 建立新 Expert 的 symlinks
 5. 重新生成 CLAUDE.md 與 expert.md
 6. 印出變更清單：
    ✓ 新增: wifi-bora-debug-sop-flow, wifi-bora-risk-report-flow, wifi-bora-coredump-knowhow
    ✗ 移除: wifi-bora-memslim-flow, wifi-bora-lsp-tool, wifi-bora-wut-tool
-   ○ 保留: framework-expert-discovery-knowhow, framework-handoff-flow（framework-base）
+   ○ 保留: framework-expert-discovery-knowhow, framework-memory-tool（framework-base）
    ○ 保留: wifi-bora-arch-knowhow, sys-bora-preflight-flow（domain base / preflight）
 7. 同仁確認後，開啟 Claude Code 進入新 Expert 環境
 ```
@@ -267,8 +267,6 @@
    - 跳過已存在的 symlinks（wifi-bora-base-expert 已建好的不重複建立）
 4. 重新生成 CLAUDE.md（預設 identity-only 格式，以最後安裝的 Expert 為主）：
    @connsys-jarvis/wifi-bora/wifi-bora-coverity-expert/soul.md
-   @connsys-jarvis/wifi-bora/wifi-bora-coverity-expert/rules.md
-   @connsys-jarvis/wifi-bora/wifi-bora-coverity-expert/duties.md
    @connsys-jarvis/wifi-bora/wifi-bora-coverity-expert/expert.md
    @CLAUDE.local.md
    （若加 --with-all-experts 參數，則同時加入所有 Expert 的 expert.md）
@@ -281,7 +279,7 @@
 **驗收條件**：
 - `--add` 不移除現有 symlinks，只補建新 expert 的 internal skills
 - 已存在的 symlink 跳過（idempotent，不報錯）
-- CLAUDE.md 預設只包含最後安裝 Expert（identity）的 soul/rules/duties/expert.md
+- CLAUDE.md 預設只包含最後安裝 Expert（identity）的 soul.md/expert.md
 - 加上 `--with-all-experts` 時，CLAUDE.md 以 Identity/Capabilities 雙區段呈現所有已安裝 Expert 的 expert.md
 - `.connsys-jarvis/.installed-experts.json`（安裝狀態記錄）更新，新增 wifi-bora-coverity-expert 條目；`include_all_experts` 欄位記錄本次是否使用 `--with-all-experts`
 
@@ -342,7 +340,7 @@
 
 ### US-05：後臺資料收集與分析
 
-**背景**：主管想了解同仁使用哪些 Expert 最多、哪些 Hand-off 流程最常卡關。
+**背景**：主管想了解同仁使用哪些 Expert 最多、哪些流程最常卡關。
 
 **流程**：
 ```
@@ -373,10 +371,10 @@ connsys-jarvis/ (git)
 │
 ├── framework/                       ← Layer 1：framework domain
 │   ├── framework-base-expert/     ← 跨所有 domain 共用（is_common: true）
-│   │   ├── skills/                  ← framework-expert-discovery-knowhow, framework-handoff-flow, framework-memory-tool
+│   │   ├── skills/                  ← framework-expert-discovery-knowhow, framework-memory-tool
 │   │   ├── hooks/                   ← session-start.sh, session-end.sh, pre-compact.sh（Shell 優先）
 │   │   │   └── memory-helper.py     ← 複雜記憶操作（Python helper）
-│   │   └── commands/                ← framework-experts-tool/, framework-handoff-tool/
+│   │   └── commands/                ← framework-experts-tool/
 │   ├── framework-skill-create-expert/
 │   ├── framework-learn-expert/
 │   └── framework-external-expert/  ← skill-creator/, claude-memory-engine/（git submodule）
@@ -404,13 +402,14 @@ connsys-jarvis/ (git)
 **每個 Expert 資料夾標準結構**（Layer 4）：
 ```
 {domain}-{name}-expert/
-├── README.md      ← History、使用說明、人工安裝說明、Design、目的
-├── setup.py     ← 唯一安裝程式（Python stdlib）
-├── expert.json    ← Expert 設定（dependencies、transitions、human_in_the_loop）
-├── CLAUDE.md      ← system prompt 模板
-├── skills/        ← 每個 skill 含 SKILL.md / README.md / test/ / report/
+├── expert.json    ← Manifest（必要）
+├── soul.md        ← Identity & personality（可選）
+├── expert.md      ← Key behaviors & tools（可選，setup.py @include 進 CLAUDE.md）
+├── README.md      ← History、使用說明、Design、目的
+├── skills/        ← 每個 skill 含 SKILL.md / README.md / test/ / report/（主要實作機制）
 ├── hooks/         ← 額外 hook（可選，Shell 優先）
-├── commands/      ← 額外 command（可選）
+├── agents/        ← Sub-agent 定義（可選）
+├── commands/      ← 額外 command（可選，相容層）
 ├── test/          ← Expert 層級測試腳本
 └── report/        ← 執行過程、結果、token 用量
 ```
@@ -440,29 +439,25 @@ workspace/                                       ← $CONNSYS_JARVIS_WORKSPACE_R
 │   └── employees/
 │       └── john.doe/                            ← git config user.name
 │           ├── sessions/
-│           ├── handoffs/
 │           └── summary.md
 │
 ├── CLAUDE.md                                    ← setup.py 生成（非 symlink）
-│   # @connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/expert.md
 │   # @connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/soul.md
-│   # @connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/rules.md
-│   # @connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/duties.md
+│   # @connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/expert.md
 │   # @CLAUDE.local.md
 │
 ├── .connsys-jarvis/                             ← setup.py 建立（.gitignore 排除）
 │   ├── .env                                     ← 環境變數（source .connsys-jarvis/.env）
 │   ├── .installed-experts.json                       ← 已安裝 Expert 清單
 │   ├── log/
-│   └── memory/                                  ← 本地三區記憶
+│   └── memory/                                  ← 本地二區記憶
 │       ├── shared/                              ← Zone 1：跨 Expert 共用知識
-│       ├── working/wifi-bora-memory-slim-expert/ ← Zone 2：飛行中狀態
-│       └── handoffs/                            ← Zone 3：交接文件（唯讀）
+│       └── working/wifi-bora-memory-slim-expert/ ← Zone 2：飛行中狀態
 │
 └── .claude/
     ├── skills/                                  ← Knowledge symlinks
     │   ├── framework-expert-discovery-knowhow → $CONNSYS_JARVIS_PATH/framework/framework-base-expert/skills/framework-expert-discovery-knowhow/
-    │   ├── framework-handoff-flow             → .../framework-base-expert/skills/framework-handoff-flow/
+    │   ├── framework-memory-tool              → .../framework-base-expert/skills/framework-memory-tool/
     │   ├── wifi-bora-arch-knowhow             → $CONNSYS_JARVIS_PATH/wifi-bora/wifi-bora-base-expert/skills/wifi-bora-arch-knowhow/
     │   ├── sys-bora-gerrit-commit-flow        → $CONNSYS_JARVIS_PATH/sys-bora/sys-bora-preflight-expert/skills/sys-bora-gerrit-commit-flow/
     │   └── wifi-bora-memslim-flow             → $CONNSYS_JARVIS_PATH/wifi-bora/wifi-bora-memory-slim-expert/skills/wifi-bora-memslim-flow/
@@ -474,7 +469,7 @@ workspace/                                       ← $CONNSYS_JARVIS_WORKSPACE_R
     │   └── shared-utils.sh           → .../framework-base-expert/hooks/shared-utils.sh
     └── commands/                                ← Tool symlinks
         ├── framework-experts-tool  → .../framework-base-expert/commands/framework-experts-tool/
-        └── framework-handoff-tool  → .../framework-base-expert/commands/framework-handoff-tool/
+        └── framework-experts-tool  → .../framework-base-expert/commands/framework-experts-tool/
 ```
 
 **Step 3 — 開啟 Claude Code，Expert 協助下載 fw**
@@ -567,25 +562,22 @@ workspace/                                       ← $CONNSYS_JARVIS_WORKSPACE_R
 ├── connsys-jarvis/ (git)
 ├── connsys-memory/ (git)
 ├── CLAUDE.md                                    ← setup.py 生成（非 symlink）
-│   # @connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/expert.md
 │   # @connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/soul.md
-│   # @connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/rules.md
-│   # @connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/duties.md
+│   # @connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/expert.md
 │   # @CLAUDE.local.md
 │
 ├── .connsys-jarvis/                             ← setup.py 建立（.gitignore 排除）
 │   ├── .env                                     ← 環境變數（source .connsys-jarvis/.env）
 │   ├── .installed-experts.json                       ← 已安裝 Expert 清單
 │   ├── log/
-│   └── memory/                                  ← 本地三區記憶
+│   └── memory/                                  ← 本地二區記憶
 │       ├── shared/                              ← Zone 1：跨 Expert 共用知識
-│       ├── working/wifi-bora-memory-slim-expert/ ← Zone 2：飛行中狀態
-│       └── handoffs/                            ← Zone 3：交接文件（唯讀）
+│       └── working/wifi-bora-memory-slim-expert/ ← Zone 2：飛行中狀態
 │
 └── .claude/
     ├── skills/
     │   ├── framework-expert-discovery-knowhow → $CONNSYS_JARVIS_PATH/framework/framework-base-expert/skills/framework-expert-discovery-knowhow/
-    │   ├── framework-handoff-flow             → .../framework-base-expert/skills/framework-handoff-flow/
+    │   ├── framework-memory-tool              → .../framework-base-expert/skills/framework-memory-tool/
     │   ├── wifi-bora-arch-knowhow             → $CONNSYS_JARVIS_PATH/wifi-bora/wifi-bora-base-expert/skills/wifi-bora-arch-knowhow/
     │   ├── sys-bora-gerrit-commit-flow        → $CONNSYS_JARVIS_PATH/sys-bora/sys-bora-preflight-expert/skills/sys-bora-gerrit-commit-flow/
     │   └── wifi-bora-memslim-flow             → $CONNSYS_JARVIS_PATH/wifi-bora/wifi-bora-memory-slim-expert/skills/wifi-bora-memslim-flow/
@@ -597,7 +589,7 @@ workspace/                                       ← $CONNSYS_JARVIS_WORKSPACE_R
     │   └── shared-utils.sh           → .../framework-base-expert/hooks/shared-utils.sh
     └── commands/
         ├── framework-experts-tool  → .../framework-base-expert/commands/framework-experts-tool/
-        └── framework-handoff-tool  → .../framework-base-expert/commands/framework-handoff-tool/
+        └── framework-experts-tool  → .../framework-base-expert/commands/framework-experts-tool/
 ```
 
 **兩個場景的主要差異**：
@@ -619,7 +611,7 @@ workspace/                                       ← $CONNSYS_JARVIS_WORKSPACE_R
 | 編號 | 需求 | 優先級 | 理由 |
 |------|------|--------|------|
 | FR-01-1 | repo 命名為 `connsys-jarvis`，Expert 直接放在 `{domain}/` 下（無 `experts/` 中間層） | Must | 減少目錄層數，Expert 命名已含 domain prefix 可自識別 |
-| FR-01-2 | 每個 Expert 資料夾含 `expert.json`、`expert.md`、`soul.md`、`rules.md`、`duties.md`、`skills/`、`hooks/`、`agents/`、`commands/`（相容層）、`test/`、`report/`、`README.md`；**不含 `install.sh` 和 `CLAUDE.md`**（由頂層 `setup.py` 統一管理） | Must | 標準化結構，Expert 資料夾只含內容；安裝管理集中在根目錄；新增 agents/ 支援 subagent 功能 |
+| FR-01-2 | 每個 Expert 資料夾**必要**：`expert.json`；**可選**：`soul.md`（identity & personality）、`expert.md`（key behaviors & tools，setup.py @include 進 CLAUDE.md）；Skills 為主要實作機制。另含 `skills/`、`hooks/`、`agents/`、`commands/`（相容層）、`test/`、`report/`、`README.md`；**不含 `install.sh` 和 `CLAUDE.md`**（由頂層 `setup.py` 統一管理） | Must | 簡化 Expert 結構，以 Skill 為主要能力載體；expert.json 為唯一必要檔案；安裝管理集中在根目錄 |
 | FR-01-3 | `expert.json` 含名稱、描述、觸發詞、skills、transitions、dependencies | Must | 資訊越完整，expert-discovery 越有用 |
 | FR-01-4 | `framework-base-expert` 存放跨所有 domain 共用的 skills / hooks / commands；各 domain 的 `{domain}-base-expert` 存放該 domain 共用內容 | Must | 三層依賴（framework → domain → internal）對應 Expert 定義的三個組件 |
 | FR-01-5 | `external/` 存放社群工具，以工具名稱為資料夾名（git submodule） | Should | 整合優質社群工具，避免重造輪子 |
@@ -650,7 +642,7 @@ workspace/                                       ← $CONNSYS_JARVIS_WORKSPACE_R
 | 編號 | 需求 | 優先級 | 理由 |
 |------|------|--------|------|
 | FR-02-1 | `connsys-jarvis/scripts/setup.py` 為**唯一安裝程式**，以 Python stdlib 實作，用 `uv run ./connsys-jarvis/scripts/setup.py` 執行 | Must | 單一入口，避免每個 Expert 各自維護 install.sh；Python stdlib 無需額外依賴 |
-| FR-02-2 | 支援 `--init <expert.json>` 參數：**全新安裝**，清除所有既有 link，讀取 expert.json 及其 dependencies，重建所有 symlink，重新生成 CLAUDE.md 和 .env；**memory 不受影響**（handoff 效果：切換 Expert 時保留 Claude 的工作記憶） | Must | 初次安裝或切換 Expert 時使用；memory 保留讓 Claude 可延續前一個 Expert 的工作記憶 |
+| FR-02-2 | 支援 `--init <expert.json>` 參數：**全新安裝**，清除所有既有 link，讀取 expert.json 及其 dependencies，重建所有 symlink，重新生成 CLAUDE.md 和 .env；**memory 不受影響**（切換 Expert 時保留 Claude 的工作記憶） | Must | 初次安裝或切換 Expert 時使用；memory 保留讓 Claude 可延續前一個 Expert 的工作記憶 |
 | FR-02-3 | 支援 `--add <expert.json>` 參數：**疊加安裝**，在既有 Expert 基礎上加入新的 Expert；CLAUDE.md 預設只包含最後安裝 Expert 的 identity（soul/rules/duties/expert.md），加上 `--with-all-experts` 旗標則同時輸出所有已安裝 Expert 的 expert.md（Identity + Capabilities 雙區段） | Must | 多 Expert 安裝流程；預設 identity-only 避免 context 過大，`--with-all-experts` 視需要開啟全能力 |
 | FR-02-4 | 支援 `--remove <expert.json>` 參數：從已安裝清單移除此 Expert，依剩餘 Expert 重建 symlink 和 CLAUDE.md；**全清再重建策略**：先清除 .claude/ 下所有 symlinks，再依剩餘 Expert（按 install_order）逐一重建，確保 symlink 集合與已安裝清單完全同步 | Must | 全清再重建與 --add 策略一致，邏輯簡單可靠，無需維護 reference count |
 | FR-02-5 | 支援 `--uninstall` 參數：清除所有 link 和 CLAUDE.md，但保留 `.connsys-jarvis/log/` 和 `.connsys-jarvis/memory/` | Must | 完全清除安裝，保留記憶；適合需要重裝但不希望遺失 Claude 工作記憶的情況 |
@@ -705,7 +697,6 @@ git -C "$CONNSYS_JARVIS_MEMORY_PATH" push origin main
 |------|------|--------|------|
 | FR-04-1 | 每個 Skill 以獨立資料夾存放，含 `SKILL.md`（YAML frontmatter + 內容） | Must | 結構化格式，未來遷移 OpenClaw 直接相容 |
 | FR-04-2 | `expert-discovery` skill 列出所有 Expert 及能力 | Must | 基本的系統可發現性 |
-| FR-04-3 | `handoff-protocol` skill 定義交接格式與流程 | Must | 所有 Expert 都需要知道如何交接 |
 | FR-04-4 | Expert 可有私有 skills，切換時一併替換 | Must | 不同專家有不同的知識庫 |
 | FR-04-5 | External skills 透過 registry 聲明，setup.py 自動建立 link | Should | 整合社群工具 |
 | FR-04-6 | 每個 Skill 資料夾除 `SKILL.md` 外，還需含 `README.md`、`test/`、`report/` | Must | 統一 Skill 資料夾標準，支援測試驗證與執行記錄 |
@@ -722,13 +713,13 @@ git -C "$CONNSYS_JARVIS_MEMORY_PATH" push origin main
 | 編號 | 需求 | 優先級 | 理由 |
 |------|------|--------|------|
 | FR-05-1 | setup.py 在 workspace 根目錄生成 `CLAUDE.md`（非 symlink） | Must | CLAUDE.md 是動態生成的，不放在 expert 資料夾中 |
-| FR-05-2 | 安裝單個 Expert 時，CLAUDE.md 以 `@include` 讀取該 Expert 資料夾的 `expert.md`、`soul.md`、`rules.md`、`duties.md` | Must | 直接引用 expert 資料夾的檔案，更新 expert 後不需重裝即可生效 |
-| FR-05-3 | 安裝多個 Expert 時，以**最後安裝的 Expert** 的 `soul.md`、`rules.md`、`duties.md` 為主 identity；所有已安裝 Expert 的 `expert.md` 均 @include | Must | 多 Expert 環境有清楚的 identity 主從關係 |
+| FR-05-2 | 安裝單個 Expert 時，CLAUDE.md 以 `@include` 讀取該 Expert 資料夾的 `soul.md`（若存在）、`expert.md`（若存在），排序為 **soul → expert**；CLAUDE.md 開頭加入 HTML comment header 標注生成資訊 | Must | soul 定義 identity 在前，expert 定義行為在後；HTML comment 提供 metadata 且不影響 Claude 解讀 |
+| FR-05-3 | 安裝多個 Expert 時，以**最後安裝的 Expert** 的 `soul.md` 為主 identity；所有已安裝 Expert 的 `expert.md` 均 @include | Must | 多 Expert 環境有清楚的 identity 主從關係 |
 | FR-05-4 | CLAUDE.md 末尾 `@include CLAUDE.local.md`（若不存在，Claude Code 忽略） | Must | 個人客製化入口 |
 | FR-05-5 | `CLAUDE.local.md` 不納入 `connsys-jarvis` repo，以 `.gitignore` 排除 | Must | 個人設定不進 repo |
 | FR-05-6 | Expert 資料夾**不含** `CLAUDE.md`（由 setup.py 在 workspace 根目錄生成） | Must | 避免混淆：expert 資料夾只含內容，workspace root 的 CLAUDE.md 才是生效的 |
-| FR-05-7 | **Base Expert 特殊規則**：凡 `expert.json` 中 `is_base: true` 的 Expert（不論是否為 identity），其 `soul.md`、`rules.md`、`duties.md`、`expert.md` 四份文件必須寫入 CLAUDE.md 的 `## Base Experts` 區段；identity 已在主區段處理，不重複輸出 | Must | Base Expert 定義整個 domain 的基礎知識，Claude 無論在何種模式下都必須能讀到 |
-| FR-05-8 | Base Expert 的偵測範圍包含**依賴樹遞迴掃描**：setup.py 在生成 CLAUDE.md 時，從每個已安裝 Expert 出發，遞迴讀取 `expert.json` 的 `dependencies` 欄位，任何中間節點的 `is_base: true` Expert 均須納入 Base Experts 區段；防止 diamond dependency 造成重複輸出 | Must | 安裝 wifi-bora-memory-slim-expert 時，其 dependency wifi-bora-base-expert 的四份文件也必須在 CLAUDE.md 中，不能因為未直接安裝而被遺漏 |
+| FR-05-7 | ~~**Base Expert 特殊規則**~~ | ~~Must~~ | **已移除**：Base Expert 的 soul.md/expert.md 不再強制寫入 CLAUDE.md；Base Expert 的知識改以 Skill 為主要載體，透過 dependency 的 skills 繼承機制提供 |
+| FR-05-8 | ~~Base Expert 依賴樹遞迴掃描~~ | ~~Must~~ | **已移除**：隨 FR-05-7 一併移除；Base Expert 知識透過 Skill symlink 機制傳遞 |
 
 ### FR-06：記憶系統（Workflow + 後臺）
 
@@ -740,40 +731,25 @@ git -C "$CONNSYS_JARVIS_MEMORY_PATH" push origin main
 | FR-06-2 | `session-end` hook 自動儲存 session 摘要 | Must | 確保記憶不遺失 |
 | FR-06-3 | `pre-compact` hook 在 context 壓縮前存快照（最可靠存檔點）| Must | 參考 claude-memory-engine 的三存檔點設計 |
 | FR-06-4 | `mid-session-checkpoint` hook 每 20 訊息存一次 | Should | 避免長 session 中途資料遺失 |
-| FR-06-5 | `session-start` hook 載入上次摘要 + 偵測待接 hand-off | Must | 新 session 能延續上次工作 |
+| FR-06-5 | `session-start` hook 載入上次摘要 | Must | 新 session 能延續上次工作 |
 | FR-06-6 | 記憶資料自動 push 到 `connsys-memory` repo | Must | 後臺收集與跨裝置同步 |
 
-#### FR-06B：本地三區記憶（Local Three-Zone Memory）
+#### FR-06B：本地二區記憶（Local Two-Zone Memory）
 
 本地記憶存放於 `workspace/.connsys-jarvis/memory/`，以 expert 名稱和日期分資料夾。session-stop hook 負責上傳至遠端 `connsys-memory` repo（git push）：
 
 | 編號 | 需求 | 優先級 | 理由 |
 |------|------|--------|------|
 | FR-06-7 | 建立 `.connsys-jarvis/memory/shared/` 區域（跨 Expert 共用知識） | Must | 儲存 project.md、conventions.md 等跨 Expert 都需要的知識，Expert 切換後仍可讀取 |
-| FR-06-8 | 建立 `.connsys-jarvis/memory/{expert-name}/{date}/` 區域（當前 Expert 的飛行中狀態），命名格式：`{HH:MM}-{expert-name}-memory.md` | Must | 以日期和時間戳命名，方便回溯；Expert 切換時歸檔 |
-| FR-06-9 | 建立 `.connsys-jarvis/memory/handoffs/{run-id}/` 區域（交接文件，寫入後唯讀）。**`run-id` 應使用 Claude Session ID**（由環境變數或 hook context 取得）；fallback 為 `{timestamp}-{random}` | Must | Session ID 作 run-id，同一人多視窗不衝突；handoff 文件 < 2000 tokens，新 Expert 由 session-start hook 讀取 |
-| FR-06-10 | `session-start` hook 自動偵測 `memory/handoffs/` 是否有待接的 hand-off 文件 | Must | 新 Expert 啟動時不需人工操作即可拿到上一個 Expert 的交接內容 |
+| FR-06-8 | 建立 `.connsys-jarvis/memory/working/{expert-name}/{date}/` 區域（當前 Expert 的飛行中狀態），命名格式：`{HH:MM}-{expert-name}-memory.md` | Must | 以日期和時間戳命名，方便回溯；Expert 切換時歸檔 |
 | FR-06-11 | 週期性記憶整理（Periodic Collection）：每日或每週自動彙整本地記憶至 connsys-memory | Should | 收集長期知識，供未來 framework-learn-expert 分析，但不造成即時系統負擔 |
-
-### FR-07：Hand-off 協議與 Expert 狀態機
-
-| 編號 | 需求 | 優先級 |
-|------|------|--------|
-| FR-07-1 | Hand-off 發生時機：切換 Expert 時（--switch）、session 結束時 | Must |
-| FR-07-2 | Hand-off 文件格式：YAML frontmatter + Markdown 摘要（< 2000 tokens）| Must |
-| FR-07-3 | 提供 `/handoff` 指令供同仁手動觸發 | Must |
-| FR-07-4 | Hand-off 文件同時存入本地 `memory/handoffs/{run-id}/`（當前 Expert 讀取用）及 `connsys-memory/employees/{id}/handoffs/`（遠端備份） | Must |
-| FR-07-5 | `expert.json` 的 `transitions` 欄位定義 Expert 的狀態機轉移（事件 → 下一個 Expert） | Must |
-| FR-07-6 | 轉移事件（如 BUILD_SUCCESS / BUILD_FAILED）由 Expert 在工作完成後主動發出，觸發 hand-off 流程 | Must |
-| FR-07-7 | 若轉移目標為 `null`（如 BUILD_FAILED），表示需要人工介入，Expert 應提示同仁並等待 | Must |
-| FR-07-8 | Stage 2 未來：符合條件的 transitions 可自動觸發 setup.py --init，無需人工操作 | Future |
 
 ### FR-08：後臺資料收集
 
 | 編號 | 需求 | 優先級 | 理由 |
 |------|------|--------|------|
 | FR-08-1 | `connsys-memory` 為單一 repo，以工號（git username）為子資料夾 | Must | 集中管理，不需每人維護自己的 repo |
-| FR-08-2 | 收集內容：session 摘要、hand-off 文件、使用的 Expert 名稱 | Must | 管理者可分析哪些 Expert 最常用、哪些流程最常卡關 |
+| FR-08-2 | 收集內容：session 摘要、使用的 Expert 名稱 | Must | 管理者可分析哪些 Expert 最常用、哪些流程最常卡關 |
 | FR-08-3 | 預設自動 push，可設定為手動 | Must | 減少同仁操作負擔 |
 
 ### FR-09：Human in the Loop（未來）
@@ -794,8 +770,7 @@ git -C "$CONNSYS_JARVIS_MEMORY_PATH" push origin main
 |------|------|------|
 | **可遷移性** | Skill 格式相容 OpenClaw；Hook 以 Shell/Python 實作（平台無關），未來遷移 OpenClaw 時改為 TypeScript | 不綁定特定平台是核心設計目標 |
 | **可擴充性** | 新增 Expert 只需新增資料夾 + expert.json，不修改其他 Expert | 降低同仁貢獻新 Expert 的門檻 |
-| **可稽核性** | Hand-off 與 session 記憶均透過 Git 保存，支援 diff 與歷史查詢 | 後臺分析與問題溯源的基礎 |
-| **Context 效率** | Hand-off 摘要 < 2000 tokens | 避免新 Expert 開始時就面臨 context 爆炸 |
+| **可稽核性** | session 記憶均透過 Git 保存，支援 diff 與歷史查詢 | 後臺分析與問題溯源的基礎 |
 | **相容性** | 完全運行於 Claude Code CLI，不依賴外部服務或資料庫 | 降低部署複雜度 |
 | **透明性** | 所有 hooks 以可讀的 Shell/Python 實作，同仁可自行檢視與修改；韌體工程師無需學習 JS 即可維護 | 參考 Harness Engineering 的精神：no black boxes |
 
@@ -810,8 +785,8 @@ git -C "$CONNSYS_JARVIS_MEMORY_PATH" push origin main
 - Symlink 在 Windows 環境下：setup.py 自動偵測並降級為 copy 模式（FR-02-15），功能相同，但更新 expert 內容後需重新執行 setup.py
 - `connsys-memory` repo 的 push 需要同仁對 remote 有寫入權限
 - Human in the Loop 功能為未來規劃，本期以人工切換 Expert 為主
-- **Skill 版本向後相容性**：SKILL.md frontmatter 的 `version` 欄位目前僅供顯示，尚未定義 Skill 升版後舊 hand-off 文件的相容性規則；Skill 的 breaking change 需人工審查
-- **Local memory GC 尚未設計**：`memory/shared/` 無限增長、`memory/handoffs/` 無保留期限機制，待真實使用 hand-off 功能後再行設計（詳見 Future Work FW-04）
+- **Skill 版本向後相容性**：SKILL.md frontmatter 的 `version` 欄位目前僅供顯示，尚未定義 Skill 升版後的相容性規則；Skill 的 breaking change 需人工審查
+- **Local memory GC 尚未設計**：`memory/shared/` 和 `memory/working/` 無限增長、無自動清理機制（詳見 Future Work FW-04）
 
 ### 假設
 
@@ -828,8 +803,8 @@ git -C "$CONNSYS_JARVIS_MEMORY_PATH" push origin main
 |------|------|--------|------|
 | FR-07-1 | **`framework-skill-create-flow`**：互動式引導工程師建立符合規範的 Skill。接收使用者對 Skill 用途的描述，輸出完整的 SKILL.md（含 YAML frontmatter、必要章節）、README.md，並放置於正確的五層目錄結構 | Must | 降低建立 Skill 的門檻；確保每個 Skill 包含所有必要章節（觸發條件、How it works、範例、限制），避免遺漏造成 AI 誤用 |
 | FR-07-2 | `framework-skill-create-flow` 輸出的 SKILL.md 須包含以下章節：**① YAML frontmatter**（name/description/version/domain/type/scope/tags）、**② Trigger**（觸發詞與條件）、**③ How it works**（步驟說明）、**④ 範例**（至少 1 個）、**⑤ 相依 Skills**（若有）、**⑥ 限制與邊界** | Must | 完整的 SKILL.md 讓 AI 準確理解何時呼叫、如何執行 |
-| FR-07-4 | **`framework-expert-create-flow`**：互動式引導工程師建立符合規範的 Expert 資料夾結構。接收使用者對 Expert 角色、職責、適用場景的描述，輸出高品質的 `soul.md`、`rules.md`、`duties.md`、`expert.md`、`expert.json` 初稿，並建立標準資料夾骨架 | Must | 降低建立 Expert 的門檻；確保四個核心文件（soul/rules/duties/expert）結構完整、語意清晰，避免 Expert 定義模糊導致 AI 行為不一致 |
-| FR-07-5 | `framework-expert-create-flow` 輸出的四個核心文件須符合：**soul.md**（Identity / Values & Principles / Communication Style / Personality）、**rules.md**（Must Always / Must Never / Boundaries / Conflict Resolution）、**duties.md**（Primary Duties / Segregation of Duties / KPIs）、**expert.md**（Overview / Key Behaviors / Tools Available / Skills 表格 / Hooks 表格） | Must | 四個文件各有明確的結構責任；結構一致才能讓 framework-base-expert 的 hand-off 和 discovery 機制正確運作 |
+| FR-07-4 | **`framework-expert-create-flow`**：互動式引導工程師建立符合規範的 Expert 資料夾結構。接收使用者對 Expert 角色、適用場景的描述，輸出 `expert.json`（必要），以及可選的 `soul.md`、`expert.md` 初稿，並建立標準資料夾骨架。Skills 為主要實作機制 | Must | 降低建立 Expert 的門檻；expert.json 為唯一必要檔案，soul.md 和 expert.md 為可選的 identity/behavior 補充 |
+| FR-07-5 | `framework-expert-create-flow` 輸出的文件須符合：**expert.json**（name/version/description/domain/dependencies/internal）、**soul.md**（可選：Identity / Values & Principles / Communication Style / Personality）、**expert.md**（可選：Overview / Key Behaviors / Tools Available / Skills 表格 / Hooks 表格） | Must | 結構一致才能讓 framework-base-expert 的 discovery 機制正確運作 |
 | FR-07-6 | `framework-expert-create-flow` 產生的 `expert.json` 初稿含正確的 schema 欄位（name/version/description/domain/type/dependencies/internal/exclude_symlink），dependencies 預設包含 `framework-base-expert` | Must | 減少工程師手動填寫 expert.json 的錯誤；新 Expert 預設繼承 framework-base-expert 的 hooks 和 commands |
 | FR-07-7 | 兩個 flow skill 均作為 `framework-base-expert` 的 internal skills，透過 `scripts/setup.py --init framework/framework-base-expert/expert.json` 安裝後即可使用 | Must | 建立工具隨 framework 安裝，不需額外操作 |
 
@@ -855,7 +830,7 @@ Phase 2：OpenClaw
 Phase 3：ADK/SDK（全自動）
   expert.json → AgentDefinition
   手動 install → Agent 自行 install
-  Markdown hand-off → JSON output_format
+  Markdown memory → JSON output_format
   Human in the Loop：風險評分自動決定介入等級
 ```
 
@@ -873,7 +848,6 @@ Phase 3：ADK/SDK（全自動）
 | Agent First | 從空白 workspace 開始，由 Expert 引導下載 code 的場景 |
 | Legacy | 同仁已手動下載 code，後續引入 Expert 的場景 |
 | codespace | Agent First 場景下，Expert 引導下載的 source code 集中目錄 |
-| Hand-off | Expert 切換或 session 結束時產生的結構化上下文摘要文件 |
 | common/ | 所有 Expert 共用的 skills/hooks/commands |
 | external/ | 整合的社群優質工具，以工具名稱為資料夾名 |
 | expert.md | 由  setup.py 從 expert.json 生成的可讀 Markdown |
@@ -922,7 +896,7 @@ AI Agent 生態系統的安全威脅已有實際案例：
 
 **設計方向**：
 ```
-使用記憶（sessions/ + handoffs/）
+使用記憶（sessions/）
     → framework-learn-expert 分析
     → 找出 pattern（常見錯誤、成功解法）
     → 自動產生/更新 SKILL.md
@@ -971,7 +945,7 @@ AI Agent 生態系統的安全威脅已有實際案例：
 
 **背景**：
 
-目前 `memory/shared/`、`memory/working/`、`memory/handoffs/` 皆無自動清理機制，長期使用後可能無限增長。
+目前 `memory/shared/` 和 `memory/working/` 無自動清理機制，長期使用後可能無限增長。
 
 **目標**：
 
@@ -981,11 +955,11 @@ AI Agent 生態系統的安全威脅已有實際案例：
 
 | 編號 | 需求 | 優先級 |
 |------|------|--------|
-| FW-04-1 | 定義 `memory/handoffs/` 的保留期限（如保留最近 30 個 run-id）| Future |
+| FW-04-1 | 定義 `memory/working/` 的保留期限（如保留最近 30 天）| Future |
 | FW-04-2 | 定義 `memory/shared/` 的壓縮策略（如超過一定大小自動摘要）| Future |
 | FW-04-3 | 由 session-end hook 或獨立 GC script 負責定期清理 | Future |
 
-> 此功能待真實使用 hand-off 功能、累積足夠資料後再行設計。
+> 此功能待真實使用累積足夠資料後再行設計。
 
 ---
 
@@ -998,6 +972,34 @@ AI Agent 生態系統的安全威脅已有實際案例：
 | 編號 | 需求 | 優先級 |
 |------|------|--------|
 | FW-05-1 | 定義 expert-discovery skill 的自動推薦邏輯（根據任務描述比對 Expert description 排序）| Future |
+
+---
+
+### FW-06：Skill 使用分析（Future）
+
+**背景**：目前無法得知各 Skill 的實際使用狀況，難以判斷哪些 Skill 品質好、哪些需要改進、哪些需求尚未被覆蓋。
+
+**目標**：
+
+| 編號 | 需求 | 優先級 |
+|------|------|--------|
+| FW-06-1 | 收集 Skill 使用頻率、錯誤率、缺失需求（使用者想用但不存在的 Skill） | Future |
+| FW-06-2 | 分析資料儲存於 `.connsys-jarvis/analytics/` | Future |
+| FW-06-3 | 隱私原則：只記錄 Skill 名稱和執行狀態（success/fail），不記錄對話內容或使用者輸入 | Future |
+
+---
+
+### FW-07：Plugin 生成
+
+**背景**：為支援未來 Agent 市場（marketplace）與跨平台發布，需要從 Expert 定義自動生成標準化的 plugin 描述檔。
+
+**目標**：
+
+| 編號 | 需求 | 優先級 |
+|------|------|--------|
+| FW-07-1 | 提供 `create_plugin_from_expert.py` 工具，讀取 Expert 的 `expert.json`、`soul.md`、`expert.md`，自動生成 `plugin.json`（plugin 描述）和 `marketplace.json`（發布 metadata） | Should |
+| FW-07-2 | 生成的 `plugin.json` 包含：name、description、version、capabilities、dependencies | Should |
+| FW-07-3 | `marketplace.json` 包含：display_name、tags、category、author、screenshots（placeholder） | Should |
 
 ---
 
