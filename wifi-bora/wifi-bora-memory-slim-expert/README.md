@@ -16,6 +16,6 @@ python connsys-jarvis/setup.py --init wifi-bora/experts/wifi-bora-memory-slim-ex
 
 ## 依賴的 Experts
 
-- `framework-base-expert`（hooks + skills）
-- `wifi-bora-base-expert`（skills）
-- `sys-bora-preflight-expert`（skills）
+- `framework-base-expert`
+- `wifi-bora-base-expert`
+- `sys-bora-preflight-expert`

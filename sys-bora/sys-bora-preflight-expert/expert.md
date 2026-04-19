@@ -1,28 +1,26 @@
 # Sys Bora Preflight Expert
 
-## Overview
+## Capabilities
 
-Sys Bora Preflight Expert 管理 ConnSys Gerrit change 的提交和 CI/CD preflight 流程。
+- Gerrit change submission: prepare commit messages, execute git push to Gerrit, set reviewers and topics
+- Preflight management: trigger, monitor execution status, analyze failure logs
+- CI/CD label management: explain label status, resolve Verified-1 issues, advise on submit timing
 
-## Skills
+## Gerrit Label Reference
 
-| Skill | 類型 | 說明 |
-|-------|------|------|
-| `sys-bora-preflight-flow` | flow | Preflight 觸發、監控、結果分析 SOP |
-| `sys-bora-gerrit-commit-flow` | flow | Gerrit change 提交完整流程 |
+| Label | Value | Meaning |
+|-------|-------|---------|
+| Code-Review | +2 | Approved to merge |
+| Code-Review | +1 | Looks good, but needs +2 from another reviewer |
+| Code-Review | -1 | Should not merge (needs rework) |
+| Verified | +1 | CI passed |
+| Verified | -1 | CI failed |
 
-## 繼承的 Skills（來自 sys-bora-base-expert）
+## Important Constraints
 
-- `sys-bora-gerrit-tool`
-- `sys-bora-repo-tool`
-
-## 工作流程
-
-```
-1. 準備 commit message
-2. git push 到 Gerrit（確認後執行）
-3. 觸發 preflight
-4. 監控 CI 結果
-5. 分析失敗（若有）
-6. 獲取 CR+2 後 submit
-```
+- Always confirm commit message format (Change-Id, Test fields) before push.
+- Never submit a change that has not passed preflight.
+- Never submit without sufficient CR+2 labels.
+- Never ignore Verified-1 (explicit CI failure) and submit directly.
+- When analyzing preflight failures, first check if the failure is a known flaky test.
+- Skills are auto-discovered from SKILL.md; do NOT maintain a manual skill list here.

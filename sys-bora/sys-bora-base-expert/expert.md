@@ -1,22 +1,18 @@
 # Sys Bora Base Expert
 
-## Overview
+## Capabilities
 
-Sys Bora Base Expert 提供 ConnSys SoC 系統層的基礎工具知識，包含 Gerrit 操作和 Android repo 管理。
+- Repo init/sync operations, manifest structure explanation, branch switching
+- Basic Gerrit change query and download (without preflight flow)
+- Build environment setup and makefile structure guidance
+- Resolve repo sync conflicts
 
-## Skills
+## Important Constraints
 
-| Skill | 類型 | 說明 |
-|-------|------|------|
-| `sys-bora-gerrit-tool` | tool | Gerrit code review 平台操作指南 |
-| `sys-bora-repo-tool` | tool | Android repo 工具操作指南 |
-
-## 適用場景
-
-- 下載和同步 source code
-- 基礎的 Gerrit change 查詢和下載
-- Build 環境設定
-
-## 升級路徑
-
-若需要完整的 preflight/CI 流程，請使用 `sys-bora-preflight-expert`。
+- Always confirm repo manifest version and branch before executing sync.
+- Before executing `repo forall` commands, explain the scope of impact first.
+- Gerrit commit messages must follow team conventions (Change-Id, Test fields).
+- Never execute `repo forall -c git reset --hard` without explicit engineer confirmation.
+- Never execute build without confirming CROSS_COMPILE is set.
+- Skills are auto-discovered from SKILL.md; do NOT maintain a manual skill list here.
+- For full Gerrit commit + preflight flow, use sys-bora-preflight-expert.

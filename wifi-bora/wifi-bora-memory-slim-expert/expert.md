@@ -1,57 +1,38 @@
 # WiFi Bora Memory Slim Expert
 
-## Overview
+## What This Expert Solves
 
-WiFi Bora Memory Slim Expert 專門處理 Wi-Fi Bora 韌體的 ROM/RAM footprint 分析與精簡。此 Expert 整合了 framework、wifi-bora-base 和 sys-bora-preflight 的能力，提供端到端的記憶體優化工作流程。
+- ROM/RAM footprint analysis and reduction for WiFi Bora firmware
+- Dead code identification via AST analysis and LSP symbol tracing
+- Linker script section optimization
+- Symbol map analysis for identifying top consumers
 
-## 觸發關鍵字
+## Critical Constraints
 
-- memory slim、ROM 優化、RAM 分析、footprint、記憶體
+### Before Starting Any Slim Work
+- Confirm the target: how much ROM/RAM to save, and is there a deadline?
+- Always analyze the .map file first — never propose slim suggestions without data
 
-## Skills
+### Risk Assessment Rules
 
-| Skill | 類型 | 說明 |
-|-------|------|------|
-| `wifi-bora-memslim-flow` | flow | 記憶體精簡端到端 SOP |
-| `wifi-bora-ast-tool` | tool | AST 分析找出未使用的函式和變數 |
-| `wifi-bora-lsp-tool` | tool | LSP-based symbol 引用追蹤 |
+| Operation | Risk | Required Verification |
+|-----------|------|----------------------|
+| Disable feature via Kconfig | Medium | Confirm feature is not in use |
+| Modify linker script section | Medium | Build verification |
+| Remove dead code | Medium | Static analysis confirmation |
+| Modify struct layout | High | Binary compatibility check |
+| git push | High | Human confirmation |
 
-## 繼承的 Skills（來自 dependencies）
+### Human-in-the-Loop (Mandatory)
+- `git push` — must ask for confirmation before pushing
+- `make clean` — must ask for confirmation before cleaning build
 
-### From framework-base-expert
-- `framework-expert-discovery-knowhow`
-- `framework-handoff-flow`
-- `framework-memory-tool`
+### AST Analysis Scope
+- When using AST tool to find dead code, always confirm analysis scope to avoid false positives from cross-module references
 
-### From wifi-bora-base-expert
-- `wifi-bora-arch-knowhow`
-- `wifi-bora-memory-knowhow`
-- `wifi-bora-linkerscript-knowhow`
-- `wifi-bora-symbolmap-knowhow`
-- `wifi-bora-build-flow`
+## Commonly Forgotten Rules
 
-### From sys-bora-preflight-expert
-- `sys-bora-gerrit-commit-flow`
-- `sys-bora-preflight-flow`
-
-## 工作流程
-
-```
-1. 取得 .map 檔 → wifi-bora-symbolmap-knowhow 分析
-2. AST 分析     → wifi-bora-ast-tool 找 dead code
-3. 精簡執行     → wifi-bora-memslim-flow SOP
-4. 驗證 build   → wifi-bora-build-flow
-5. 提交 Gerrit  → sys-bora-gerrit-commit-flow
-```
-
-## Human-in-the-Loop
-
-以下操作**必須**詢問工程師確認：
-- `git push`：推送前確認
-- `make clean`：清除 build 前確認
-
-## 狀態轉移
-
-| 狀態 | 觸發條件 | 下一個 Expert |
-|------|---------|--------------|
-| `ANALYSIS_DONE` | 精簡分析完成，進入提交流程 | wifi-bora-cr-robot-expert |
+- Backup linker script before modification and explain the impact of changes
+- Compare map files before and after each slim step to confirm actual savings
+- Never remove code on the critical protocol path, even if it appears unused
+- Every slim proposal must include estimated savings (in bytes) and risk level

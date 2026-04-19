@@ -11,7 +11,6 @@ python connsys-jarvis/setup.py --init framework/experts/framework-base-expert/ex
 ## 包含的 Skills
 
 - `framework-expert-discovery-knowhow` — Expert 探索與選擇
-- `framework-handoff-flow` — Expert 交接 SOP
 - `framework-memory-tool` — 記憶系統操作工具
 
 ## 包含的 Hooks
@@ -25,4 +24,3 @@ python connsys-jarvis/setup.py --init framework/experts/framework-base-expert/ex
 ## 包含的 Commands
 
 - `framework-experts-tool` — `/experts` 指令實作
-- `framework-handoff-tool` — `/handoff` 指令實作
