@@ -1,10 +1,12 @@
 ---
+name: framework-base-expert-list-cmd
 description: 列出所有可用 Expert 及其能力，協助選擇合適的 Expert
+version: 1.0.0
 argument-hint: "[list|info <name>|recommend <task>]"
 allowed-tools: Read, Bash(python3:*)
 ---
 
-# /framework-base-expert-list-cmd — Expert 探索指令
+# Expert 探索指令
 
 列出所有已安裝的 Expert 及其能力，協助工程師選擇合適的 Expert 處理當前任務。
 

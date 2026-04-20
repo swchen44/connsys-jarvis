@@ -35,17 +35,19 @@ class TestIntegrationInit:
     def test_skills_symlinks_created(self, workspace, framework_expert_json):
         self._run_init(workspace, "framework/framework-base-expert/expert.json")
         skills = list((workspace / ".claude" / "skills").iterdir())
-        assert len(skills) == 4
+        assert len(skills) == 5
 
     def test_hooks_symlinks_created(self, workspace):
         self._run_init(workspace, "framework/framework-base-expert/expert.json")
         hooks = list((workspace / ".claude" / "hooks").iterdir())
         assert len(hooks) == 5
 
-    def test_commands_symlinks_created(self, workspace):
+    def test_commands_dir_empty_or_absent(self, workspace):
         self._run_init(workspace, "framework/framework-base-expert/expert.json")
-        cmds = list((workspace / ".claude" / "commands").iterdir())
-        assert len(cmds) == 1  # framework-experts-tool only (handoff-tool removed)
+        cmds_dir = workspace / ".claude" / "commands"
+        if cmds_dir.exists():
+            assert len(list(cmds_dir.iterdir())) == 0
+        # list-cmd moved to skills/, so no commands expected
 
     def test_claude_md_is_generated(self, workspace):
         self._run_init(workspace, "framework/framework-base-expert/expert.json")
@@ -72,7 +74,7 @@ class TestIntegrationInit:
         self._run_init(workspace, "framework/framework-base-expert/expert.json")
         self._run_init(workspace, "framework/framework-base-expert/expert.json")
         skills = list((workspace / ".claude" / "skills").iterdir())
-        assert len(skills) == 4
+        assert len(skills) == 5
 
     def test_memory_preserved_after_init(self, workspace):
         """--init 不觸碰 memory/。"""
@@ -110,14 +112,14 @@ class TestIntegrationAdd:
         self._run_init(workspace, "framework/framework-base-expert/expert.json")
         self._run_add(workspace, "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
         count = len(list((workspace / ".claude" / "skills").iterdir()))
-        assert count == 15
+        assert count == 16
 
     def test_add_idempotent_second_call_no_error(self, workspace):
         self._run_init(workspace, "framework/framework-base-expert/expert.json")
         self._run_add(workspace, "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
         self._run_add(workspace, "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
         count = len(list((workspace / ".claude" / "skills").iterdir()))
-        assert count == 15
+        assert count == 16
 
     def test_add_installed_json_has_two(self, workspace):
         self._run_init(workspace, "framework/framework-base-expert/expert.json")
@@ -148,7 +150,7 @@ class TestIntegrationRemove:
         self._setup(workspace)
         inst.cmd_remove(workspace, "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
         count = len(list((workspace / ".claude" / "skills").iterdir()))
-        assert count == 4
+        assert count == 5
 
     def test_shared_skills_preserved(self, workspace):
         self._setup(workspace)
