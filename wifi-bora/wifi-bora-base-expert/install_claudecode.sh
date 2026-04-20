@@ -42,6 +42,7 @@ fi
 # scope. Each plugin must be installed explicitly. (As of 2026-04)
 echo "[2/3] Installing plugins..."
 PLUGINS=(
+  "sys-bora-base-expert"
   "wifi-bora-base-expert"
 )
 INSTALLED=$(claude plugin list --json 2>/dev/null || echo "[]")

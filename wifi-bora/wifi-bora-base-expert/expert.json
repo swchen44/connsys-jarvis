@@ -8,10 +8,14 @@
   "is_base": true,
   "triggers": [],
   "transitions": {},
-  "dependencies": [],
+  "dependencies": [
+    {
+      "expert": "sys-bora/sys-bora-base-expert",
+      "skills": "ALL"
+    }
+  ],
   "internal": {
-    "skills": ["wifi-bora-protocol-knowhow", "wifi-bora-arch-knowhow", "wifi-bora-build-flow",
-               "wifi-bora-memory-knowhow", "wifi-bora-linkerscript-knowhow", "wifi-bora-symbolmap-knowhow"],
+    "skills": ["ALL"],
     "hooks": [],
     "agents": [],
     "commands": [],
