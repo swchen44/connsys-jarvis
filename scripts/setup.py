@@ -1857,6 +1857,84 @@ def cmd_doctor(workspace: Path) -> None:
         if f4_ok and skill_dirs_all:
             print(f"    ✅ All skills are referenced")
 
+        # F5: Plugin JSON 同步檢查（expert.json ↔ plugin.json ↔ marketplace.json）
+        print(f"\n  F5 Plugin JSON Dependency Sync:")
+
+        # 一次性讀入 marketplace.json
+        marketplace_path = jarvis_dir / ".claude-plugin" / "marketplace.json"
+        marketplace_deps: dict = {}  # name → [dep_names]
+        if marketplace_path.exists():
+            try:
+                mkt_data = json.loads(marketplace_path.read_text())
+                for entry in mkt_data.get("plugins", []):
+                    marketplace_deps[entry["name"]] = entry.get("dependencies", [])
+            except Exception:
+                pass
+
+        f5_ok = True
+        for exp_dir in expert_dirs:
+            rel        = str(exp_dir.relative_to(jarvis_dir))
+            expert_json = exp_dir / "expert.json"
+            if not expert_json.exists():
+                continue
+            try:
+                data = json.loads(expert_json.read_text())
+            except Exception:
+                continue
+
+            expert_name = data.get("name", exp_dir.name)
+
+            # 1. 從 expert.json 推導期望的 dep names（直接依賴，不遞迴）
+            expected_deps = []
+            for dep in data.get("dependencies", []):
+                dep_rel = dep.get("expert", "") if isinstance(dep, dict) else str(dep)
+                if dep_rel:
+                    dep_json_path = jarvis_dir / dep_rel / "expert.json"
+                    if dep_json_path.exists():
+                        try:
+                            dep_data = json.loads(dep_json_path.read_text())
+                            expected_deps.append(dep_data["name"])
+                        except Exception:
+                            pass
+
+            # 2. 讀 plugin.json deps
+            plugin_json_path = exp_dir / ".claude-plugin" / "plugin.json"
+            plugin_deps: list = []
+            if plugin_json_path.exists():
+                try:
+                    pj = json.loads(plugin_json_path.read_text())
+                    plugin_deps = pj.get("dependencies", [])
+                except Exception:
+                    pass
+
+            # 3. 讀 marketplace.json deps
+            mkt_deps = marketplace_deps.get(expert_name, [])
+
+            # 4. 比較（set，不管順序）
+            expected_set   = set(expected_deps)
+            plugin_mismatch = set(plugin_deps) != expected_set
+            mkt_mismatch    = set(mkt_deps) != expected_set
+
+            # 5. 顯示結果
+            dep_display = ", ".join(expected_deps) if expected_deps else "(none)"
+            if plugin_mismatch or mkt_mismatch:
+                print(f"    ❌ {rel}")
+                print(f"       expert.json deps : {dep_display}")
+                if plugin_mismatch:
+                    print(f"       plugin.json deps : {', '.join(plugin_deps) or '(none)'}")
+                if mkt_mismatch:
+                    print(f"       marketplace deps : {', '.join(mkt_deps) or '(none)'}")
+                print(f"       → Fix: python connsys-jarvis/framework/framework-base-expert"
+                      f"/skills/framework-expert-create-flow/scripts/create_plugin_from_expert.py")
+                all_ok = False
+                f5_ok  = False
+                logger.debug("cmd_doctor: F5 dep mismatch %s", rel)
+            else:
+                print(f"    ✅ {rel} — deps: {dep_display}")
+
+        if f5_ok:
+            print(f"    ✅ All experts in sync")
+
     # ── 總體狀態 ──
     print()
     if all_ok:
