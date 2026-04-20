@@ -90,7 +90,7 @@ def generate_plugin_json(expert_json_path: Path, expert_data: dict,
     if expert_data.get("triggers"):
         plugin["keywords"] = expert_data["triggers"]
 
-    # Component directories: explicitly list if they exist
+    # Component directories & config files: list if they exist
     # Ref: https://code.claude.com/docs/zh-TW/plugins-reference
     expert_dir = expert_json_path.parent
     if (expert_dir / "skills").is_dir():
@@ -99,6 +99,14 @@ def generate_plugin_json(expert_json_path: Path, expert_data: dict,
         plugin["commands"] = ["./commands/"]
     if (expert_dir / "agents").is_dir():
         plugin["agents"] = ["./agents/"]
+    if (expert_dir / "hooks" / "hooks.json").is_file():
+        plugin["hooks"] = "./hooks/hooks.json"
+    if (expert_dir / ".mcp.json").is_file():
+        plugin["mcpServers"] = "./.mcp.json"
+    if (expert_dir / ".lsp.json").is_file():
+        plugin["lspServers"] = "./.lsp.json"
+    if (expert_dir / "monitors" / "monitors.json").is_file():
+        plugin["monitors"] = "./monitors/monitors.json"
 
     # Dependencies: map to plugin dependency names
     dep_names = []
