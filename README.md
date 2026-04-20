@@ -216,3 +216,163 @@ uvx pytest scripts/tests/e2e/ -v           # CLI 黑箱 E2E 測試
 ## Roadmap
 
 - Skill 使用分析（收集頻率、錯誤率、缺失需求）
+
+---
+
+## 開發者指南
+
+本章節說明如何在本地開發新的 Expert 或 Skill，並完成從建立到發佈的完整流程。
+
+### 步驟 1：建立 Workspace 資料夾
+
+```bash
+mkdir ~/workspace && cd ~/workspace
+```
+
+> Workspace 是所有 Expert repo 和工作目錄的共同根目錄，**不要**在已有 git repo 的資料夾內建立。
+
+---
+
+### 步驟 2：Clone Repo 並安裝 framework-base-expert
+
+```bash
+# Clone repo
+git clone https://github.com/swchen44/connsys-jarvis.git
+
+# 至少安裝 framework-base-expert（提供 skill/expert 建立流程）
+python3 connsys-jarvis/scripts/setup.py --init framework/framework-base-expert/expert.json
+
+# 啟動環境變數（每次開新 shell 都要執行）
+source .connsys-jarvis/.env
+```
+
+> `framework-base-expert` 包含 `framework-skill-create-flow` 和 `framework-expert-create-flow`，是開發的最小必要基礎。
+
+若需要安裝其他 Expert（例如你要在 wifi-bora domain 下開發）：
+
+```bash
+python3 connsys-jarvis/scripts/setup.py --add wifi-bora/wifi-bora-base-expert/expert.json
+```
+
+---
+
+### 步驟 3：使用 AI 引導建立 Skill 或 Expert
+
+啟動 Claude Code，在對話中輸入以下短名即可觸發引導流程：
+
+```
+/framework-skill-create-flow    ← 建立新 Skill
+/framework-expert-create-flow   ← 建立新 Expert
+```
+
+**建立 Skill 的注意事項：**
+- Skill 命名格式：`{domain}-{name}-{type}`（type = flow / knowhow / tool）
+- SKILL.md frontmatter **務必加上 `name` 欄位**，否則短名呼叫會失敗：
+  ```yaml
+  ---
+  name: my-skill-name
+  description: ...
+  ---
+  ```
+- 使用 `framework-skill-create-flow` 的 **eval 功能**自動產生 test case，驗證 skill 的觸發條件和預期輸出
+- 建立後檢查 skill 目錄下的 `README.md` 是否完整
+
+---
+
+### 步驟 4：手動 Symlink 快速測試
+
+不需要走完整安裝流程，直接 symlink skill 到 `.claude/skills/` 即可在 Claude Code 中立即測試：
+
+```bash
+# 建立 symlink（從 workspace 根目錄執行）
+ln -s $(pwd)/connsys-jarvis/<domain>/<expert>/skills/<skill-name> \
+      .claude/skills/<skill-name>
+
+# 範例：測試 wifi-bora-memslim-flow
+ln -s $(pwd)/connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/skills/wifi-bora-memslim-flow \
+      .claude/skills/wifi-bora-memslim-flow
+```
+
+**測試時觀察 Token 用量：**
+
+在 Claude Code 對話中執行：
+```
+/context
+```
+可查看當前 context 使用量。測試 skill 載入前後對比，確認 SKILL.md 內容精簡不過度膨脹 context。
+
+> 測試完畢記得移除暫時 symlink，再用 `setup.py --add` 正式安裝。
+
+---
+
+### 步驟 5：生成 plugin.json 和 marketplace.json
+
+開發完成後，執行腳本更新 Plugin 清單：
+
+```bash
+# 預覽（不寫檔）
+python3 connsys-jarvis/framework/framework-base-expert/skills/framework-expert-create-flow/scripts/create_plugin_from_expert.py --dry-run
+
+# 正式生成
+python3 connsys-jarvis/framework/framework-base-expert/skills/framework-expert-create-flow/scripts/create_plugin_from_expert.py
+```
+
+生成的檔案：
+- `<expert>/.claude-plugin/plugin.json` — 每個 expert 的 Claude Code Plugin 宣告（含 dependencies）
+- `.claude-plugin/marketplace.json` — Marketplace 總覽（含各 expert 的直接依賴）
+
+---
+
+### 步驟 6：執行 Doctor 檢查
+
+Push 前執行完整健康診斷，確認所有結構正確：
+
+```bash
+python3 connsys-jarvis/scripts/setup.py --doctor
+```
+
+重點檢查項目：
+- **F2** expert.json 必要欄位齊全
+- **F3** 所有 skill 資料夾都有 SKILL.md
+- **F5 Plugin JSON Dependency Sync** — 確認 expert.json / plugin.json / marketplace.json 三份 JSON 的 dependencies 一致。若出現 ❌，執行步驟 5 重新生成即可
+
+所有項目顯示 `✅` 才可繼續。
+
+---
+
+### 步驟 7：Push for Review
+
+**GitHub PR：**
+```bash
+git checkout -b feat/my-new-skill
+git add connsys-jarvis/<domain>/<expert>/
+git commit -m "feat: add <skill-name> skill to <expert>"
+git push origin feat/my-new-skill
+# 到 GitHub 開 PR
+```
+
+**Gerrit：**
+```bash
+git add connsys-jarvis/<domain>/<expert>/
+git commit -m "feat: add <skill-name> skill to <expert>"
+git push origin HEAD:refs/for/main
+```
+
+---
+
+### 步驟 8：使用者角度安裝測試
+
+Push 合併後，以使用者身份從頭測試安裝流程：
+
+```bash
+# 1. 加入 Marketplace
+claude plugin marketplace add "https://github.com/swchen44/connsys-jarvis.git" --scope project
+
+# 2. 安裝目標 Expert（Claude Code 自動安裝所有 dependencies）
+claude plugin install <expert-name>@connsys-jarvis --scope project
+
+# 3. 確認安裝結果
+claude plugin list --json
+```
+
+確認安裝的 plugin 數量符合預期（目標 expert + 所有遞移依賴），重啟 Claude Code 後驗證 skill 可正常呼叫。
