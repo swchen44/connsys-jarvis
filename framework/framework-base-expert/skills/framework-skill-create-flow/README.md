@@ -65,6 +65,16 @@ Trigger 優化流程：產生 20 組 query（10 should-trigger、10 should-not-t
 
 ---
 
+## Plugin 安裝時的 Skill 命名
+
+透過 Claude Code Plugin（Marketplace）安裝時，skill 全名會加上 plugin 前綴（如 `framework-base-expert:framework-skill-create-flow`）。但使用者**只需輸入短名**（如 `/framework-skill-create-flow`），Claude Code 會自動匹配。
+
+**原因**：Claude Code 的 `findCommand()` 會比對 SKILL.md frontmatter 的 `name` 欄位。
+
+**因此建立 Skill 時，務必在 SKILL.md frontmatter 加上 `name` 欄位。** 這不只影響 Plugin 模式，也是 Claude Code 識別 skill 的標準做法。
+
+---
+
 ## TODO / 限制
 
 - [ ] 加入 connsys-jarvis 專屬的 eval assertions（例如「SKILL.md frontmatter 為有效 YAML」、「expert.json 已正確更新」）

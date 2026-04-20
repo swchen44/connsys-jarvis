@@ -201,6 +201,19 @@ Skill 命名規則：`{domain}-{name}-{type}`
 - `create_plugin_from_expert.py` 從 expert.json 生成 `plugin.json` + `marketplace.json`
 - **限制**：Plugin 無法注入 CLAUDE.md，需額外執行 `setup.py` 補齊
 
+### Skill 命名與短名呼叫
+
+Plugin 安裝後，skill 全名會帶 plugin 前綴（如 `framework-base-expert:framework-skill-create-flow`）。但使用者**只需輸入短名即可呼叫**：
+
+```
+/framework-skill-create-flow        ← 短名，Claude Code 自動匹配
+/framework-base-expert:framework-skill-create-flow  ← 全名，也可以用
+```
+
+**原理**：Claude Code 的 `findCommand()` 會比對 SKILL.md frontmatter 的 `name` 欄位。只要 frontmatter 有 `name`，短名就能匹配。這對 skills、commands、agents 都適用。
+
+> **撰寫 SKILL.md 時，務必在 frontmatter 加上 `name` 欄位。**
+
 ---
 
 ## 執行測試

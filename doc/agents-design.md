@@ -1602,7 +1602,18 @@ description: 列出所有可用的 Expert
 | **跨 Expert 引用用 dependencies** | 若需要其他 Expert 的資源，透過 `expert.json` 的 `dependencies` 機制，不在 plugin.json 中直接引用其他 Expert 的檔案 |
 | **`${CLAUDE_PLUGIN_ROOT}` 環境變數** | Hook 腳本中可使用 `${CLAUDE_PLUGIN_ROOT}` 取得 plugin 根目錄的絕對路徑，避免 hardcode 路徑或使用 `..` |
 
-### 14.4 SKILL.md 遷移格式
+### 14.4 Plugin Skill 命名與短名呼叫
+
+Plugin 安裝後，所有 skill/command/agent 的內部全名為 `pluginName:skillDirName`（如 `framework-base-expert:framework-skill-create-flow`）。但使用者只需輸入短名（如 `/framework-skill-create-flow`）即可呼叫。
+
+**原理**：Claude Code 的 `findCommand()` 比對邏輯（`src/commands.ts`）除了精確比對 `_.name`（全名），也會比對 `getCommandName()`，而 `getCommandName()` 回傳 `userFacingName()` = SKILL.md frontmatter 的 `name` 欄位。
+
+因此：
+- SKILL.md / command.md / agent.md 的 frontmatter **務必包含 `name` 欄位**
+- `name` 欄位的值就是使用者輸入的短名
+- 使用 `setup.py` 安裝（symlink）和 Plugin 安裝（marketplace）在使用體驗上沒有差異
+
+### 14.5 SKILL.md 遷移格式
 
 加入 `metadata.openclaw` 區塊即可，內容不需修改：
 

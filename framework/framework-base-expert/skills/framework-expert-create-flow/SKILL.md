@@ -112,6 +112,7 @@ The Expert directory doubles as a Claude Code Plugin package. The full structure
 **Command metadata:**
 ```yaml
 ---
+name: command-short-name
 description: Command description
 argument-hint: "[args]"
 allowed-tools: Read, Bash(*)
@@ -121,7 +122,7 @@ allowed-tools: Read, Bash(*)
 **Skill metadata:**
 ```yaml
 ---
-name: Skill Name
+name: skill-short-name
 description: When to use this skill
 version: 1.0.0
 ---
@@ -130,11 +131,14 @@ version: 1.0.0
 **Agent metadata:**
 ```yaml
 ---
+name: agent-short-name
 description: Agent role and expertise
 capabilities:
   - Specific task 1
 ---
 ```
+
+> **重要**：`name` 欄位決定使用者能否用短名呼叫。Plugin 安裝後全名為 `pluginName:name`（如 `framework-base-expert:framework-skill-create-flow`），但 Claude Code 會用 frontmatter `name` 做匹配，所以使用者只需輸入 `/framework-skill-create-flow` 即可呼叫。**務必在所有 SKILL.md / command.md / agent.md 的 frontmatter 加上 `name` 欄位。**
 
 Create the directory, then proceed file by file.
 

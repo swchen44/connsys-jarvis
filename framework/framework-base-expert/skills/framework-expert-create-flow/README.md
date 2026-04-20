@@ -48,6 +48,16 @@ framework-team
 
 ---
 
+## Plugin 安裝時的 Skill 命名
+
+透過 Claude Code Plugin（Marketplace）安裝時，所有 skill/command/agent 的全名會加上 plugin 前綴（如 `framework-base-expert:framework-expert-create-flow`）。但使用者**只需輸入短名**（如 `/framework-expert-create-flow`），Claude Code 會自動匹配。
+
+**原因**：Claude Code 的 `findCommand()` 除了比對全名，也會比對 frontmatter 的 `name` 欄位。只要 SKILL.md / command.md / agent.md 的 frontmatter 有 `name` 欄位，短名就能匹配。
+
+**因此建立 Expert 時，務必確保所有 SKILL.md 都有 `name` frontmatter 欄位。**
+
+---
+
 ## TODO / 限制
 
 - [ ] 支援從現有 expert 複製為範本（`--from-template` 模式）
