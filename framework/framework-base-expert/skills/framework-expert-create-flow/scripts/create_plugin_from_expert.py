@@ -43,13 +43,22 @@ logger = logging.getLogger("create_plugin")
 # ─── Path Helpers ─────────────────────────────────────────────────────────────
 
 def find_repo_root(start: Path = None) -> Path:
-    """Find connsys-jarvis repo root by looking for known markers."""
+    """Find connsys-jarvis repo root by looking for known markers.
+
+    Script location: framework/.../framework-expert-create-flow/scripts/
+    → repo root is 5 levels up from this file.
+    """
     if start is None:
-        # Try script location first
-        start = Path(__file__).resolve().parent.parent.parent
-    for candidate in [start, start.parent, start.parent.parent]:
-        if (candidate / "scripts" / "setup.py").exists():
-            return candidate
+        # Walk up from script location until we find the repo root marker
+        current = Path(__file__).resolve().parent
+        for _ in range(8):  # max 8 levels up
+            if (current / "scripts" / "setup.py").exists():
+                return current
+            current = current.parent
+    else:
+        for candidate in [start, start.parent, start.parent.parent]:
+            if (candidate / "scripts" / "setup.py").exists():
+                return candidate
     # Fallback: cwd
     return Path.cwd()
 

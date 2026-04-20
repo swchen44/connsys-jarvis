@@ -121,8 +121,7 @@ npx skills add swchen44/connsys-jarvis --agent claude-code
 5. **執行 `create_plugin_from_expert.py`** — 生成 plugin.json 供 Marketplace 使用
 
 ```bash
-python connsys-jarvis/scripts/create_plugin_from_expert/create_plugin_from_expert.py \
-  wifi-bora/wifi-bora-memory-slim-expert/expert.json
+python connsys-jarvis/framework/framework-base-expert/skills/framework-expert-create-flow/scripts/create_plugin_from_expert.py
 ```
 
 ---

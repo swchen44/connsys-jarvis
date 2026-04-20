@@ -402,7 +402,7 @@ After all files are written:
 
 4. **Generate plugin** (if applicable):
    ```bash
-   uv run ./connsys-jarvis/scripts/create_plugin_from_expert/create_plugin_from_expert.py
+   uv run ./connsys-jarvis/framework/framework-base-expert/skills/framework-expert-create-flow/scripts/create_plugin_from_expert.py
    ```
    > Run `create_plugin_from_expert.py` after creating an expert to generate `.claude-plugin/plugin.json` and `marketplace.json`.
    > The script auto-detects `skills/`, `commands/`, `agents/`, `hooks/hooks.json`, `.mcp.json`, `.lsp.json`, `monitors/monitors.json` in each expert directory.
