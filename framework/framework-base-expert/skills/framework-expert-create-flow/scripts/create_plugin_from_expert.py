@@ -99,7 +99,10 @@ def generate_plugin_json(expert_json_path: Path, expert_data: dict,
     if expert_data.get("triggers"):
         plugin["keywords"] = expert_data["triggers"]
 
-    # Component directories & config files: list if they exist
+    # Component directories: explicitly list if they exist
+    # Note: hooks/hooks.json, .mcp.json, .lsp.json are auto-loaded by Claude Code
+    # — do NOT list them in plugin.json or it causes "Duplicate" errors.
+    # Only skills/, commands/, agents/ need explicit listing.
     # Ref: https://code.claude.com/docs/zh-TW/plugins-reference
     expert_dir = expert_json_path.parent
     if (expert_dir / "skills").is_dir():
@@ -108,12 +111,7 @@ def generate_plugin_json(expert_json_path: Path, expert_data: dict,
         plugin["commands"] = ["./commands/"]
     if (expert_dir / "agents").is_dir():
         plugin["agents"] = ["./agents/"]
-    if (expert_dir / "hooks" / "hooks.json").is_file():
-        plugin["hooks"] = "./hooks/hooks.json"
-    if (expert_dir / ".mcp.json").is_file():
-        plugin["mcpServers"] = "./.mcp.json"
-    if (expert_dir / ".lsp.json").is_file():
-        plugin["lspServers"] = "./.lsp.json"
+    # monitors is NOT auto-detected, so list it explicitly
     if (expert_dir / "monitors" / "monitors.json").is_file():
         plugin["monitors"] = "./monitors/monitors.json"
 
