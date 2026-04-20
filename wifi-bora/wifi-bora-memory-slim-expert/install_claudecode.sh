@@ -43,6 +43,7 @@ fi
 echo "[2/3] Installing plugins..."
 PLUGINS=(
   "framework-base-expert"
+  "sys-bora-base-expert"
   "wifi-bora-base-expert"
   "sys-bora-base-expert"
   "sys-bora-preflight-expert"

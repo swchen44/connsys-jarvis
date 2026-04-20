@@ -166,6 +166,23 @@ def generate_marketplace_json(expert_jsons: list, repo_root: Path) -> dict:
         if data.get("description"):
             entry["description"] = data["description"]
 
+        # Direct dependencies only — Claude Code is expected to recursively
+        # resolve transitive deps by following each dependency's marketplace entry.
+        dep_names = []
+        for dep in data.get("dependencies", []):
+            dep_rel = dep.get("expert", "") if isinstance(dep, dict) else str(dep)
+            if dep_rel:
+                dep_json = repo_root / dep_rel / "expert.json"
+                if dep_json.exists():
+                    try:
+                        with open(dep_json) as f:
+                            dep_data = json.load(f)
+                        dep_names.append(dep_data["name"])
+                    except (json.JSONDecodeError, KeyError, OSError):
+                        pass
+        if dep_names:
+            entry["dependencies"] = dep_names
+
         plugins.append(entry)
 
     return {

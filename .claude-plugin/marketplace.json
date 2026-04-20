@@ -32,19 +32,30 @@
       "name": "sys-bora-preflight-expert",
       "source": "./sys-bora/sys-bora-preflight-expert",
       "version": "1.0.0",
-      "description": "gerrit commit/preflight 操作；CI/CD label 定義；preflight 結果分析"
+      "description": "gerrit commit/preflight 操作；CI/CD label 定義；preflight 結果分析",
+      "dependencies": [
+        "sys-bora-base-expert"
+      ]
     },
     {
       "name": "wifi-bora-base-expert",
       "source": "./wifi-bora/wifi-bora-base-expert",
       "version": "1.0.0",
-      "description": "wifi-bora domain 共用 skill/hook/command/agent 的容器"
+      "description": "wifi-bora domain 共用 skill/hook/command/agent 的容器",
+      "dependencies": [
+        "sys-bora-base-expert"
+      ]
     },
     {
       "name": "wifi-bora-memory-slim-expert",
       "source": "./wifi-bora/wifi-bora-memory-slim-expert",
       "version": "1.0.0",
-      "description": "分析 Wi-Fi Bora ROM/RAM footprint，協助精簡記憶體用量"
+      "description": "分析 Wi-Fi Bora ROM/RAM footprint，協助精簡記憶體用量",
+      "dependencies": [
+        "framework-base-expert",
+        "wifi-bora-base-expert",
+        "sys-bora-preflight-expert"
+      ]
     },
     {
       "name": "wifi-gen4m-base-expert",
