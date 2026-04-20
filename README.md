@@ -49,10 +49,27 @@ python connsys-jarvis/scripts/setup.py --doctor
 python connsys-jarvis/scripts/setup.py --uninstall
 ```
 
-### 方法二：Claude Marketplace
+### 方法二：Claude Code Plugin（install_claudecode.sh）
+
+每個 Expert 目錄下都有 `install_claudecode.sh`，一行指令即可安裝 Expert 及其所有 dependencies 到 project scope：
 
 ```bash
-claude plugin add --marketplace https://github.com/swchen44/connsys-jarvis.git
+# 安裝 WiFi Bora Memory Slim Expert（含 4 個 dependencies）
+bash connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/install_claudecode.sh
+
+# 安裝 Framework Base Expert（無 dependencies）
+bash connsys-jarvis/framework/framework-base-expert/install_claudecode.sh
+
+# 安裝到 user scope（所有專案共用）
+bash connsys-jarvis/bt-bora/bt-bora-base-expert/install_claudecode.sh --scope user
+```
+
+> **可同時安裝多個 Expert** — 共用的 dependency（如 framework-base-expert）不會重複安裝。
+
+或用 curl 直接從 GitHub 執行（不需先 clone repo）：
+
+```bash
+curl -sL https://raw.githubusercontent.com/swchen44/connsys-jarvis/main/wifi-bora/wifi-bora-memory-slim-expert/install_claudecode.sh | bash
 ```
 
 ### 方法三：npx skills (vercel-labs/skills)
