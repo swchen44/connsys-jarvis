@@ -72,7 +72,35 @@ bash connsys-jarvis/bt-bora/bt-bora-base-expert/install_claudecode.sh --scope us
 curl -sL https://raw.githubusercontent.com/swchen44/connsys-jarvis/main/wifi-bora/wifi-bora-memory-slim-expert/install_claudecode.sh | bash
 ```
 
-### 方法三：npx skills (vercel-labs/skills)
+### 方法三：Claude Plugin Marketplace（手動 CLI）
+
+使用 Claude Code CLI 手動管理 marketplace 和 plugin，適合需要精確控制的場景。
+
+```bash
+# 1. 新增 Marketplace（到 project scope）
+claude plugin marketplace add "https://github.com/swchen44/connsys-jarvis.git" --scope project
+
+# 2. 查看可用 Plugin
+claude plugin list --available --json
+
+# 3. 安裝 Plugin（需手動安裝 dependencies）
+claude plugin install framework-base-expert@connsys-jarvis --scope project
+claude plugin install wifi-bora-base-expert@connsys-jarvis --scope project
+claude plugin install wifi-bora-memory-slim-expert@connsys-jarvis --scope project
+
+# 4. 更新 Plugin
+claude plugin update wifi-bora-memory-slim-expert@connsys-jarvis --scope project
+
+# 5. 移除 Plugin
+claude plugin uninstall wifi-bora-memory-slim-expert@connsys-jarvis --scope project
+
+# 6. 移除 Marketplace
+claude plugin marketplace remove connsys-jarvis
+```
+
+> **注意**：此方法需自行處理 dependencies 安裝順序。建議使用方法二（install_claudecode.sh）自動處理。
+
+### 方法四：npx skills (vercel-labs/skills)
 
 ```bash
 npx skills add swchen44/connsys-jarvis --agent claude-code
