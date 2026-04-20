@@ -37,16 +37,23 @@ else
   claude plugin marketplace add "$MARKETPLACE_URL" --scope "$SCOPE"
 fi
 
-# 3. Install dependencies in order, then the expert itself
+# 3. Install or update dependencies in order, then the expert itself
 # NOTE: Claude Code currently does NOT auto-resolve dependencies in project
 # scope. Each plugin must be installed explicitly. (As of 2026-04)
 echo "[2/3] Installing plugins..."
 PLUGINS=(
   "bt-bora-base-expert"
 )
+INSTALLED=$(claude plugin list --json 2>/dev/null || echo "[]")
 for plugin in "${PLUGINS[@]}"; do
-  echo "  → $plugin"
-  claude plugin install "${plugin}@${MARKETPLACE_NAME}" --scope "$SCOPE" 2>/dev/null || true
+  PLUGIN_ID="${plugin}@${MARKETPLACE_NAME}"
+  if echo "$INSTALLED" | grep -q "\"$PLUGIN_ID\""; then
+    echo "  ↻ $plugin (update)"
+    claude plugin update "$PLUGIN_ID" --scope "$SCOPE" 2>/dev/null || true
+  else
+    echo "  + $plugin (install)"
+    claude plugin install "$PLUGIN_ID" --scope "$SCOPE" 2>/dev/null || true
+  fi
 done
 
 # 4. Validate
