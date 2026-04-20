@@ -4,5 +4,8 @@
   "description": "SoC/OS/build system 基礎知識；manifest 下載與 build 流程",
   "author": {
     "name": "sys-team"
-  }
+  },
+  "skills": [
+    "./skills/"
+  ]
 }

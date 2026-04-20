@@ -21,10 +21,12 @@ Usage:
 
 Design:
   - Expert = Claude Code Plugin (1:1 mapping)
-  - plugin.json lists metadata + dependency plugin names only
-  - Claude Code auto-detects skills/, commands/, agents/ from the plugin directory
+  - plugin.json lists metadata, component directories (skills/, commands/, agents/),
+    and dependency plugin names
   - Dependency plugins are resolved via the `dependencies` array
   - marketplace.json uses relative paths from repo root to each expert directory
+
+Reference: https://code.claude.com/docs/zh-TW/plugins-reference
 
 Dependencies: Python stdlib only (no pip install required)
 """
@@ -87,6 +89,16 @@ def generate_plugin_json(expert_json_path: Path, expert_data: dict,
     # Keywords from triggers
     if expert_data.get("triggers"):
         plugin["keywords"] = expert_data["triggers"]
+
+    # Component directories: explicitly list if they exist
+    # Ref: https://code.claude.com/docs/zh-TW/plugins-reference
+    expert_dir = expert_json_path.parent
+    if (expert_dir / "skills").is_dir():
+        plugin["skills"] = ["./skills/"]
+    if (expert_dir / "commands").is_dir():
+        plugin["commands"] = ["./commands/"]
+    if (expert_dir / "agents").is_dir():
+        plugin["agents"] = ["./agents/"]
 
     # Dependencies: map to plugin dependency names
     dep_names = []

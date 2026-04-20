@@ -12,6 +12,9 @@
     "footprint",
     "記憶體"
   ],
+  "skills": [
+    "./skills/"
+  ],
   "dependencies": [
     "framework-base-expert",
     "wifi-bora-base-expert",
