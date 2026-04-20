@@ -9,8 +9,7 @@ create_plugin_from_expert.py — Generate Claude Code plugin.json from expert.js
 
 Scans all expert.json files in the connsys-jarvis repo and generates:
   1. .claude-plugin/plugin.json      per expert (Claude Code plugin manifest)
-  2. .claude-plugin/marketplace.json  at repo root (marketplace registry)
-  3. install_claudecode.sh            per expert (one-command installer)
+  2. .claude-plugin/marketplace.json  at repo root (marketplace registry with dependencies)
 
 Usage:
   python create_plugin_from_expert.py                   # Generate all files
@@ -299,9 +298,7 @@ def run_doctor(repo_root: Path, expert_jsons: list) -> bool:
     return all_ok
 
 
-# (install_claudecode.sh generation removed 2026-04)
-# Claude Code auto-resolves dependencies via marketplace.json `dependencies` field.
-# Install command: claude plugin marketplace add <url> && claude plugin install <name>@connsys-jarvis
+# ─── Main ─────────────────────────────────────────────────────────────────────
 
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
