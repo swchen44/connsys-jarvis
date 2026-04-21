@@ -256,7 +256,7 @@ python3 connsys-jarvis/scripts/setup.py --add wifi-bora/wifi-bora-base-expert/ex
 
 ---
 
-### 步驟 3：使用 AI 引導建立 Skill 或 Expert
+### 步驟 3：使用 AI 引導建立 Skill 或 Expert，並透過 Eval 驗證
 
 啟動 Claude Code，在對話中輸入以下短名即可觸發引導流程：
 
@@ -271,11 +271,100 @@ python3 connsys-jarvis/scripts/setup.py --add wifi-bora/wifi-bora-base-expert/ex
   ```yaml
   ---
   name: my-skill-name
-  description: ...
+  description: "..."
+  version: "1.0.0"
+  domain: {domain}
+  type: {type}
+  scope: {target-expert-name}
   ---
   ```
-- 使用 `framework-skill-create-flow` 的 **eval 功能**自動產生 test case，驗證 skill 的觸發條件和預期輸出
-- 建立後檢查 skill 目錄下的 `README.md` 是否完整
+- 建立後確認 skill 目錄下的 `README.md` 完整（繁體中文，含功能、目標、設計理念）
+
+#### Eval 驗證流程
+
+`framework-skill-create-flow` 內建完整的 eval/benchmark 循環，驗證 skill 行為正確性。
+
+**1. 撰寫 test case**
+
+建立 2–3 個真實使用者會輸入的 prompt，存入 `evals/evals.json`：
+
+```json
+{
+  "skill_name": "my-skill-name",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "使用者實際會說的話",
+      "expected_output": "預期輸出的描述",
+      "files": []
+    }
+  ]
+}
+```
+
+**2. 執行 Eval Loop**
+
+由 `framework-skill-create-flow` 引導，自動以**平行 subagent** 執行：
+- **with-skill run**：帶此 skill 回答 prompt
+- **baseline run**：不帶 skill（新建用），或帶舊版 skill（改版用）
+
+結果存入 `<skill-name>-workspace/iteration-1/eval-<id>/`。
+
+**3. 評分與聚合**
+
+```bash
+# 在 framework-skill-create-flow 目錄下執行
+python -m scripts.aggregate_benchmark <workspace>/iteration-1 --skill-name <name>
+```
+
+產生 `benchmark.json`：各 assertion 通過率、with-skill vs baseline delta、token 用量（mean ± stddev）。
+
+**4. eval-viewer 複查**
+
+```bash
+nohup python eval-viewer/generate_review.py \
+  <workspace>/iteration-1 \
+  --skill-name "my-skill-name" \
+  --benchmark <workspace>/iteration-1/benchmark.json \
+  > /dev/null 2>&1 &
+```
+
+瀏覽器開啟後：
+- **Outputs tab**：逐一檢視輸出，留文字 feedback
+- **Benchmark tab**：通過率、執行時間、token 統計
+
+點「Submit All Reviews」儲存 `feedback.json`，回到 Claude Code 告知完成，AI 依 feedback 改版並進入下一輪 iteration。
+
+**5. Trigger 優化**（行為穩定後執行）
+
+```bash
+python -m scripts.run_loop \
+  --eval-set <path-to-trigger-eval.json> \
+  --skill-path <path-to-skill> \
+  --model claude-sonnet-4-6 \
+  --max-iterations 5 \
+  --verbose
+```
+
+自動迭代優化 `description` 欄位，輸出 `best_description` 後更新 SKILL.md frontmatter。
+
+#### 上傳 Eval 產出物
+
+Eval 完成後，將以下檔案一起 commit：
+
+```bash
+# skill 本身
+git add connsys-jarvis/<domain>/<expert>/skills/<skill-name>/
+
+# test cases（必須上傳）
+git add connsys-jarvis/<domain>/<expert>/skills/<skill-name>/evals/evals.json
+
+# eval 報告（讓他人可重現驗證結果）
+git add connsys-jarvis/<domain>/<expert>/skills/<skill-name>-workspace/iteration-*/benchmark.json
+git add connsys-jarvis/<domain>/<expert>/skills/<skill-name>-workspace/iteration-*/eval-*/grading.json
+```
+
+> iteration 的原始 output 檔案（大型產出物）不需 commit，保留 `evals.json`、`benchmark.json`、`grading.json` 即可。
 
 ---
 
