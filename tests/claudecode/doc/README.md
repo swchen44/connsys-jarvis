@@ -120,6 +120,100 @@ python -m tests.claudecode.cli --scaffold wifi-logan-base-expert \
    e. Reports saved to .results/analysis/{session-id}/
 ```
 
+### Sequence Chart: CLI to Expert Test to Report
+
+```
+User                CLI (cli.py)              ClaudeRunner             Expert (Claude Code)       Analyzer
+ |                      |                          |                          |                      |
+ |--- run --expert X -->|                          |                          |                      |
+ |                      |-- load_test_cases(X) --->|                          |                      |
+ |                      |<-- test_cases.json ------|                          |                      |
+ |                      |                          |                          |                      |
+ |                      |====== For each test case ==========================================       |
+ |                      |                          |                          |                      |
+ |                      |-- run_test_case() ------>|                          |                      |
+ |                      |                          |-- resolve prompt ------->|                      |
+ |                      |                          |   (inline or .md file)   |                      |
+ |                      |                          |                          |                      |
+ |                      |                          |-- claude -p (headless) ->|                      |
+ |                      |                          |   or tmux send-keys      |--- execute task ---> |
+ |                      |                          |                          |   (skill triggers,   |
+ |                      |                          |                          |    tool calls,       |
+ |                      |                          |                          |    thinking...)      |
+ |                      |                          |<-- stream-json output ---|                      |
+ |                      |                          |                          |                      |
+ |                      |                          |-- save session log ----> .results/{ts}/         |
+ |                      |                          |                          |                      |
+ |                      |<-- SessionResult --------|                          |                      |
+ |                      |                          |                          |                      |
+ |                      |-- run_all_checks() ----->|                          |                      |
+ |                      |   Layer 1: files_created |                          |                      |
+ |                      |   Layer 2: skills_invoked|                          |                      |
+ |                      |   Layer 3: tools_called  |                          |                      |
+ |                      |   Layer 4: output_contains                          |                      |
+ |                      |   Layer 5: nl_checks --->|-- claude -p (haiku) ---->| (judge evaluation)   |
+ |                      |   Layer 6: judge ------->|-- claude -p (haiku) ---->| (overall scoring)    |
+ |                      |<-- AssertResults[] ------|                          |                      |
+ |                      |                          |                          |                      |
+ |                      |====== End loop ====================================================       |
+ |                      |                          |                          |                      |
+ |                      |-- save results.json ---> .results/latest_results.json                      |
+ |                      |                          |                          |                      |
+ |                      |-- _run_session_analysis() --------------------------------------------->   |
+ |                      |   find JSONL in ~/.claude/projects/                 |                      |
+ |                      |                          |                          |      analyze_session.py
+ |                      |                          |                          |      |-- parse JSONL  |
+ |                      |                          |                          |      |-- token stats  |
+ |                      |                          |                          |      |-- tool stats   |
+ |                      |                          |                          |      |-- behavior     |
+ |                      |                          |                          |      |-- errors       |
+ |                      |<-- report.html, report.json, report.txt ----------------------------------|
+ |                      |                          |                          |                      |
+ |                      |-- open report.html ----> Browser                    |                      |
+ |<-- done, reports ----|                          |                          |                      |
+```
+
+### Data Flow Diagram
+
+```
+                    ┌─────────────────┐
+                    │  test_cases.json │
+                    │  prompts/*.md    │
+                    │  golden/*.md     │
+                    │  rubrics/*.md    │
+                    └────────┬────────┘
+                             │
+                             ▼
+┌──────────┐    ┌────────────────────────┐    ┌─────────────────────┐
+│          │    │      ClaudeRunner      │    │   Claude Code CLI   │
+│ CLI      │───>│  HeadlessExecutor  OR  │───>│  claude -p --model  │
+│ (cli.py) │    │  TmuxExecutor          │    │  --output-format    │
+│          │    └────────────┬───────────┘    │  stream-json        │
+└──────────┘                │                 └──────────┬──────────┘
+                            │ SessionResult              │
+                ┌───────────┼───────────┐                │
+                │           │           │                ▼
+         ┌──────┴──┐ ┌──────┴──┐ ┌──────┴──┐   ~/.claude/projects/
+         │Asserti- │ │ Token   │ │ Skill   │   {session-id}.jsonl
+         │ons      │ │Analyzer │ │Checker  │         │
+         │6 layers │ │         │ │         │         │
+         └────┬────┘ └────┬────┘ └────┬────┘         │
+              │           │           │              │
+              └───────────┼───────────┘              │
+                          │                          │
+                          ▼                          ▼
+                  ┌───────────────┐    ┌──────────────────────────┐
+                  │ ReportEngine  │    │ framework-session-        │
+                  │ L1: Quality   │    │ analyzer-tool             │
+                  │ L2: Statistics│    │                           │
+                  │ L3: Behavior  │    │ analyze_session.py        │
+                  └───────┬───────┘    │ generate_html_report.py   │
+                          │            └──────────┬───────────────┘
+                          ▼                       ▼
+                  .results/              .results/analysis/
+                  latest_results.json    {session}/report.html
+```
+
 ---
 
 ## How to Read Reports
@@ -239,20 +333,21 @@ tests/claudecode/
 ├── dependency_checker.py      # Topological dependency resolution
 ├── report.py                  # 3-layer report generator (L1/L2/L3)
 ├── conftest.py                # Shared pytest fixtures
-├── TODO.md                    # Progress tracker
+├── doc/
+│   ├── TODO.md                # Progress tracker
 ├── .results/                  # Test output logs (git-ignored)
 ├── templates/
 │   └── expert_test_template.py
 ├── framework-base-expert/     # Test suite for framework-base-expert
 │   ├── test_cases.json        # Test definitions (prompts + 6-layer checks)
-│   ├── test_framework_base.py # unittest runner
+│   ├── test_framework-base-expert.py  # unittest runner
 │   ├── prompts/               # Markdown prompt files
 │   ├── golden/                # Expected output references
 │   ├── fixtures/              # Mock data (code repos, configs)
 │   └── rubrics/               # Scoring rubrics for judge
 └── wifi-bora-memory-slim-expert/  # Test suite (5-Expert dependency chain)
     ├── test_cases.json
-    ├── test_memory_slim.py
+    ├── test_wifi-bora-memory-slim-expert.py
     ├── prompts/
     ├── golden/
     ├── fixtures/
@@ -277,7 +372,7 @@ tests/claudecode/
 
 5. **Write rubrics** in `rubrics/*.md` — scoring criteria (1-10) for the judge
 
-6. **Implement test runner** in `test_{expert}.py` — or copy from template
+6. **Implement test runner** in `test_{expert-name}.py` — or copy from template
 
 7. **Run and iterate**:
    ```bash

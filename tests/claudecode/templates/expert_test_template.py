@@ -1,6 +1,6 @@
 """Template for creating new Expert integration tests.
 
-Copy this file to tests/claudecode/{expert-name}/ and customize:
+Copy this file to tests/claudecode/{expert-name}/test_{expert-name}.py and customize:
 1. Update EXPERT_NAME to match the target Expert
 2. Modify test methods to match test_cases.json
 3. Adjust expected skill count for the Expert's dependency chain
