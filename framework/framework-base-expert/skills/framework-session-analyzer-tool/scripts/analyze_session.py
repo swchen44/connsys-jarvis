@@ -842,6 +842,7 @@ def main():
     )
     parser.add_argument("jsonl_path", help="Path to .jsonl session file")
     parser.add_argument("--output-dir", "-o", help="Output directory (default: same as input)")
+    parser.add_argument("--no-html", action="store_true", help="Skip HTML report generation")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose logging")
     args = parser.parse_args()
 
@@ -877,6 +878,25 @@ def main():
     text_content = format_text_report(report)
     text_path.write_text(text_content, encoding="utf-8")
     logger.info("Text report: %s", text_path)
+
+    # Generate HTML report
+    if not args.no_html:
+        try:
+            script_dir = Path(__file__).resolve().parent
+            # Import generate_html from sibling script
+            import importlib.util
+            spec = importlib.util.spec_from_file_location(
+                "generate_html_report",
+                script_dir / "generate_html_report.py",
+            )
+            html_mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(html_mod)
+            html_content = html_mod.generate_html(report)
+            html_path = output_dir / "report.html"
+            html_path.write_text(html_content, encoding="utf-8")
+            logger.info("HTML report: %s", html_path)
+        except Exception as exc:
+            logger.warning("HTML generation failed: %s", exc)
 
     # Print summary to stdout
     print(text_content)
