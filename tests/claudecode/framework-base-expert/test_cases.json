@@ -1,0 +1,176 @@
+{
+  "expert": "framework-base-expert",
+  "version": "1.0.0",
+  "description": "Integration tests for framework-base-expert skills",
+  "test_cases": [
+    {
+      "id": "FW-001",
+      "name": "skill_create_flow_trigger",
+      "description": "驗證 framework-skill-create-flow 能正確觸發並建立 skill 結構",
+      "prompt": "prompts/FW-001_skill_create.md",
+      "timeout": 180,
+      "token_budget": 50000,
+      "checks": {
+        "files_created": [
+          {
+            "path": "skills/test-demo-skill/SKILL.md",
+            "contains": ["name:", "description:"],
+            "comment": "SKILL.md 必須有 YAML frontmatter 必要欄位"
+          }
+        ],
+        "skills_invoked": [
+          {
+            "skill": "framework-skill-create-flow",
+            "required": true,
+            "comment": "主要流程 skill 必須被觸發"
+          },
+          {
+            "skill": "framework-expert-discovery-knowhow",
+            "required": false,
+            "comment": "可能被觸發來探索現有 skills，但非必要"
+          }
+        ],
+        "tools_called": [
+          {
+            "tool": "Write",
+            "min_count": 1,
+            "comment": "至少要寫一個檔案"
+          }
+        ],
+        "output_contains": ["SKILL.md"],
+        "output_not_contains": [],
+        "nl_checks": [
+          {
+            "id": "nl-01",
+            "aspect": "completeness",
+            "question": "回應是否完整建立了 SKILL.md 並包含正確的 frontmatter 格式（name, description, allowed-tools）？",
+            "model": "haiku",
+            "scale": 10,
+            "min_pass": 7,
+            "reference": "golden/FW-001_expected.md"
+          },
+          {
+            "id": "nl-02",
+            "aspect": "best_practice",
+            "question": "建立的 skill 結構是否遵循 connsys-jarvis 的慣例（目錄命名使用 kebab-case、含 SKILL.md）？",
+            "model": "haiku",
+            "scale": 10,
+            "min_pass": 6
+          }
+        ],
+        "judge": {
+          "enabled": true,
+          "model": "haiku",
+          "rubric": "rubrics/FW-001_rubric.md",
+          "min_score": 7
+        }
+      }
+    },
+    {
+      "id": "FW-002",
+      "name": "expert_create_flow_trigger",
+      "description": "驗證 framework-expert-create-flow 能正確觸發並建立 Expert 結構",
+      "prompt": "prompts/FW-002_expert_create.md",
+      "timeout": 240,
+      "token_budget": 80000,
+      "checks": {
+        "files_created": [
+          {
+            "path": "expert.json",
+            "contains": ["name", "version", "dependencies"],
+            "comment": "expert.json 需包含基本結構"
+          }
+        ],
+        "skills_invoked": [
+          {
+            "skill": "framework-expert-create-flow",
+            "required": true
+          }
+        ],
+        "tools_called": [
+          {
+            "tool": "Write",
+            "min_count": 1
+          },
+          {
+            "tool": "Bash",
+            "min_count": 1,
+            "comment": "需要建立目錄結構"
+          }
+        ],
+        "output_contains": ["expert.json"],
+        "nl_checks": [
+          {
+            "id": "nl-01",
+            "aspect": "completeness",
+            "question": "回應是否完整建立了 Expert 的標準目錄結構（expert.json, skills/, hooks/, .claude-plugin/plugin.json）？",
+            "model": "haiku",
+            "scale": 10,
+            "min_pass": 7
+          }
+        ],
+        "judge": {
+          "enabled": true,
+          "model": "haiku",
+          "rubric": "rubrics/FW-002_rubric.md",
+          "min_score": 7
+        }
+      }
+    },
+    {
+      "id": "FW-003",
+      "name": "expert_discovery_trigger",
+      "description": "驗證 framework-expert-discovery-knowhow 能列出可用的 Experts",
+      "prompt": "請列出目前所有可用的 Expert，包含名稱、版本和描述",
+      "timeout": 60,
+      "token_budget": 20000,
+      "checks": {
+        "skills_invoked": [
+          {
+            "skill": "framework-expert-discovery-knowhow",
+            "required": false,
+            "comment": "此 knowhow 可能內化在回應中而非透過 Skill tool"
+          }
+        ],
+        "output_contains": ["framework-base-expert", "wifi-bora"],
+        "nl_checks": [
+          {
+            "id": "nl-01",
+            "aspect": "accuracy",
+            "question": "回應是否正確列出了 marketplace.json 中的 Expert 名稱和描述？至少應包含 framework-base-expert 和 wifi-bora 相關 Expert。",
+            "model": "haiku",
+            "scale": 10,
+            "min_pass": 7
+          }
+        ],
+        "judge": {
+          "enabled": false
+        }
+      }
+    },
+    {
+      "id": "FW-004",
+      "name": "list_command_trigger",
+      "description": "驗證 framework-base-expert-list-cmd 能列出已安裝的命令",
+      "prompt": "列出目前已安裝的所有 commands 和 skills",
+      "timeout": 60,
+      "token_budget": 15000,
+      "checks": {
+        "output_contains": ["skill"],
+        "nl_checks": [
+          {
+            "id": "nl-01",
+            "aspect": "helpfulness",
+            "question": "回應是否清楚列出了可用的 skills 和 commands，並附帶簡短的說明？",
+            "model": "haiku",
+            "scale": 10,
+            "min_pass": 6
+          }
+        ],
+        "judge": {
+          "enabled": false
+        }
+      }
+    }
+  ]
+}
