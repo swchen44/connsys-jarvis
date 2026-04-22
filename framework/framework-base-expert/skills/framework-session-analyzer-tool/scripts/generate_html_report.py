@@ -201,6 +201,59 @@ def table(headers: list[str], rows: list[list[str]], highlight_col: int = -1) ->
     return f'<table><thead><tr>{ths}</tr></thead><tbody>{"".join(trs)}</tbody></table>'
 
 
+def collapsible_table(
+    headers: list[str],
+    rows: list[list[str]],
+    visible: int = 5,
+    label: str = "",
+    highlight_col: int = -1,
+) -> str:
+    """Table that collapses rows beyond `visible` into a <details> toggle.
+
+    If total rows <= visible, renders a plain table (no collapse).
+
+    Args:
+        headers: Column headers.
+        rows: All rows.
+        visible: Number of rows always shown.
+        label: Summary text for the collapsed section.
+        highlight_col: Column index to highlight.
+
+    Returns:
+        HTML string.
+    """
+    if len(rows) <= visible:
+        return table(headers, rows, highlight_col)
+
+    top_rows = rows[:visible]
+    rest_rows = rows[visible:]
+    rest_count = len(rest_rows)
+    summary_text = label or f"Show {rest_count} more rows..."
+
+    top_table = table(headers, top_rows, highlight_col)
+
+    # Build the hidden rows as a table (no header)
+    rest_trs = []
+    for row in rest_rows:
+        tds = []
+        for i, cell in enumerate(row):
+            cls = ' class="highlight"' if i == highlight_col else ''
+            tds.append(f"<td{cls}>{cell}</td>")
+        rest_trs.append("<tr>" + "".join(tds) + "</tr>")
+    ths = "".join(f"<th>{html.escape(h)}</th>" for h in headers)
+    rest_table = (
+        f'<table><thead><tr>{ths}</tr></thead>'
+        f'<tbody>{"".join(rest_trs)}</tbody></table>'
+    )
+
+    return (
+        f'{top_table}'
+        f'<details><summary>{html.escape(summary_text)}</summary>'
+        f'<div class="collapsible-content">{rest_table}</div>'
+        f'</details>'
+    )
+
+
 def legend(items: list[tuple[str, str]]) -> str:
     """Chart legend component."""
     parts = []
@@ -381,7 +434,7 @@ def build_tool_stats(report: dict) -> str:
             f'{t["tokens"]:,}',
             f'{t["ratio"]:.1%}',
         ])
-    tbl = table(["Tool", "Calls", "OK", "Err", "Err%", "Tokens", "Share"], rows)
+    tbl = collapsible_table(["Tool", "Calls", "OK", "Err", "Err%", "Tokens", "Share"], rows, label=f"Show all {len(rows)} tools...")
 
     return f'<div class="chart-row"><div class="chart-container">{chart}</div><div class="chart-table" style="flex:1.5">{tbl}</div></div>'
 
@@ -533,7 +586,7 @@ def build_tool_deep_dive(report: dict) -> str:
             bar,
             f'{t["tokens"]:,}',
         ])
-    parts.append(table(["Tool", "Calls", "OK", "Errors", "Success Rate", "Tokens"], rows))
+    parts.append(collapsible_table(["Tool", "Calls", "OK", "Errors", "Success Rate", "Tokens"], rows, label=f"Show all {len(rows)} tools..."))
 
     # Tool call distribution donut
     top_tools = tools[:8]
@@ -591,7 +644,7 @@ def build_skill_deep_dive(report: dict) -> str:
                 f'<span style="color:{color};font-weight:600">{rate:.0%}</span>',
                 f'{s["tokens"]:,}',
             ])
-        parts.append(table(["Skill Name", "Calls", "OK", "Errors", "Rate", "Tokens"], rows))
+        parts.append(collapsible_table(["Skill Name", "Calls", "OK", "Errors", "Rate", "Tokens"], rows, label=f"Show all {len(rows)} skills..."))
     else:
         parts.append('<div class="info-box">No Skill tool invocations detected in this session. Skills may have been triggered via other mechanisms.</div>')
 
@@ -727,7 +780,7 @@ def build_api_deep_dive(report: dict) -> str:
             recovered = '<span style="color:#22c55e">Yes</span>' if attempt > 0 else '<span style="color:#94a3b8">-</span>'
 
             rows.append([ts, f'<code>{html.escape(code)}</code>', retry_info, wait_info, recovered, html.escape(msg)])
-        parts.append(table(["Time", "Code", "Retry", "Wait", "Recovered", "Message"], rows))
+        parts.append(collapsible_table(["Time", "Code", "Retry", "Wait", "Recovered", "Message"], rows, label=f"Show all {len(rows)} API errors..."))
 
     return "".join(parts)
 
@@ -811,7 +864,7 @@ def build_error_detail(report: dict) -> str:
                 t.get("category", ""),
                 f'<span style="font-size:11px;color:{COLORS["muted"]}">{html.escape(t.get("sample_error", "")[:60])}</span>',
             ])
-        parts.append(table(["Count", "Tool", "Target", "Category", "Sample Error"], rows))
+        parts.append(collapsible_table(["Count", "Tool", "Target", "Category", "Sample Error"], rows, label=f"Show all {len(rows)} error targets..."))
 
     # Full error log (last N errors with full detail)
     if all_errors:
@@ -829,7 +882,7 @@ def build_error_detail(report: dict) -> str:
                 f'<code style="font-size:11px">{html.escape(target)}</code>',
                 f'<span style="font-size:11px">{html.escape(e.get("error_message", "")[:80])}</span>',
             ])
-        parts.append(table(["Time", "Tool", "Category", "Target", "Error Message"], rows))
+        parts.append(collapsible_table(["Time", "Tool", "Category", "Target", "Error Message"], rows, label=f"Show all {len(rows)} error log entries..."))
 
     return "".join(parts)
 
@@ -853,7 +906,7 @@ def build_file_changes(report: dict) -> str:
     if files:
         parts.append('<h3>Modified Files</h3>')
         rows = [[f'<code>{html.escape(f)}</code>'] for f in files[:30]]
-        parts.append(table(["File Path"], rows))
+        parts.append(collapsible_table(["File Path"], rows, label=f"Show all {len(rows)} modified files..."))
         if len(files) > 30:
             parts.append(f'<p style="color:{COLORS["muted"]}">... and {len(files)-30} more files</p>')
 
@@ -967,7 +1020,7 @@ def build_subagent_files(report: dict) -> str:
             html.escape(f.get("agent_type", "-")),
             html.escape(desc[:60]),
         ])
-    parts.append(table(["File", "Size", "Type", "Description"], rows))
+    parts.append(collapsible_table(["File", "Size", "Type", "Description"], rows, label=f"Show all {len(rows)} subagent files..."))
 
     return "".join(parts)
 
@@ -1061,6 +1114,11 @@ code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 12p
 .info-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 16px; color: #1e40af; font-size: 14px; }
 .section-divider { border: none; border-top: 3px solid #6366f1; margin: 40px 0 32px; opacity: 0.3; }
 .detail-header { color: #6366f1; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 16px; }
+details { margin-bottom: 8px; }
+details summary { cursor: pointer; padding: 8px 12px; background: #f1f5f9; border-radius: 8px; font-size: 13px; font-weight: 600; color: #475569; user-select: none; transition: background 0.2s; }
+details summary:hover { background: #e2e8f0; }
+details[open] summary { background: #e0e7ff; color: #4338ca; border-radius: 8px 8px 0 0; }
+details .collapsible-content { border: 1px solid var(--border); border-top: none; border-radius: 0 0 8px 8px; padding: 12px; background: var(--card-bg); }
 """
 
 
