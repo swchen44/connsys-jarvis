@@ -494,6 +494,244 @@ def build_errors_hooks(report: dict) -> str:
     return "".join(parts) if parts else "<p>No errors or hooks recorded.</p>"
 
 
+def build_tool_deep_dive(report: dict) -> str:
+    """Build detailed tool success/failure distribution analysis."""
+    tools = report.get("L2_statistics", {}).get("tools", {}).get("tools", [])
+    if not tools:
+        return "<p>No tool data.</p>"
+
+    parts = []
+    total_calls = sum(t["calls"] for t in tools)
+    total_ok = sum(t["success"] for t in tools)
+    total_err = sum(t["errors"] for t in tools)
+
+    # Overview counts
+    parts.append(f'''
+    <div class="card-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom:20px">
+      {card("Unique Tools", str(len(tools)), f"out of {total_calls} total calls")}
+      {card("Total Success", f"{total_ok:,}", f"{total_ok/max(total_calls,1):.1%} success rate", COLORS["success"])}
+      {card("Total Errors", f"{total_err:,}", f"{total_err/max(total_calls,1):.1%} error rate", COLORS["danger"])}
+      {card("Avg Calls/Tool", f"{total_calls/max(len(tools),1):.1f}", "calls per unique tool")}
+    </div>''')
+
+    # Success rate ranking (sorted by success rate ascending — worst first)
+    parts.append('<h3>Tool Reliability Ranking (worst first)</h3>')
+    ranked = sorted(
+        [t for t in tools if t["calls"] >= 1],
+        key=lambda t: (t["success"] / max(t["calls"], 1)),
+    )
+    rows = []
+    for t in ranked:
+        rate = t["success"] / max(t["calls"], 1)
+        color = COLORS["success"] if rate >= 0.9 else (COLORS["warning"] if rate >= 0.7 else COLORS["danger"])
+        bar = progress_bar(rate, color, f'{rate:.0%}')
+        rows.append([
+            f'<code>{html.escape(t["name"])}</code>',
+            str(t["calls"]),
+            f'<span style="color:{COLORS["success"]}">{t["success"]}</span>',
+            f'<span style="color:{COLORS["danger"]}">{t["errors"]}</span>',
+            bar,
+            f'{t["tokens"]:,}',
+        ])
+    parts.append(table(["Tool", "Calls", "OK", "Errors", "Success Rate", "Tokens"], rows))
+
+    # Tool call distribution donut
+    top_tools = tools[:8]
+    other_calls = sum(t["calls"] for t in tools[8:])
+    donut_data = [(t["name"], t["calls"], CHART_COLORS[i % len(CHART_COLORS)]) for i, t in enumerate(top_tools)]
+    if other_calls > 0:
+        donut_data.append(("Others", other_calls, COLORS["muted"]))
+
+    parts.append('<h3 style="margin-top:24px">Tool Call Distribution</h3>')
+    chart = svg_donut(donut_data, size=200)
+    leg = legend([(label, color) for label, _, color in donut_data])
+    parts.append(f'<div style="text-align:center">{chart}{leg}</div>')
+
+    return "".join(parts)
+
+
+def build_skill_deep_dive(report: dict) -> str:
+    """Build detailed skill invocation analysis."""
+    skills = report.get("L2_statistics", {}).get("skills", {}).get("skills", [])
+    tools = report.get("L2_statistics", {}).get("tools", {}).get("tools", [])
+
+    parts = []
+
+    # Skill vs Tool count comparison
+    skill_count = len(skills)
+    tool_count = len(tools)
+    total_skill_calls = sum(s["calls"] for s in skills)
+    total_tool_calls = sum(t["calls"] for t in tools)
+
+    parts.append(f'''
+    <div class="card-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom:20px">
+      {card("Unique Skills", str(skill_count), f"{total_skill_calls} total invocations", COLORS["primary"])}
+      {card("Unique Tools", str(tool_count), f"{total_tool_calls} total calls", COLORS["info"])}
+      {card("Skill/Tool Ratio", f"{total_skill_calls}/{total_tool_calls}", f"{total_skill_calls/max(total_tool_calls,1):.1%} of calls are Skills")}
+      {card("Avg Calls/Skill", f"{total_skill_calls/max(skill_count,1):.1f}", "invocations per unique skill")}
+    </div>''')
+
+    if skills:
+        # Skill name distribution bar chart
+        parts.append('<h3>Skill Invocation Distribution</h3>')
+        skill_data = [(s["name"], s["calls"], CHART_COLORS[i % len(CHART_COLORS)]) for i, s in enumerate(skills)]
+        chart = svg_bar_horizontal(skill_data, width=600)
+        parts.append(f'<div style="margin-bottom:16px">{chart}</div>')
+
+        # Detailed skill table
+        rows = []
+        for s in skills:
+            rate = s["success"] / max(s["calls"], 1) if s["success"] > 0 else (1.0 if s["errors"] == 0 else 0.0)
+            color = COLORS["success"] if rate >= 0.9 else COLORS["danger"]
+            rows.append([
+                f'<code>{html.escape(s["name"])}</code>',
+                str(s["calls"]),
+                str(s["success"]),
+                str(s["errors"]),
+                f'<span style="color:{color};font-weight:600">{rate:.0%}</span>',
+                f'{s["tokens"]:,}',
+            ])
+        parts.append(table(["Skill Name", "Calls", "OK", "Errors", "Rate", "Tokens"], rows))
+    else:
+        parts.append('<div class="info-box">No Skill tool invocations detected in this session. Skills may have been triggered via other mechanisms.</div>')
+
+    return "".join(parts)
+
+
+def build_efficiency_detail(report: dict) -> str:
+    """Build detailed efficiency analysis with formula explanation."""
+    eff = report.get("L3_behavior", {}).get("efficiency", {})
+    l1 = report.get("L1_quality", {})
+    tokens = report.get("L2_statistics", {}).get("tokens", {})
+    if not eff:
+        return ""
+
+    effective = eff.get("effective_tokens", 0)
+    wasted = eff.get("wasted_tokens", 0)
+    total = eff.get("total_tokens", 1)
+    cache_hit = l1.get("cache_hit_ratio", 0)
+
+    parts = []
+
+    # Formula explanation
+    parts.append('''
+    <div class="formula-box">
+      <h3>Calculation Formulas</h3>
+      <table class="formula-table">
+        <tr>
+          <td><strong>Effective Ratio</strong></td>
+          <td><code>(total_tokens - wasted_tokens) / total_tokens</code></td>
+          <td>''' + f'<code>({total:,} - {wasted:,}) / {total:,} = <strong>{effective/max(total,1):.1%}</strong></code>' + '''</td>
+        </tr>
+        <tr>
+          <td><strong>Wasted Tokens</strong></td>
+          <td><code>sum(error_retry + edit_mismatch + timeout_retry)</code></td>
+          <td>''' + f'<code>{wasted:,} tokens detected</code>' + '''</td>
+        </tr>
+        <tr>
+          <td><strong>Cache Hit Ratio</strong></td>
+          <td><code>cache_read_tokens / (input + cache_creation + cache_read)</code></td>
+          <td>''' + f'<code>{cache_hit:.1%}</code>' + '''</td>
+        </tr>
+        <tr>
+          <td><strong>Estimated Cost</strong></td>
+          <td><code>(input * rate + output * rate + cache_read * rate + cache_create * rate) / 1M</code></td>
+          <td>''' + f'<code>${l1.get("estimated_cost_usd", 0):.4f}</code>' + '''</td>
+        </tr>
+      </table>
+    </div>''')
+
+    # Cache TTL breakdown
+    ephemeral_5m = tokens.get("ephemeral_5m_tokens", 0)
+    ephemeral_1h = tokens.get("ephemeral_1h_tokens", 0)
+    total_cache_create = tokens.get("total", {}).get("cache_creation_tokens", 0)
+
+    if ephemeral_5m > 0 or ephemeral_1h > 0:
+        parts.append('<h3 style="margin-top:20px">Cache TTL Distribution</h3>')
+        cache_data = [
+            ("5-min ephemeral", ephemeral_5m, CHART_COLORS[0]),
+            ("1-hour ephemeral", ephemeral_1h, CHART_COLORS[1]),
+        ]
+        other_cache = total_cache_create - ephemeral_5m - ephemeral_1h
+        if other_cache > 0:
+            cache_data.append(("Other cache", other_cache, COLORS["muted"]))
+        chart = svg_donut(cache_data, size=160, hole=0.6)
+        leg = legend([(label, color) for label, _, color in cache_data])
+        parts.append(f'<div style="text-align:center">{chart}{leg}</div>')
+
+    return "".join(parts)
+
+
+def build_api_deep_dive(report: dict) -> str:
+    """Build detailed API error analysis."""
+    errors = report.get("L2_statistics", {}).get("errors", {})
+    api_errors = errors.get("api_errors", [])
+    error_count = errors.get("error_count", 0)
+    retry_count = errors.get("retry_count", 0)
+    total_wait_ms = errors.get("total_retry_wait_ms", 0)
+    dist = errors.get("error_code_distribution", {})
+
+    parts = []
+
+    if error_count == 0:
+        parts.append(f'''
+        <div class="card-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom:20px">
+          {card("API Errors", "0", "No API errors in this session", COLORS["success"])}
+          {card("Retries", "0", "No retries needed", COLORS["success"])}
+          {card("Availability", "100%", "All API calls succeeded", COLORS["success"])}
+        </div>
+        <p style="color:{COLORS['success']};font-weight:600">This session had no API errors. Excellent API stability.</p>''')
+        return "".join(parts)
+
+    # Summary cards
+    recovery_rate = retry_count / max(error_count, 1)
+    avg_wait = total_wait_ms / max(retry_count, 1)
+    parts.append(f'''
+    <div class="card-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom:20px">
+      {card("Total Errors", str(error_count), "API failures detected", COLORS["danger"])}
+      {card("Retries", str(retry_count), f"{recovery_rate:.0%} of errors retried", COLORS["warning"])}
+      {card("Avg Wait", f"{avg_wait/1000:.1f}s", f"{total_wait_ms/1000:.1f}s total wait", COLORS["info"])}
+      {card("Error Types", str(len(dist)), "unique error codes")}
+    </div>''')
+
+    # Error code distribution with donut
+    if dist:
+        parts.append('<h3>Error Code Distribution</h3>')
+        error_data = [(code, count, CHART_COLORS[i % len(CHART_COLORS)]) for i, (code, count) in enumerate(sorted(dist.items(), key=lambda x: x[1], reverse=True))]
+        chart = svg_donut(error_data, size=180)
+        leg = legend([(label, color) for label, _, color in error_data])
+
+        rows = []
+        for code, count in sorted(dist.items(), key=lambda x: x[1], reverse=True):
+            pct = count / max(error_count, 1)
+            bar = progress_bar(pct, COLORS["danger"], f'{pct:.0%}')
+            rows.append([f'<code>{html.escape(code)}</code>', str(count), bar])
+        tbl = table(["Error Code", "Count", "Proportion"], rows)
+
+        parts.append(f'<div class="chart-row"><div class="chart-container">{chart}{leg}</div><div class="chart-table">{tbl}</div></div>')
+
+    # Detailed error timeline
+    if api_errors:
+        parts.append('<h3 style="margin-top:20px">Error Timeline</h3>')
+        rows = []
+        for e in api_errors[:20]:
+            ts = e.get("timestamp", "")[:19]
+            code = e.get("code", "unknown")
+            attempt = e.get("retry_attempt", 0)
+            max_r = e.get("max_retries", 0)
+            wait = e.get("retry_in_ms", 0)
+            msg = e.get("message", "")[:80]
+
+            retry_info = f'{attempt}/{max_r}' if attempt > 0 else '-'
+            wait_info = f'{wait/1000:.1f}s' if wait > 0 else '-'
+            recovered = '<span style="color:#22c55e">Yes</span>' if attempt > 0 else '<span style="color:#94a3b8">-</span>'
+
+            rows.append([ts, f'<code>{html.escape(code)}</code>', retry_info, wait_info, recovered, html.escape(msg)])
+        parts.append(table(["Time", "Code", "Retry", "Wait", "Recovered", "Message"], rows))
+
+    return "".join(parts)
+
+
 def build_session_info(report: dict) -> str:
     """Build session metadata section."""
     meta = report.get("metadata", {})
@@ -573,6 +811,15 @@ code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 12p
 .nav a:hover { background: #6366f1; color: white; border-color: #6366f1; }
 @media (max-width: 768px) { .chart-row { flex-direction: column; } .card-grid { grid-template-columns: repeat(2, 1fr); } }
 .footer { text-align: center; color: var(--text-secondary); font-size: 12px; padding: 24px 0; }
+.formula-box { background: #fefce8; border: 1px solid #fde68a; border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+.formula-box h3 { color: #92400e; margin-bottom: 12px; }
+.formula-table { font-size: 13px; }
+.formula-table td { padding: 8px 12px; vertical-align: middle; }
+.formula-table td:first-child { font-weight: 600; white-space: nowrap; width: 160px; }
+.formula-table code { font-size: 12px; }
+.info-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 16px; color: #1e40af; font-size: 14px; }
+.section-divider { border: none; border-top: 3px solid #6366f1; margin: 40px 0 32px; opacity: 0.3; }
+.detail-header { color: #6366f1; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 16px; }
 """
 
 
@@ -602,10 +849,15 @@ def generate_html(report: dict) -> str:
         '<a href="#tools">Tools</a>'
         '<a href="#behavior">Behavior</a>'
         '<a href="#efficiency">Efficiency</a>'
-        '<a href="#errors">Errors & Hooks</a>'
-        '<a href="#info">Session Info</a>'
+        '<a href="#errors">Errors</a>'
+        '<a href="#tool-detail">Tool Detail</a>'
+        '<a href="#skill-detail">Skill Detail</a>'
+        '<a href="#formula">Formulas</a>'
+        '<a href="#api-detail">API Detail</a>'
+        '<a href="#info">Info</a>'
         '</nav>',
 
+        # === Overview sections ===
         build_summary(report),
         f'<div id="summary">{build_ai_summary(report)}</div>',
         section("Token Distribution", build_token_distribution(report), "tokens"),
@@ -614,6 +866,14 @@ def generate_html(report: dict) -> str:
         section("Behavior Phases", build_behavior_phases(report), "behavior"),
         section("Token Efficiency", build_efficiency(report), "efficiency"),
         section("Errors & Hooks", build_errors_hooks(report), "errors"),
+
+        # === Detailed analysis sections ===
+        '<hr class="section-divider">',
+        '<div class="detail-header">Detailed Analysis</div>',
+        section("Tool Deep Dive", build_tool_deep_dive(report), "tool-detail"),
+        section("Skill Deep Dive", build_skill_deep_dive(report), "skill-detail"),
+        section("Efficiency Formulas & Cache", build_efficiency_detail(report), "formula"),
+        section("API Error Analysis", build_api_deep_dive(report), "api-detail"),
         section("Session Info", build_session_info(report), "info"),
 
         '<div class="footer">Generated by framework-session-analyzer-tool &mdash; connsys-jarvis</div>',
