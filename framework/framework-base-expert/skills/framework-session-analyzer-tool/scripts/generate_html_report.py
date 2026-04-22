@@ -104,7 +104,7 @@ def svg_donut(data: list[tuple[str, float, str]], size: int = 180, hole: float =
             f"L {x1i:.1f} {y1i:.1f} "
             f"A {r_inner:.1f} {r_inner:.1f} 0 {large_arc} 0 {x2i:.1f} {y2i:.1f} Z"
         )
-        tooltip = f"{label}: {value:,.0f} ({pct:.1%})"
+        tooltip = f"{html.escape(label)}: {value:,.0f} ({pct:.1%})"
         paths.append(
             f'<path d="{d}" fill="{color}" stroke="white" stroke-width="1.5">'
             f'<title>{tooltip}</title></path>'
@@ -150,7 +150,7 @@ def svg_bar_horizontal(data: list[tuple[str, float, str]], width: int = 400, bar
         bars.append(
             f'<rect x="{label_w}" y="{y}" width="{max(bar_width, 2):.1f}" '
             f'height="{bar_h}" rx="4" fill="{color}" opacity="0.85">'
-            f'<title>{label}: {value:,.0f}</title></rect>'
+            f'<title>{html.escape(label)}: {value:,.0f}</title></rect>'
         )
         bars.append(
             f'<text x="{label_w + bar_width + 6:.1f}" y="{y + bar_h/2 + 4}" '
@@ -277,7 +277,7 @@ def build_ai_summary(report: dict) -> str:
     points.append(f"Session consumed <strong>{total:,}</strong> tokens (~${cost:.2f}) over <strong>{duration/60:.1f} minutes</strong>.")
 
     if len(models) > 1:
-        points.append(f"Models used: {', '.join(f'<code>{m}</code>' for m in models)}.")
+        points.append(f"Models used: {', '.join(f'<code>{html.escape(m)}</code>' for m in models)}.")
     elif models:
         points.append(f"Model: <code>{models[0]}</code>.")
 
