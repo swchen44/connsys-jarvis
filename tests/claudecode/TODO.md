@@ -1,50 +1,50 @@
 # Integration Test - Progress Tracker
 
-## Phase 0 — Documents & Skeleton
+## Phase 0 — Documents & Skeleton ✅
 - [x] Create `tests/claudecode/` directory structure
 - [x] Write `doc/requirements.md`
 - [x] Write `doc/design.md`
 - [x] Create `TODO.md`
-- [ ] git commit
+- [x] git commit (3ab60fa)
 
-## Phase 1 — Core Runner
-- [ ] `config.py` — constants, paths, model definitions
-- [ ] `runner.py` — HeadlessExecutor + TmuxExecutor + ClaudeRunner
-- [ ] `cli.py` — argparse entry point (--mode, --model, --expert, -v)
-- [ ] `__init__.py`
-- [ ] git commit
+## Phase 1 — Core Runner ✅
+- [x] `config.py` — constants, paths, model definitions, pricing
+- [x] `runner.py` — HeadlessExecutor + TmuxExecutor + ClaudeRunner
+- [x] `cli.py` — argparse entry point (--mode, --model, --expert, -v)
+- [x] `__init__.py` + `__main__.py`
+- [x] git commit (67137cd)
 
-## Phase 2 — Analysis & Verification Modules
-- [ ] `assertions.py` — assertion library
-- [ ] `token_analyzer.py` — token classification & statistics
-- [ ] `skill_checker.py` — skill invocation verification
-- [ ] `dependency_checker.py` — dependency chain verification
-- [ ] git commit
+## Phase 2 — Analysis & Verification Modules ✅
+- [x] `assertions.py` — 6-layer assertion library with LLM-as-judge
+- [x] `token_analyzer.py` — token classification, waste detection, behavior phases
+- [x] `skill_checker.py` — recursive skill loading, invocation verification
+- [x] `dependency_checker.py` — topological dependency resolution
+- [x] git commit (17a7bd4)
 
-## Phase 3 — framework-base-expert Tests
-- [ ] `framework-base-expert/test_cases.json`
-- [ ] `framework-base-expert/test_framework_base.py`
-- [ ] `framework-base-expert/prompts/` — test prompts
-- [ ] `framework-base-expert/golden/` — expected outputs
-- [ ] `framework-base-expert/rubrics/` — scoring rubrics
-- [ ] Verify headless mode output format
-- [ ] Verify tmux output capture
-- [ ] git commit
+## Phase 3 — framework-base-expert Tests ✅
+- [x] `framework-base-expert/test_cases.json` (4 test cases: FW-001~FW-004)
+- [x] `framework-base-expert/test_framework_base.py`
+- [x] `framework-base-expert/prompts/` — FW-001, FW-002
+- [x] `framework-base-expert/golden/` — FW-001 expected
+- [x] `framework-base-expert/rubrics/` — FW-001, FW-002
+- [ ] Verify headless mode output format (requires runtime test)
+- [ ] Verify tmux output capture (requires runtime test)
+- [x] git commit (80fc3ce)
 
-## Phase 4 — wifi-bora-memory-slim-expert Tests
-- [ ] `wifi-bora-memory-slim-expert/test_cases.json`
-- [ ] `wifi-bora-memory-slim-expert/test_memory_slim.py`
-- [ ] `wifi-bora-memory-slim-expert/prompts/`
-- [ ] `wifi-bora-memory-slim-expert/golden/`
-- [ ] `wifi-bora-memory-slim-expert/rubrics/`
-- [ ] Verify 5-Expert dependency chain resolution
-- [ ] Verify symlink completeness
-- [ ] git commit
+## Phase 4 — wifi-bora-memory-slim-expert Tests ✅
+- [x] `wifi-bora-memory-slim-expert/test_cases.json` (4 test cases: MEM-001~MEM-004)
+- [x] `wifi-bora-memory-slim-expert/test_memory_slim.py`
+- [x] `wifi-bora-memory-slim-expert/prompts/` — MEM-002, MEM-003
+- [x] `wifi-bora-memory-slim-expert/golden/` — MEM-002 expected
+- [x] `wifi-bora-memory-slim-expert/rubrics/` — MEM-002
+- [x] Verify 5-Expert dependency chain resolution (in test code)
+- [x] Verify symlink completeness (in dependency_checker)
+- [x] git commit (b86ea97)
 
 ## Phase 5 — Report & Template
-- [ ] `report.py` — three-layer report generator
-- [ ] `templates/expert_test_template.py`
-- [ ] `conftest.py` — pytest fixtures
+- [x] `report.py` — three-layer report generator
+- [x] `templates/expert_test_template.py`
+- [x] `conftest.py` — pytest fixtures
 - [ ] pylint pass (>= 9.0)
 - [ ] git commit
 
