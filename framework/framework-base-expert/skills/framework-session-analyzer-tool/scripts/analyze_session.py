@@ -301,6 +301,216 @@ def analyze_tools(lines: list[dict]) -> dict:
     }
 
 
+def analyze_tool_errors_detail(lines: list[dict]) -> dict:
+    """L2: Detailed tool error analysis with specific targets.
+
+    Captures what exactly failed: which file, command, URL, or pattern
+    caused each tool error, and classifies errors by category.
+    """
+    # Map tool_use_id -> {tool_name, input details}
+    call_inputs: dict[str, dict] = {}
+    error_records: list[dict] = []
+
+    for line in lines:
+        msg_type = line.get("type", "")
+
+        # Collect tool_use inputs
+        if msg_type == "assistant":
+            for block in extract_content_blocks(line):
+                if block.get("type") != "tool_use":
+                    continue
+                use_id = block.get("id", "")
+                if not use_id:
+                    continue
+                tool_name = block.get("name", "")
+                tool_input = block.get("input", {})
+
+                # Extract the target (file, command, URL, pattern)
+                target = _extract_tool_target(tool_name, tool_input)
+                call_inputs[use_id] = {
+                    "tool": tool_name,
+                    "target": target,
+                    "input_summary": _summarize_input(tool_name, tool_input),
+                }
+
+        # Collect error results
+        if msg_type in ("user", "tool_result"):
+            for block in extract_content_blocks(line):
+                if block.get("type") != "tool_result":
+                    continue
+                use_id = block.get("tool_use_id", "")
+                is_error = block.get("is_error", False)
+                result_content = block.get("content", "")
+
+                if not is_error:
+                    # Also check result text for error indicators
+                    if isinstance(result_content, str):
+                        lower = result_content.lower()
+                        if not any(kw in lower for kw in [
+                            "error", "failed", "not found", "denied",
+                            "timeout", "timed out", "no such file",
+                        ]):
+                            continue
+
+                call_info = call_inputs.get(use_id, {})
+                if not call_info:
+                    continue
+
+                error_msg = ""
+                if isinstance(result_content, str):
+                    error_msg = result_content[:300]
+                elif isinstance(result_content, list):
+                    for item in result_content:
+                        if isinstance(item, dict) and item.get("text"):
+                            error_msg = item["text"][:300]
+                            break
+
+                category = _classify_error(
+                    call_info["tool"], error_msg, call_info["target"]
+                )
+
+                error_records.append({
+                    "tool": call_info["tool"],
+                    "target": call_info["target"],
+                    "input_summary": call_info["input_summary"],
+                    "error_message": error_msg[:200],
+                    "category": category,
+                    "timestamp": line.get("timestamp", ""),
+                })
+
+    # Aggregate by category
+    category_counts: dict[str, int] = {}
+    for rec in error_records:
+        cat = rec["category"]
+        category_counts[cat] = category_counts.get(cat, 0) + 1
+
+    # Aggregate by tool + target (top repeated errors)
+    target_counts: dict[str, dict] = {}
+    for rec in error_records:
+        key = f"{rec['tool']}:{rec['target']}"
+        if key not in target_counts:
+            target_counts[key] = {
+                "tool": rec["tool"],
+                "target": rec["target"],
+                "count": 0,
+                "category": rec["category"],
+                "sample_error": rec["error_message"][:100],
+            }
+        target_counts[key]["count"] += 1
+
+    # Sort by count descending
+    top_targets = sorted(
+        target_counts.values(), key=lambda x: x["count"], reverse=True
+    )
+
+    return {
+        "total_errors_detailed": len(error_records),
+        "by_category": dict(sorted(
+            category_counts.items(), key=lambda x: x[1], reverse=True
+        )),
+        "top_error_targets": top_targets[:15],
+        "all_errors": error_records[:30],
+    }
+
+
+def _extract_tool_target(tool_name: str, tool_input: dict) -> str:
+    """Extract the main target from tool input."""
+    if tool_name in ("Read", "Write", "Edit"):
+        return tool_input.get("file_path", "") or tool_input.get("path", "")
+    if tool_name == "Bash":
+        cmd = tool_input.get("command", "")
+        # Truncate long commands but keep the key part
+        return cmd[:120] if len(cmd) <= 120 else cmd[:117] + "..."
+    if tool_name in ("Grep", "Glob"):
+        pattern = tool_input.get("pattern", "")
+        path = tool_input.get("path", "")
+        return f"{pattern} in {path}" if path else pattern
+    if tool_name in ("WebFetch", "WebSearch"):
+        return tool_input.get("url", "") or tool_input.get("query", "")
+    if tool_name == "Agent":
+        return tool_input.get("description", "") or tool_input.get("prompt", "")[:80]
+    if tool_name == "Skill":
+        return tool_input.get("skill", "")
+    if tool_name.startswith("mcp__claude-in-chrome__"):
+        return str(tool_input.get("url", "") or tool_input.get("tabId", ""))
+    if tool_name == "ExitPlanMode":
+        return "plan approval"
+    # Generic fallback — always return str
+    for key in ("file_path", "path", "command", "url", "query", "prompt"):
+        if key in tool_input:
+            val = str(tool_input[key])
+            return val[:120] if len(val) <= 120 else val[:117] + "..."
+    return str(tool_input)[:80] if tool_input else ""
+
+
+def _summarize_input(tool_name: str, tool_input: dict) -> str:
+    """Create a human-readable summary of tool input."""
+    target = _extract_tool_target(tool_name, tool_input)
+    if tool_name == "Read":
+        return f"Read {target}"
+    if tool_name == "Write":
+        return f"Write {target}"
+    if tool_name == "Edit":
+        old = tool_input.get("old_string", "")[:40]
+        return f"Edit {target} (old_string: {old}...)"
+    if tool_name == "Bash":
+        return f"$ {target}"
+    if tool_name == "Grep":
+        return f"Grep '{target}'"
+    if tool_name == "Agent":
+        return f"Agent: {target}"
+    return f"{tool_name}: {target}"
+
+
+def _classify_error(tool_name: str, error_msg: str, target: str) -> str:
+    """Classify an error into a human-readable category."""
+    lower = error_msg.lower()
+
+    # File-related
+    if any(kw in lower for kw in ["no such file", "not found", "does not exist"]):
+        return "file_not_found"
+    if any(kw in lower for kw in ["permission denied", "access denied", "not permitted"]):
+        return "permission_denied"
+
+    # Edit-specific
+    if "old_string" in lower and ("not unique" in lower or "not found" in lower):
+        return "edit_mismatch"
+    if "old_string" in lower:
+        return "edit_mismatch"
+
+    # Connection
+    if any(kw in lower for kw in ["connection refused", "connection reset", "econnrefused"]):
+        return "connection_refused"
+    if any(kw in lower for kw in ["timeout", "timed out", "etimedout"]):
+        return "timeout"
+    if any(kw in lower for kw in ["dns", "resolve", "enotfound"]):
+        return "dns_error"
+
+    # Command
+    if any(kw in lower for kw in ["command not found", "no such command"]):
+        return "command_not_found"
+    if "exit code" in lower or "non-zero" in lower:
+        return "command_failed"
+
+    # Tool-specific
+    if tool_name == "ExitPlanMode" and "rejected" in lower:
+        return "user_rejected"
+    if "user" in lower and ("rejected" in lower or "denied" in lower or "doesn't want" in lower):
+        return "user_rejected"
+
+    # Agent
+    if tool_name == "Agent" and any(kw in lower for kw in ["rejected", "error"]):
+        return "agent_failed"
+
+    # Browser
+    if tool_name.startswith("mcp__claude-in-chrome"):
+        if "no longer exists" in lower or "tab" in lower:
+            return "browser_tab_error"
+        return "browser_error"
+
+    return "other_error"
+
+
 def analyze_skills(lines: list[dict]) -> dict:
     """L2: Skill invocation statistics."""
     skill_stats: dict[str, ToolStat] = {}
@@ -766,6 +976,7 @@ def generate_report(lines: list[dict], jsonl_path: Path | None = None) -> dict:
     skills = analyze_skills(lines)
     subagents = analyze_subagents(lines)
     errors = analyze_errors(lines)
+    error_details = analyze_tool_errors_detail(lines)
     hooks = analyze_hooks(lines)
     behavior = analyze_behavior(lines)
     file_changes = analyze_file_changes(lines)
@@ -798,6 +1009,7 @@ def generate_report(lines: list[dict], jsonl_path: Path | None = None) -> dict:
             "skills": skills,
             "subagents": subagents,
             "errors": errors,
+            "error_details": error_details,
             "hooks": hooks,
             "file_changes": file_changes,
             "aggregated_stats": aggregated,

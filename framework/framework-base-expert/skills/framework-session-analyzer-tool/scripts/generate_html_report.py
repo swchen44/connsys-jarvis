@@ -732,6 +732,108 @@ def build_api_deep_dive(report: dict) -> str:
     return "".join(parts)
 
 
+def build_error_detail(report: dict) -> str:
+    """Build detailed error analysis with specific targets."""
+    ed = report.get("L2_statistics", {}).get("error_details", {})
+    total = ed.get("total_errors_detailed", 0)
+    by_category = ed.get("by_category", {})
+    top_targets = ed.get("top_error_targets", [])
+    all_errors = ed.get("all_errors", [])
+
+    parts = []
+
+    if total == 0:
+        parts.append(f'''
+        <div class="card-grid" style="grid-template-columns: repeat(2, 1fr); margin-bottom:20px">
+          {card("Detailed Errors", "0", "No tool errors with detail captured", COLORS["success"])}
+          {card("Error Categories", "0", "All tools executed cleanly", COLORS["success"])}
+        </div>''')
+        return "".join(parts)
+
+    # Summary cards
+    top_cat = max(by_category, key=by_category.get) if by_category else "none"
+    parts.append(f'''
+    <div class="card-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom:20px">
+      {card("Total Errors", str(total), "with detailed context", COLORS["danger"])}
+      {card("Error Categories", str(len(by_category)), f"most common: {top_cat}", COLORS["warning"])}
+      {card("Unique Targets", str(len(top_targets)), "distinct file/cmd/URL failures")}
+      {card("Top Offender", f"{top_targets[0]['count']}x" if top_targets else "-", top_targets[0]['target'][:30] if top_targets else "-", COLORS["danger"])}
+    </div>''')
+
+    # Error category distribution with donut
+    if by_category:
+        parts.append('<h3>Error Category Distribution</h3>')
+
+        cat_labels = {
+            "file_not_found": "File Not Found",
+            "permission_denied": "Permission Denied",
+            "edit_mismatch": "Edit Mismatch",
+            "connection_refused": "Connection Refused",
+            "timeout": "Timeout",
+            "dns_error": "DNS Error",
+            "command_not_found": "Command Not Found",
+            "command_failed": "Command Failed",
+            "user_rejected": "User Rejected",
+            "agent_failed": "Agent Failed",
+            "browser_tab_error": "Browser Tab Error",
+            "browser_error": "Browser Error",
+            "other_error": "Other",
+        }
+
+        cat_data = [
+            (cat_labels.get(cat, cat), count, CHART_COLORS[i % len(CHART_COLORS)])
+            for i, (cat, count) in enumerate(by_category.items())
+        ]
+        chart = svg_donut(cat_data, size=180)
+        leg = legend([(label, color) for label, _, color in cat_data])
+
+        rows = []
+        for cat, count in by_category.items():
+            pct = count / max(total, 1)
+            bar = progress_bar(pct, COLORS["danger"], f'{count}x ({pct:.0%})')
+            rows.append([cat_labels.get(cat, cat), bar])
+        tbl = table(["Category", "Count & Proportion"], rows)
+
+        parts.append(f'<div class="chart-row"><div class="chart-container">{chart}{leg}</div><div class="chart-table">{tbl}</div></div>')
+
+    # Top error targets (ranked list)
+    if top_targets:
+        parts.append('<h3 style="margin-top:24px">Top Error Targets (most frequent first)</h3>')
+        rows = []
+        for t in top_targets:
+            target_display = t["target"]
+            if len(target_display) > 60:
+                target_display = target_display[:57] + "..."
+            rows.append([
+                f'<span style="color:{COLORS["danger"]};font-weight:700">{t["count"]}x</span>',
+                f'<code>{html.escape(t["tool"])}</code>',
+                f'<code style="font-size:11px">{html.escape(target_display)}</code>',
+                t.get("category", ""),
+                f'<span style="font-size:11px;color:{COLORS["muted"]}">{html.escape(t.get("sample_error", "")[:60])}</span>',
+            ])
+        parts.append(table(["Count", "Tool", "Target", "Category", "Sample Error"], rows))
+
+    # Full error log (last N errors with full detail)
+    if all_errors:
+        parts.append('<h3 style="margin-top:24px">Error Log (recent)</h3>')
+        rows = []
+        for e in all_errors:
+            ts = e.get("timestamp", "")[:19]
+            target = e.get("target", "")
+            if len(target) > 50:
+                target = target[:47] + "..."
+            rows.append([
+                ts,
+                f'<code>{html.escape(e.get("tool", ""))}</code>',
+                e.get("category", ""),
+                f'<code style="font-size:11px">{html.escape(target)}</code>',
+                f'<span style="font-size:11px">{html.escape(e.get("error_message", "")[:80])}</span>',
+            ])
+        parts.append(table(["Time", "Tool", "Category", "Target", "Error Message"], rows))
+
+    return "".join(parts)
+
+
 def build_file_changes(report: dict) -> str:
     """Build file change tracking section."""
     fc = report.get("L2_statistics", {}).get("file_changes", {})
@@ -993,6 +1095,7 @@ def generate_html(report: dict) -> str:
         '<a href="#skill-detail">Skill Detail</a>'
         '<a href="#formula">Formulas</a>'
         '<a href="#api-detail">API Detail</a>'
+        '<a href="#error-detail">Error Detail</a>'
         '<a href="#files">Files</a>'
         '<a href="#agg-stats">Aggregated</a>'
         '<a href="#speculation">Speculation</a>'
@@ -1017,6 +1120,7 @@ def generate_html(report: dict) -> str:
         section("Skill Deep Dive", build_skill_deep_dive(report), "skill-detail"),
         section("Efficiency Formulas & Cache", build_efficiency_detail(report), "formula"),
         section("API Error Analysis", build_api_deep_dive(report), "api-detail"),
+        section("Tool Error Detail", build_error_detail(report), "error-detail"),
         section("File Changes", build_file_changes(report), "files"),
         section("Aggregated Statistics", build_aggregated_stats(report), "agg-stats"),
         section("Speculation", build_speculation(report), "speculation"),
