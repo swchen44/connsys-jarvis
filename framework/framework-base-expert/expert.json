@@ -10,7 +10,7 @@
   "transitions": {},
   "dependencies": [],
   "internal": {
-    "skills": ["framework-expert-discovery-knowhow", "framework-memory-tool", "framework-skill-create-flow", "framework-expert-create-flow", "framework-base-expert-list-cmd"],
+    "skills": ["framework-expert-discovery-knowhow", "framework-memory-tool", "framework-skill-create-flow", "framework-expert-create-flow", "framework-base-expert-list-cmd", "framework-session-analyzer-tool"],
     "hooks": ["framework-base-expert-session-start-hook.sh", "framework-base-expert-session-end-hook.sh", "framework-base-expert-pre-compact-hook.sh", "framework-base-expert-mid-checkpoint-hook.sh", "framework-base-expert-shared-utils.sh"],
     "agents": [],
     "commands": [],
