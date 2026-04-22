@@ -1,0 +1,163 @@
+{
+  "expert": "wifi-bora-memory-slim-expert",
+  "version": "1.0.0",
+  "description": "Integration tests for wifi-bora-memory-slim-expert (dependency chain + skills)",
+  "test_cases": [
+    {
+      "id": "MEM-001",
+      "name": "dependency_chain_integrity",
+      "description": "驗證 5 層相依性的 plugin dir、expert.json、skills 目錄全部正確",
+      "type": "dependency_check",
+      "checks": {
+        "dependencies_resolved": [
+          "sys-bora-base-expert",
+          "framework-base-expert",
+          "wifi-bora-base-expert",
+          "sys-bora-preflight-expert",
+          "wifi-bora-memory-slim-expert"
+        ]
+      }
+    },
+    {
+      "id": "MEM-002",
+      "name": "memslim_flow_trigger",
+      "description": "驗證 wifi-bora-memslim-flow skill 能正確觸發記憶體分析流程",
+      "prompt": "prompts/MEM-002_memslim_flow.md",
+      "timeout": 240,
+      "token_budget": 80000,
+      "checks": {
+        "skills_invoked": [
+          {
+            "skill": "wifi-bora-memslim-flow",
+            "required": true,
+            "comment": "主要記憶體分析流程 skill 必須被觸發"
+          },
+          {
+            "skill": "wifi-bora-memory-knowhow",
+            "required": false,
+            "comment": "記憶體知識庫可能被引用"
+          },
+          {
+            "skill": "wifi-bora-ast-tool",
+            "required": false,
+            "comment": "AST 分析工具可能被調用"
+          }
+        ],
+        "tools_called": [
+          {
+            "tool": "Read",
+            "min_count": 1,
+            "comment": "需讀取 map/elf/linker script 檔案"
+          },
+          {
+            "tool": "Bash",
+            "min_count": 1,
+            "comment": "需執行 size/nm 等分析命令"
+          }
+        ],
+        "output_contains": ["ROM", "RAM"],
+        "output_not_contains": [],
+        "nl_checks": [
+          {
+            "id": "nl-01",
+            "aspect": "completeness",
+            "question": "回應是否完整涵蓋了 ROM 和 RAM 兩方面的分析？包括 section 分佈、大型 symbol、佔比等資訊？",
+            "model": "haiku",
+            "scale": 10,
+            "min_pass": 7,
+            "reference": "golden/MEM-002_expected.md"
+          },
+          {
+            "id": "nl-02",
+            "aspect": "accuracy",
+            "question": "分析結果中引用的 function name 和 size 數字是否看起來合理？格式是否正確（使用 bytes/KB 單位）？",
+            "model": "haiku",
+            "scale": 10,
+            "min_pass": 6
+          },
+          {
+            "id": "nl-03",
+            "aspect": "actionability",
+            "question": "回應是否提供了可執行的記憶體優化建議（而不只是列出數字）？例如：建議移除或精簡哪些 function。",
+            "model": "haiku",
+            "scale": 10,
+            "min_pass": 6
+          }
+        ],
+        "judge": {
+          "enabled": true,
+          "model": "haiku",
+          "rubric": "rubrics/MEM-002_rubric.md",
+          "min_score": 7
+        }
+      }
+    },
+    {
+      "id": "MEM-003",
+      "name": "lsp_tool_trigger",
+      "description": "驗證 wifi-bora-lsp-tool 能分析程式碼結構",
+      "prompt": "prompts/MEM-003_lsp_tool.md",
+      "timeout": 180,
+      "token_budget": 60000,
+      "checks": {
+        "skills_invoked": [
+          {
+            "skill": "wifi-bora-lsp-tool",
+            "required": true
+          }
+        ],
+        "tools_called": [
+          {
+            "tool": "Read",
+            "min_count": 1
+          }
+        ],
+        "output_contains": ["function", "call"],
+        "nl_checks": [
+          {
+            "id": "nl-01",
+            "aspect": "accuracy",
+            "question": "回應是否正確分析了程式碼的 function call graph 或 symbol reference？",
+            "model": "haiku",
+            "scale": 10,
+            "min_pass": 6
+          }
+        ],
+        "judge": {
+          "enabled": false
+        }
+      }
+    },
+    {
+      "id": "MEM-004",
+      "name": "cross_dependency_skill_access",
+      "description": "驗證相依的 skill (sys-bora-gerrit-tool) 可以從 memory-slim expert 觸發",
+      "prompt": "請使用 repo 工具幫我查看目前的 manifest 狀態",
+      "timeout": 120,
+      "token_budget": 40000,
+      "checks": {
+        "skills_invoked": [
+          {
+            "skill": "sys-bora-repo-tool",
+            "required": false,
+            "comment": "從 sys-bora-base-expert 繼承的 skill，應該可被觸發"
+          }
+        ],
+        "output_not_contains": ["skill not found", "unknown skill"],
+        "nl_checks": [
+          {
+            "id": "nl-01",
+            "aspect": "accessibility",
+            "question": "回應是否成功調用了相依 Expert (sys-bora-base-expert) 的功能？是否有權限錯誤或 skill 找不到的問題？",
+            "model": "haiku",
+            "scale": 10,
+            "min_pass": 5
+          }
+        ],
+        "judge": {
+          "enabled": false
+        }
+      }
+    }
+  ]
+}
