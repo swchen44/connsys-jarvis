@@ -732,9 +732,148 @@ def build_api_deep_dive(report: dict) -> str:
     return "".join(parts)
 
 
+def build_file_changes(report: dict) -> str:
+    """Build file change tracking section."""
+    fc = report.get("L2_statistics", {}).get("file_changes", {})
+    parts = []
+
+    snapshot_count = fc.get("snapshot_count", 0)
+    unique_files = fc.get("unique_files_modified", 0)
+    files = fc.get("files", [])
+
+    parts.append(f'''
+    <div class="card-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom:20px">
+      {card("Snapshots", str(snapshot_count), "file-history-snapshot events")}
+      {card("Files Modified", str(unique_files), "unique files tracked", COLORS["info"])}
+      {card("Avg Files/Snap", f"{unique_files/max(snapshot_count,1):.1f}", "files per snapshot")}
+    </div>''')
+
+    if files:
+        parts.append('<h3>Modified Files</h3>')
+        rows = [[f'<code>{html.escape(f)}</code>'] for f in files[:30]]
+        parts.append(table(["File Path"], rows))
+        if len(files) > 30:
+            parts.append(f'<p style="color:{COLORS["muted"]}">... and {len(files)-30} more files</p>')
+
+    if not snapshot_count:
+        parts.append(f'<p style="color:{COLORS["muted"]}">No file-history-snapshot entries found in this session.</p>')
+
+    return "".join(parts)
+
+
+def build_aggregated_stats(report: dict) -> str:
+    """Build aggregated tool statistics from collapsed_read_search."""
+    agg = report.get("L2_statistics", {}).get("aggregated_stats", {})
+    totals = agg.get("totals", {})
+    entry_count = agg.get("entry_count", 0)
+    mcp_servers = agg.get("mcp_servers", [])
+
+    parts = []
+
+    if entry_count == 0:
+        parts.append(f'<p style="color:{COLORS["muted"]}">No collapsed_read_search aggregation entries found.</p>')
+        return "".join(parts)
+
+    # Cards for key counts
+    parts.append(f'''
+    <div class="card-grid" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); margin-bottom:20px">
+      {card("Read", str(totals.get("readCount", 0)), "file reads", COLORS["info"])}
+      {card("Search", str(totals.get("searchCount", 0)), "grep/glob", COLORS["primary"])}
+      {card("Bash", str(totals.get("bashCount", 0)), "shell commands", COLORS["warning"])}
+      {card("Git Ops", str(totals.get("gitOpBashCount", 0)), "git bash ops")}
+      {card("Edit/Repl", str(totals.get("replCount", 0)), "replacements", COLORS["success"])}
+      {card("MCP Calls", str(totals.get("mcpCallCount", 0)), f"{len(mcp_servers)} servers", COLORS["primary"])}
+      {card("Hook Runs", str(totals.get("hookCount", 0)), f"{totals.get('hookTotalMs',0)/1000:.1f}s total")}
+      {card("Memory Ops", str(totals.get("memoryReadCount",0) + totals.get("memoryWriteCount",0) + totals.get("memorySearchCount",0)), "read+write+search")}
+    </div>''')
+
+    # Bar chart of counts
+    chart_data = [
+        (k, v, CHART_COLORS[i % len(CHART_COLORS)])
+        for i, (k, v) in enumerate(sorted(totals.items(), key=lambda x: x[1], reverse=True))
+        if v > 0 and k != "hookTotalMs"
+    ]
+    if chart_data:
+        parts.append('<h3>Operation Distribution</h3>')
+        chart = svg_bar_horizontal(chart_data, width=550)
+        parts.append(f'<div style="margin-bottom:16px">{chart}</div>')
+
+    # MCP servers
+    if mcp_servers:
+        parts.append('<h3>MCP Servers Used</h3>')
+        rows = [[f'<code>{html.escape(s)}</code>'] for s in mcp_servers]
+        parts.append(table(["Server Name"], rows))
+
+    return "".join(parts)
+
+
+def build_speculation(report: dict) -> str:
+    """Build speculation time-saved section."""
+    spec = report.get("L2_statistics", {}).get("speculation", {})
+    event_count = spec.get("event_count", 0)
+    total_saved = spec.get("total_time_saved_ms", 0)
+
+    parts = []
+
+    if event_count == 0:
+        parts.append(f'''
+        <div class="card-grid" style="grid-template-columns: repeat(2, 1fr); margin-bottom:20px">
+          {card("Speculation Events", "0", "No speculative execution detected", COLORS["muted"])}
+          {card("Time Saved", "0s", "No time saved", COLORS["muted"])}
+        </div>
+        <p style="color:{COLORS["muted"]}">No SpeculationAcceptMessage entries found. Speculative execution may not be enabled or no speculations were accepted.</p>''')
+        return "".join(parts)
+
+    parts.append(f'''
+    <div class="card-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom:20px">
+      {card("Speculation Events", str(event_count), "accepted speculations", COLORS["success"])}
+      {card("Time Saved", f"{total_saved/1000:.1f}s", f"{total_saved:,}ms total", COLORS["success"])}
+      {card("Avg Saved/Event", f"{total_saved/max(event_count,1)/1000:.2f}s", "per speculation")}
+    </div>''')
+
+    events = spec.get("events", [])
+    if events:
+        rows = [[e["timestamp"][:19], f'{e["time_saved_ms"]:,}ms'] for e in events[:15]]
+        parts.append(table(["Time", "Saved"], rows))
+
+    return "".join(parts)
+
+
+def build_subagent_files(report: dict) -> str:
+    """Build subagent JSONL file listing."""
+    files = report.get("L2_statistics", {}).get("subagent_files", [])
+
+    parts = []
+
+    if not files:
+        parts.append(f'<p style="color:{COLORS["muted"]}">No subagent JSONL files found for this session.</p>')
+        return "".join(parts)
+
+    parts.append(f'''
+    <div class="card-grid" style="grid-template-columns: repeat(2, 1fr); margin-bottom:20px">
+      {card("Subagent Files", str(len(files)), "independent JSONL transcripts", COLORS["info"])}
+      {card("Total Size", f"{sum(f['size_bytes'] for f in files)/1024:.1f} KB", "combined size")}
+    </div>''')
+
+    rows = []
+    for f in files:
+        size_kb = f["size_bytes"] / 1024
+        desc = f.get("description", "") or f.get("agent_type", "") or "-"
+        rows.append([
+            f'<code>{html.escape(f["filename"])}</code>',
+            f'{size_kb:.1f} KB',
+            html.escape(f.get("agent_type", "-")),
+            html.escape(desc[:60]),
+        ])
+    parts.append(table(["File", "Size", "Type", "Description"], rows))
+
+    return "".join(parts)
+
+
 def build_session_info(report: dict) -> str:
     """Build session metadata section."""
     meta = report.get("metadata", {})
+    l1 = report.get("L1_quality", {})
     rows = [
         ["Session ID", f'<code>{meta.get("session_id", "")[:24]}...</code>'],
         ["Claude Code Version", meta.get("version", "")],
@@ -854,6 +993,10 @@ def generate_html(report: dict) -> str:
         '<a href="#skill-detail">Skill Detail</a>'
         '<a href="#formula">Formulas</a>'
         '<a href="#api-detail">API Detail</a>'
+        '<a href="#files">Files</a>'
+        '<a href="#agg-stats">Aggregated</a>'
+        '<a href="#speculation">Speculation</a>'
+        '<a href="#subagent-files">Subagents</a>'
         '<a href="#info">Info</a>'
         '</nav>',
 
@@ -874,6 +1017,10 @@ def generate_html(report: dict) -> str:
         section("Skill Deep Dive", build_skill_deep_dive(report), "skill-detail"),
         section("Efficiency Formulas & Cache", build_efficiency_detail(report), "formula"),
         section("API Error Analysis", build_api_deep_dive(report), "api-detail"),
+        section("File Changes", build_file_changes(report), "files"),
+        section("Aggregated Statistics", build_aggregated_stats(report), "agg-stats"),
+        section("Speculation", build_speculation(report), "speculation"),
+        section("Subagent JSONL Files", build_subagent_files(report), "subagent-files"),
         section("Session Info", build_session_info(report), "info"),
 
         '<div class="footer">Generated by framework-session-analyzer-tool &mdash; connsys-jarvis</div>',

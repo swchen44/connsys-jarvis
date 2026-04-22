@@ -439,6 +439,123 @@ def analyze_hooks(lines: list[dict]) -> dict:
     return {"hooks": sorted(result, key=lambda h: h["count"], reverse=True)}
 
 
+def analyze_file_changes(lines: list[dict]) -> dict:
+    """L2: File change tracking from file-history-snapshot entries."""
+    snapshots: list[dict] = []
+    all_files: set[str] = set()
+
+    for line in lines:
+        if line.get("type") != "file-history-snapshot":
+            continue
+        snapshot = line.get("snapshot", {})
+        tracked = snapshot.get("trackedFileBackups", {})
+        timestamp = line.get("timestamp", "")
+        files_in_snapshot = list(tracked.keys())
+        all_files.update(files_in_snapshot)
+        snapshots.append({
+            "timestamp": timestamp,
+            "file_count": len(files_in_snapshot),
+            "files": files_in_snapshot[:20],  # Limit for report size
+        })
+
+    return {
+        "snapshot_count": len(snapshots),
+        "unique_files_modified": len(all_files),
+        "files": sorted(all_files),
+        "snapshots": snapshots[:10],  # Last 10 snapshots
+    }
+
+
+def analyze_aggregated_stats(lines: list[dict]) -> dict:
+    """L2: Aggregated tool stats from collapsed_read_search entries."""
+    totals = {
+        "searchCount": 0, "readCount": 0, "listCount": 0,
+        "bashCount": 0, "gitOpBashCount": 0, "replCount": 0,
+        "memorySearchCount": 0, "memoryReadCount": 0, "memoryWriteCount": 0,
+        "mcpCallCount": 0, "hookCount": 0, "hookTotalMs": 0,
+    }
+    mcp_servers: set[str] = set()
+    entry_count = 0
+
+    for line in lines:
+        if line.get("type") != "collapsed_read_search":
+            continue
+        entry_count += 1
+        for key in totals:
+            totals[key] += line.get(key, 0)
+        for server in line.get("mcpServerNames", []):
+            mcp_servers.add(server)
+
+    return {
+        "entry_count": entry_count,
+        "totals": totals,
+        "mcp_servers": sorted(mcp_servers),
+    }
+
+
+def analyze_speculation(lines: list[dict]) -> dict:
+    """L2: Speculation accept events (time saved by speculative execution)."""
+    events: list[dict] = []
+    total_saved_ms = 0
+
+    for line in lines:
+        # Check for speculation-accept type or SpeculationAcceptMessage
+        line_type = line.get("type", "")
+        if "speculation" not in line_type.lower() and "speculation" not in str(line.get("subtype", "")).lower():
+            # Also check content for speculation data
+            content = line.get("content", "")
+            if isinstance(content, str) and "timeSaved" not in content:
+                continue
+
+        time_saved = line.get("timeSavedMs", 0)
+        if time_saved > 0:
+            total_saved_ms += time_saved
+            events.append({
+                "timestamp": line.get("timestamp", ""),
+                "time_saved_ms": time_saved,
+            })
+
+    return {
+        "event_count": len(events),
+        "total_time_saved_ms": total_saved_ms,
+        "total_time_saved_seconds": round(total_saved_ms / 1000, 1),
+        "events": events[:20],
+    }
+
+
+def find_subagent_jsonls(session_jsonl_path: Path) -> list[dict]:
+    """Find subagent JSONL files relative to the session file.
+
+    Subagent files are at: <session-id>/subagents/agent-<agentId>.jsonl
+    """
+    session_dir = session_jsonl_path.parent
+    session_id = session_jsonl_path.stem
+    subagent_dir = session_dir / session_id / "subagents"
+
+    results = []
+    if subagent_dir.exists():
+        for jsonl_file in sorted(subagent_dir.rglob("agent-*.jsonl")):
+            size = jsonl_file.stat().st_size
+            # Read meta file if exists
+            meta_file = jsonl_file.with_suffix(".meta.json")
+            meta = {}
+            if meta_file.exists():
+                try:
+                    with open(meta_file, "r", encoding="utf-8") as fh:
+                        meta = json.load(fh)
+                except (json.JSONDecodeError, OSError):
+                    pass
+            results.append({
+                "path": str(jsonl_file),
+                "filename": jsonl_file.name,
+                "size_bytes": size,
+                "agent_type": meta.get("agentType", ""),
+                "description": meta.get("description", ""),
+            })
+
+    return results
+
+
 def analyze_behavior(lines: list[dict]) -> dict:
     """L3: Behavior phase classification."""
     phases: dict[str, PhaseSegment] = {}
@@ -641,7 +758,7 @@ def analyze_session_metadata(lines: list[dict]) -> dict:
 # Report generation
 # ---------------------------------------------------------------------------
 
-def generate_report(lines: list[dict]) -> dict:
+def generate_report(lines: list[dict], jsonl_path: Path | None = None) -> dict:
     """Generate the full three-layer report."""
     metadata = analyze_session_metadata(lines)
     tokens = analyze_tokens(lines)
@@ -651,6 +768,10 @@ def generate_report(lines: list[dict]) -> dict:
     errors = analyze_errors(lines)
     hooks = analyze_hooks(lines)
     behavior = analyze_behavior(lines)
+    file_changes = analyze_file_changes(lines)
+    aggregated = analyze_aggregated_stats(lines)
+    speculation = analyze_speculation(lines)
+    subagent_files = find_subagent_jsonls(jsonl_path) if jsonl_path else []
 
     return {
         "metadata": metadata,
@@ -668,6 +789,8 @@ def generate_report(lines: list[dict]) -> dict:
             "total_skill_calls": skills["total_skill_calls"],
             "api_error_count": errors["error_count"],
             "compact_count": behavior["compact_boundary_count"],
+            "files_modified": file_changes["unique_files_modified"],
+            "speculation_saved_ms": speculation["total_time_saved_ms"],
         },
         "L2_statistics": {
             "tokens": tokens,
@@ -676,6 +799,10 @@ def generate_report(lines: list[dict]) -> dict:
             "subagents": subagents,
             "errors": errors,
             "hooks": hooks,
+            "file_changes": file_changes,
+            "aggregated_stats": aggregated,
+            "speculation": speculation,
+            "subagent_files": subagent_files,
         },
         "L3_behavior": behavior,
     }
@@ -865,7 +992,7 @@ def main():
         logger.error("No data in %s", jsonl_path)
         sys.exit(1)
 
-    report = generate_report(lines)
+    report = generate_report(lines, jsonl_path)
 
     # Save JSON report
     json_path = output_dir / "report.json"
