@@ -112,6 +112,12 @@ python -m tests.claudecode.cli --scaffold wifi-logan-base-expert \
    f. SkillChecker verifies skill invocations
 5. ReportEngine generates L1/L2/L3 reports
 6. Save reports to .results/
+7. Session Analysis (auto, skip with --no-analysis):
+   a. Find session JSONL from ~/.claude/projects/
+   b. Run framework-session-analyzer-tool (analyze_session.py)
+   c. Generate HTML report with charts, tables, error detail
+   d. Open report in browser
+   e. Reports saved to .results/analysis/{session-id}/
 ```
 
 ---

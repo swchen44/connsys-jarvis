@@ -24,8 +24,10 @@ Usage::
 """
 
 import argparse
+import importlib.util
 import json
 import logging
+import subprocess
 import sys
 from pathlib import Path
 
@@ -217,7 +219,145 @@ def cmd_run(args: argparse.Namespace) -> int:
             json.dump(all_results, fh, indent=2, ensure_ascii=False)
         logger.info("Results saved to: %s", results_file)
 
+    # --- Session Analysis Report ---
+    # Collect session JSONL paths from test results and run analyzer
+    if all_results and not args.no_analysis:
+        _run_session_analysis(all_results)
+
     return 0
+
+
+def _run_session_analysis(results: list[dict]) -> None:
+    """Run framework-session-analyzer-tool on each session JSONL.
+
+    Finds the session JSONL files from test results (saved in .results/)
+    and runs analyze_session.py to produce HTML reports.
+
+    Args:
+        results: List of test result dicts from cmd_run.
+    """
+    analyzer_script = (
+        config.JARVIS_ROOT
+        / "framework" / "framework-base-expert" / "skills"
+        / "framework-session-analyzer-tool" / "scripts"
+        / "analyze_session.py"
+    )
+
+    if not analyzer_script.exists():
+        logger.warning(
+            "Session analyzer not found: %s — skipping analysis",
+            analyzer_script,
+        )
+        return
+
+    # Collect unique session log directories
+    log_dirs: set[str] = set()
+    for result in results:
+        log_path = result.get("log_path", "")
+        if log_path:
+            log_dirs.add(log_path)
+
+    if not log_dirs:
+        logger.info("No session logs to analyze")
+        return
+
+    # Also try to find the Claude Code session JSONL from ~/.claude/
+    # by looking for the most recent JSONL matching our session IDs
+    session_ids = {
+        r.get("session_id", "") for r in results if r.get("session_id")
+    }
+    analyzed_count = 0
+
+    for session_id in session_ids:
+        if not session_id:
+            continue
+        # Search for JSONL file
+        jsonl_path = _find_session_jsonl(session_id)
+        if not jsonl_path:
+            logger.debug("JSONL not found for session %s", session_id[:16])
+            continue
+
+        # Output to .results/ under the session ID
+        output_dir = config.RESULTS_DIR / "analysis" / session_id[:16]
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        logger.info(
+            "=== Running Session Analysis: %s ===", session_id[:16]
+        )
+        try:
+            proc = subprocess.run(
+                [
+                    sys.executable, str(analyzer_script),
+                    str(jsonl_path),
+                    "--output-dir", str(output_dir),
+                ],
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+            if proc.returncode == 0:
+                analyzed_count += 1
+                html_report = output_dir / "report.html"
+                if html_report.exists():
+                    logger.info("HTML report: %s", html_report)
+                    # Try to open in browser
+                    try:
+                        subprocess.run(
+                            ["open", str(html_report)],
+                            capture_output=True,
+                            timeout=5,
+                        )
+                    except (subprocess.SubprocessError, OSError):
+                        pass
+            else:
+                logger.warning(
+                    "Analyzer failed (exit %d): %s",
+                    proc.returncode,
+                    proc.stderr[:200] if proc.stderr else "",
+                )
+        except subprocess.TimeoutExpired:
+            logger.warning("Analyzer timed out for session %s", session_id[:16])
+        except OSError as exc:
+            logger.warning("Failed to run analyzer: %s", exc)
+
+    if analyzed_count > 0:
+        logger.info(
+            "Session analysis complete: %d session(s) analyzed. "
+            "Reports in %s",
+            analyzed_count,
+            config.RESULTS_DIR / "analysis",
+        )
+    else:
+        logger.info(
+            "No Claude Code session JSONLs found for analysis. "
+            "Session JSONLs are at ~/.claude/projects/"
+        )
+
+
+def _find_session_jsonl(session_id: str) -> Path | None:
+    """Find a Claude Code session JSONL file by session ID.
+
+    Searches ~/.claude/projects/ for a matching JSONL filename.
+
+    Args:
+        session_id: Claude session UUID.
+
+    Returns:
+        Path to the JSONL file, or None if not found.
+    """
+    sessions_dir = config.CLAUDE_SESSIONS_DIR
+    if not sessions_dir.exists():
+        return None
+
+    # Session files are named <session-id>.jsonl
+    for project_dir in sessions_dir.iterdir():
+        if not project_dir.is_dir():
+            continue
+        jsonl_path = project_dir / f"{session_id}.jsonl"
+        if jsonl_path.exists():
+            return jsonl_path
+
+    return None
 
 
 def cmd_analyze(args: argparse.Namespace) -> int:
@@ -334,6 +474,11 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["json", "text"],
         default="text",
         help="Report output format (default: %(default)s)",
+    )
+    analysis_group.add_argument(
+        "--no-analysis",
+        action="store_true",
+        help="Skip session analysis report after tests",
     )
 
     # Scaffolding
