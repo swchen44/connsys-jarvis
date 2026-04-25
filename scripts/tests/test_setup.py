@@ -201,26 +201,26 @@ class TestGenerateClaudeMdSingle:
         assert "未安裝" in content
         assert "@CLAUDE.local.md" in content
 
-    def test_single_expert_has_identity_and_technical_reference(self, workspace, framework_expert_json):
-        """v2.0: CLAUDE.md contains ## Identity (soul.md) + ## Technical Reference (expert.md).
-        No rules.md or duties.md in output."""
+    def test_single_expert_has_using_knowhow_directive(self, workspace, framework_expert_json):
+        """v3.0: CLAUDE.md contains ## Expert Guidelines with using-knowhow skill directives.
+        No @include soul.md / expert.md, no rules.md / duties.md."""
         installed = self._installed(
             "framework/framework-base-expert/expert.json",
             "framework-base-expert",
             "Framework Base Expert",
         )
         content = inst.generate_claude_md(workspace, installed)
-        # v2.0 format: soul.md under Identity, expert.md under Technical Reference
-        assert "## Identity" in content
-        assert "## Technical Reference" in content
-        assert "@connsys-jarvis/framework/framework-base-expert/soul.md" in content
-        assert "@connsys-jarvis/framework/framework-base-expert/expert.md" in content
-        # v2.0: rules.md and duties.md are NOT in output
-        assert "rules.md" not in content
-        assert "duties.md" not in content
+        # v3.0 format: using-knowhow skill directives
+        assert "## Expert Guidelines" in content
+        assert "framework-base-expert-using-knowhow" in content
+        assert "MUST use the skill" in content
+        # v3.0: no @include lines
+        assert "@connsys-jarvis" not in content
+        assert "## Identity" not in content
+        assert "## Technical Reference" not in content
 
     def test_single_expert_has_html_comment_header(self, workspace, framework_expert_json):
-        """v2.0: CLAUDE.md starts with an HTML comment containing metadata."""
+        """v3.0: CLAUDE.md starts with an HTML comment containing metadata."""
         installed = self._installed(
             "framework/framework-base-expert/expert.json",
             "framework-base-expert",
@@ -250,14 +250,13 @@ class TestGenerateClaudeMdSingle:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# TC-U06  generate_claude_md — 多 Expert (v2.0 format)
+# TC-U06  generate_claude_md — 多 Expert (v3.0 format)
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TestGenerateClaudeMdMulti:
-    """測試多 Expert 情境下 generate_claude_md 的 v2.0 格式：
-      - 所有 expert 的 soul.md 在 ## Identity 區段
-      - 所有 expert 的 expert.md 在 ## Technical Reference 區段
-      - 不再有 include_all_experts / --with-all-experts 模式
+    """測試多 Expert 情境下 generate_claude_md 的 v3.0 格式：
+      - 所有 expert 輸出 using-knowhow skill 指示
+      - 不再有 @include soul.md / expert.md
     """
 
     def _two_experts(self) -> dict:
@@ -279,25 +278,19 @@ class TestGenerateClaudeMdMulti:
             ]
         }
 
-    def test_multi_expert_identity_section_has_all_soul_mds(self, workspace):
-        """v2.0: ## Identity 區段包含所有 expert 的 soul.md。"""
+    def test_multi_expert_guidelines_has_all_experts(self, workspace):
+        """v3.0: ## Expert Guidelines 包含所有 expert 的 using-knowhow 指示。"""
         content = inst.generate_claude_md(workspace, self._two_experts())
-        assert "## Identity" in content
-        assert "@connsys-jarvis/framework/framework-base-expert/soul.md" in content
-        assert "@connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/soul.md" in content
+        assert "## Expert Guidelines" in content
+        assert "framework-base-expert-using-knowhow" in content
+        assert "wifi-bora-memory-slim-expert-using-knowhow" in content
 
-    def test_multi_expert_technical_reference_has_all_expert_mds(self, workspace):
-        """v2.0: ## Technical Reference 區段包含所有 expert 的 expert.md。"""
+    def test_multi_expert_no_include_lines(self, workspace):
+        """v3.0: 不再有 @include soul.md / expert.md。"""
         content = inst.generate_claude_md(workspace, self._two_experts())
-        assert "## Technical Reference" in content
-        assert "@connsys-jarvis/framework/framework-base-expert/expert.md" in content
-        assert "@connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/expert.md" in content
-
-    def test_multi_expert_no_rules_or_duties(self, workspace):
-        """v2.0: rules.md and duties.md are NOT in output."""
-        content = inst.generate_claude_md(workspace, self._two_experts())
-        assert "rules.md" not in content
-        assert "duties.md" not in content
+        assert "@connsys-jarvis" not in content
+        assert "## Identity" not in content
+        assert "## Technical Reference" not in content
 
     def test_multi_expert_ends_with_claude_local(self, workspace):
         content = inst.generate_claude_md(workspace, self._two_experts())
@@ -434,7 +427,7 @@ class TestIntegrationInit:
     def test_skills_symlinks_created(self, workspace, framework_expert_json):
         self._run_init(workspace, "framework/framework-base-expert/expert.json")
         skills = list((workspace / ".claude" / "skills").iterdir())
-        assert len(skills) == 5
+        assert len(skills) == 6
 
     def test_hooks_symlinks_created(self, workspace):
         self._run_init(workspace, "framework/framework-base-expert/expert.json")
@@ -473,7 +466,7 @@ class TestIntegrationInit:
         self._run_init(workspace, "framework/framework-base-expert/expert.json")
         self._run_init(workspace, "framework/framework-base-expert/expert.json")
         skills = list((workspace / ".claude" / "skills").iterdir())
-        assert len(skills) == 5
+        assert len(skills) == 6
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -496,18 +489,18 @@ class TestIntegrationAdd:
         after = len(list((workspace / ".claude" / "skills").iterdir()))
         assert after > before
 
-    def test_add_total_skills_is_13(self, workspace):
+    def test_add_total_skills_count(self, workspace):
         self._run_init(workspace, "framework/framework-base-expert/expert.json")
         self._run_add(workspace, "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
         count = len(list((workspace / ".claude" / "skills").iterdir()))
-        assert count == 16
+        assert count == 18
 
     def test_add_idempotent_second_call_no_error(self, workspace):
         self._run_init(workspace, "framework/framework-base-expert/expert.json")
         self._run_add(workspace, "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
         self._run_add(workspace, "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
         count = len(list((workspace / ".claude" / "skills").iterdir()))
-        assert count == 16
+        assert count == 18
 
     def test_add_installs_experts_json_has_two(self, workspace):
         self._run_init(workspace, "framework/framework-base-expert/expert.json")
@@ -536,7 +529,7 @@ class TestIntegrationRemove:
         self._setup(workspace)
         inst.cmd_remove(workspace, "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
         count = len(list((workspace / ".claude" / "skills").iterdir()))
-        assert count == 5  # framework skills (including list-cmd)
+        assert count == 6  # framework skills (including list-cmd, session-analyzer)
 
     def test_shared_skills_preserved(self, workspace):
         self._setup(workspace)
@@ -957,29 +950,13 @@ class TestDoctorClaudeMd:
         out = capsys.readouterr().out
         assert "Content matches expected" in out
 
-    def test_include_targets_all_exist_shows_checkmarks(self, workspace, capsys):
-        """正常安裝後，@include 目標存在性區段中每個 @include 都應顯示 ✅"""
+    def test_claude_md_has_using_knowhow_entries(self, workspace, capsys):
+        """v3.0: doctor 顯示 expert guideline entries 數量。"""
         inst.cmd_init(workspace, self._fw_json(workspace))
         capsys.readouterr()
         inst.cmd_doctor(workspace)
         out = capsys.readouterr().out
-        assert "@include target existence" in out
-        # 不應有任何 ❌（file not found）
-        assert "file not found" not in out
-
-    def test_include_target_missing_shows_error(self, workspace, capsys):
-        """CLAUDE.md 中的 @include 指向不存在的檔案 → ❌"""
-        inst.cmd_init(workspace, self._fw_json(workspace))
-        claude_md = workspace / "CLAUDE.md"
-        # 加一行指向不存在檔案的 @include
-        claude_md.write_text(
-            claude_md.read_text() + "@connsys-jarvis/nonexistent/ghost.md\n"
-        )
-        capsys.readouterr()
-        inst.cmd_doctor(workspace)
-        out = capsys.readouterr().out
-        assert "ghost.md" in out
-        assert "file not found" in out
+        assert "expert guideline entries" in out
 
     def test_missing_claude_md_shows_error(self, workspace, capsys):
         inst.cmd_init(workspace, self._fw_json(workspace))
@@ -989,29 +966,15 @@ class TestDoctorClaudeMd:
         out = capsys.readouterr().out
         assert "CLAUDE.md not found" in out
 
-    def test_missing_include_shows_error(self, workspace, capsys):
+    def test_claude_md_content_mismatch_shows_error(self, workspace, capsys):
+        """v3.0: CLAUDE.md 內容不一致時顯示 Content mismatch。"""
         inst.cmd_init(workspace, self._fw_json(workspace))
-        # 從 CLAUDE.md 刪掉一個 @include 行
         claude_md = workspace / "CLAUDE.md"
-        lines = [l for l in claude_md.read_text().splitlines()
-                 if not l.strip().startswith("@connsys-jarvis")]
-        claude_md.write_text("\n".join(lines))
+        claude_md.write_text("# Wrong content\n")
         capsys.readouterr()
         inst.cmd_doctor(workspace)
         out = capsys.readouterr().out
-        assert "missing @include" in out
-
-    def test_extra_include_shows_warning(self, workspace, capsys):
-        inst.cmd_init(workspace, self._fw_json(workspace))
-        claude_md = workspace / "CLAUDE.md"
-        # 加一行不屬於已安裝 Expert 的 @include
-        claude_md.write_text(
-            claude_md.read_text() + "@connsys-jarvis/fake/expert.md\n"
-        )
-        capsys.readouterr()
-        inst.cmd_doctor(workspace)
-        out = capsys.readouterr().out
-        assert "extra @include" in out
+        assert "Content mismatch" in out
 
 
 # ─────────────────────────────────────────────────────────────────────────────

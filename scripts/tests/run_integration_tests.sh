@@ -74,10 +74,9 @@ assert_exists   "$WS/.claude"
 assert_exists   "$WS/CLAUDE.md"
 assert_exists   "$WS/.connsys-jarvis/.env"
 assert_exists   "$WS/.connsys-jarvis/.installed-experts.json"
-assert_contains "TC-01-2 CLAUDE.md has soul.md"     "$(cat "$WS/CLAUDE.md")" "soul.md"
-assert_contains "TC-01-3 CLAUDE.md has Identity"    "$(cat "$WS/CLAUDE.md")" "## Identity"
-assert_contains "TC-01-4 CLAUDE.md has TechRef"     "$(cat "$WS/CLAUDE.md")" "## Technical Reference"
-assert_contains "TC-01-5 CLAUDE.md has expert.md"   "$(cat "$WS/CLAUDE.md")" "expert.md"
+assert_contains "TC-01-2 CLAUDE.md has using-knowhow" "$(cat "$WS/CLAUDE.md")" "using-knowhow"
+assert_contains "TC-01-3 CLAUDE.md has Guidelines"   "$(cat "$WS/CLAUDE.md")" "## Expert Guidelines"
+assert_contains "TC-01-4 CLAUDE.md has MUST"         "$(cat "$WS/CLAUDE.md")" "MUST use the skill"
 assert_contains "TC-01-6 .env has CONNSYS_JARVIS_PATH" "$(cat "$WS/.connsys-jarvis/.env")" "CONNSYS_JARVIS_PATH"
 assert_contains "TC-01-7 .installed-experts.json"   "$(cat "$WS/.connsys-jarvis/.installed-experts.json")" "framework-base-expert"
 # ── 新增：自動建立的目錄 ──
@@ -203,10 +202,10 @@ cd "$WS" && $SETUP --init framework/framework-base-expert/expert.json > /dev/nul
 cd "$WS" && $SETUP --add wifi-bora/wifi-bora-memory-slim-expert/expert.json > /dev/null 2>&1
 
 claude_content=$(cat "$WS/CLAUDE.md")
-assert_contains "TC-13-1 Identity section"           "$claude_content" "## Identity"
-assert_contains "TC-13-2 Technical Reference"        "$claude_content" "## Technical Reference"
-assert_contains "TC-13-3 soul.md present"            "$claude_content" "soul.md"
-assert_contains "TC-13-4 framework expert.md"        "$claude_content" "framework-base-expert/expert.md"
+assert_contains "TC-13-1 Expert Guidelines section"  "$claude_content" "## Expert Guidelines"
+assert_contains "TC-13-2 using-knowhow directive"    "$claude_content" "using-knowhow"
+assert_contains "TC-13-3 framework expert"           "$claude_content" "framework-base-expert-using-knowhow"
+assert_contains "TC-13-4 wifi-bora expert"           "$claude_content" "wifi-bora-memory-slim-expert-using-knowhow"
 assert_contains "TC-13-5 HTML comment header"        "$claude_content" "<!-- connsys-jarvis CLAUDE.md"
 
 # ============================================================
