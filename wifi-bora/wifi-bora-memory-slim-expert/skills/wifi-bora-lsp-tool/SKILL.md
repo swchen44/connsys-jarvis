@@ -2,10 +2,6 @@
 name: wifi-bora-lsp-tool
 description: "使用 LSP（Language Server Protocol）追蹤 WiFi Bora symbol 的所有引用，確認 dead code 分析結果"
 version: "1.0.0"
-domain: wifi-bora
-type: tool
-scope: wifi-bora-memory-slim-expert
-tags: [wifi, bora, LSP, clangd, symbol, reference, cross-reference]
 ---
 
 # WiFi Bora LSP Tool

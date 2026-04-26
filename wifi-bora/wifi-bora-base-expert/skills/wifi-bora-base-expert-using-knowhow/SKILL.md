@@ -2,10 +2,6 @@
 name: wifi-bora-base-expert-using-knowhow
 description: "MANDATORY foundation for all wifi-bora domain skills. You MUST read this skill FIRST before using ANY skill prefixed with 'wifi-bora'. Contains the expert's methodology, values, critical constraints, and engineering rules for WiFi Bora firmware development. Once read in a session, no need to re-read."
 version: "1.0.0"
-domain: wifi-bora
-type: knowhow
-scope: wifi-bora-base-expert
-tags: [wifi-bora, identity, methodology, constraints, using-knowhow]
 ---
 
 # WiFi Bora Base Expert — Using Knowhow

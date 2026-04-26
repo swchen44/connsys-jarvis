@@ -2,10 +2,6 @@
 name: framework-skill-create-flow
 description: "Create a new skill for a connsys-jarvis Expert, following the naming convention, directory structure, eval/benchmark loop, and expert.json registration. Use whenever a developer wants to build a new skill from scratch, update or optimize an existing skill, run evals, benchmark skill performance, or optimize a skill's description for better triggering — even if they don't say 'skill-creator' explicitly."
 version: "1.0.0"
-domain: framework
-type: flow
-scope: framework-base-expert
-tags: [framework, skill-creator, flow, development]
 ---
 
 # Framework Skill Create Flow
@@ -119,10 +115,6 @@ For connsys-jarvis skills, use this frontmatter format:
 name: {domain}-{name}-{type}
 description: "..."
 version: "1.0.0"
-domain: {domain}
-type: {type}
-scope: {target-expert-name}
-tags: [{domain}, {name}, {type}]
 ---
 ```
 

@@ -2,10 +2,6 @@
 name: sys-bora-gerrit-commit-flow
 description: "Gerrit change 提交完整流程 SOP，從 commit 準備到 submit 的每個步驟"
 version: "1.0.0"
-domain: sys-bora
-type: flow
-scope: sys-bora-preflight-expert
-tags: [sys-bora, gerrit, commit, push, review, submit]
 ---
 
 # Sys Bora Gerrit Commit Flow

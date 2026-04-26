@@ -2,10 +2,6 @@
 name: wifi-bora-symbolmap-knowhow
 description: "WiFi Bora map 檔（.map）解讀方法，找出 ROM/RAM 使用量最大的 symbol 和模組"
 version: "1.0.0"
-domain: wifi-bora
-type: knowhow
-scope: wifi-bora-base-expert
-tags: [wifi, bora, map, symbol, nm, objdump, footprint, analysis]
 ---
 
 # WiFi Bora Symbol Map Knowhow

@@ -2,10 +2,6 @@
 name: wifi-bora-memory-knowhow
 description: "WiFi Bora ROM/RAM 記憶體佈局基礎知識，包含 section 劃分、SRAM 管理與使用量分析方法"
 version: "1.0.0"
-domain: wifi-bora
-type: knowhow
-scope: wifi-bora-base-expert
-tags: [wifi, bora, memory, ROM, RAM, SRAM, section]
 ---
 
 # WiFi Bora Memory Knowhow

@@ -2,10 +2,6 @@
 name: wifi-bora-build-flow
 description: "WiFi Bora firmware build 流程 SOP，包含環境設定、編譯指令、常見錯誤排除"
 version: "1.0.0"
-domain: wifi-bora
-type: flow
-scope: wifi-bora-base-expert
-tags: [wifi, bora, build, toolchain, make, kconfig]
 ---
 
 # WiFi Bora Build Flow

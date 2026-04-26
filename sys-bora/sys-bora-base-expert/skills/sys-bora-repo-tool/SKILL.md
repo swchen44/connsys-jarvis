@@ -2,10 +2,6 @@
 name: sys-bora-repo-tool
 description: "Android repo 工具操作指南，包含 init、sync、branch 管理和常見問題排除"
 version: "1.0.0"
-domain: sys-bora
-type: tool
-scope: sys-bora-base-expert
-tags: [repo, android, manifest, sync, sys-bora]
 ---
 
 # Sys Bora Repo Tool

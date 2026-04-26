@@ -2,10 +2,6 @@
 name: wifi-bora-ast-tool
 description: "使用 AST（抽象語法樹）分析 WiFi Bora C 原始碼，找出未被呼叫的函式和未使用的全域變數"
 version: "1.0.0"
-domain: wifi-bora
-type: tool
-scope: wifi-bora-memory-slim-expert
-tags: [wifi, bora, AST, static-analysis, dead-code, clang]
 ---
 
 # WiFi Bora AST Tool

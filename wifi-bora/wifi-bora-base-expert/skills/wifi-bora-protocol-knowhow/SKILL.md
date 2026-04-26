@@ -2,10 +2,6 @@
 name: wifi-bora-protocol-knowhow
 description: "802.11 協議在 WiFi Bora 韌體中的實作細節，涵蓋 MAC、MLME、data path"
 version: "1.0.0"
-domain: wifi-bora
-type: knowhow
-scope: wifi-bora-base-expert
-tags: [wifi, 802.11, protocol, MAC, MLME, bora]
 ---
 
 # WiFi Bora Protocol Knowhow

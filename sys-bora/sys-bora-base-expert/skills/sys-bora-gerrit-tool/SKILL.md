@@ -2,10 +2,6 @@
 name: sys-bora-gerrit-tool
 description: "Gerrit code review 平台的操作指南，包含 change 查詢、下載、review 操作"
 version: "1.0.0"
-domain: sys-bora
-type: tool
-scope: sys-bora-base-expert
-tags: [gerrit, code-review, git, sys-bora]
 ---
 
 # Sys Bora Gerrit Tool

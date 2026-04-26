@@ -2,10 +2,6 @@
 name: framework-session-analyzer-tool
 description: "分析 Claude Code Session JSONL 紀錄，產出 token 消耗、tool/skill 調用、行為階段、cache 效率等三層報告。當使用者提到分析 session、查看 token 用量、檢查 Claude Code 對話效率、理解 AI 行為模式、或想知道為什麼 session 花了太多 token 時使用此 skill。即使使用者只是說「剛才那次對話效率怎麼樣」或「幫我看一下 token 用在哪裡」也應觸發。"
 version: "1.0.0"
-domain: framework
-type: tool
-scope: framework-base-expert
-tags: [framework, session, analyzer, token, tool]
 allowed-tools:
   - Read
   - Bash

@@ -2,10 +2,6 @@
 name: wifi-bora-linkerscript-knowhow
 description: "WiFi Bora linker script 結構解析，包含 section 配置、MEMORY 定義、常見優化技巧"
 version: "1.0.0"
-domain: wifi-bora
-type: knowhow
-scope: wifi-bora-base-expert
-tags: [wifi, bora, linker, linkerscript, ld, section, memory-layout]
 ---
 
 # WiFi Bora Linker Script Knowhow

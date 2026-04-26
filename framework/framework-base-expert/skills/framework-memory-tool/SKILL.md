@@ -2,10 +2,6 @@
 name: framework-memory-tool
 description: "操作 Connsys Jarvis 本地記憶系統，提供讀取、寫入、搜尋記憶的標準介面"
 version: "1.0.0"
-domain: framework
-type: tool
-scope: framework-base-expert
-tags: [framework, memory, persistence, context]
 ---
 
 # Framework Memory Tool
@@ -96,7 +92,6 @@ date: YYYY-MM-DD             # 日期
 time: HH:MM                  # 時間（可選）
 task: <task-name>            # 任務名稱（可選）
 status: IN_PROGRESS|DONE     # 狀態（可選）
-tags: [tag1, tag2]           # 標籤（可選）
 ---
 ```
 

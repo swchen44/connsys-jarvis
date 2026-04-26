@@ -278,9 +278,6 @@ python3 connsys-jarvis/scripts/setup.py --add wifi-bora/wifi-bora-base-expert/ex
   name: my-skill-name
   description: "..."
   version: "1.0.0"
-  domain: {domain}
-  type: {type}
-  scope: {target-expert-name}
   ---
   ```
 - 建立後確認 skill 目錄下的 `README.md` 完整（繁體中文，含功能、目標、設計理念）

@@ -2,10 +2,6 @@
 name: framework-expert-discovery-knowhow
 description: "列出所有可用 Expert 及其能力，協助工程師選擇合適的 Expert 處理當前任務"
 version: "1.0.0"
-domain: framework
-type: knowhow
-scope: framework-base-expert
-tags: [framework, discovery, expert-selection]
 ---
 
 # Framework Expert Discovery Knowhow

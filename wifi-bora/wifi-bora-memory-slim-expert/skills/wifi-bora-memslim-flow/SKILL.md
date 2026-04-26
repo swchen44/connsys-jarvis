@@ -2,10 +2,6 @@
 name: wifi-bora-memslim-flow
 description: "WiFi Bora 記憶體精簡端到端 SOP，從分析到驗證的完整流程"
 version: "1.0.0"
-domain: wifi-bora
-type: flow
-scope: wifi-bora-memory-slim-expert
-tags: [wifi, bora, memory, slim, ROM, RAM, optimization, SOP]
 ---
 
 # WiFi Bora Memory Slim Flow

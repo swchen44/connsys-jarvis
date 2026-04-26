@@ -2,10 +2,6 @@
 name: sys-bora-preflight-flow
 description: "ConnSys CI/CD preflight 觸發、監控和結果分析的完整 SOP"
 version: "1.0.0"
-domain: sys-bora
-type: flow
-scope: sys-bora-preflight-expert
-tags: [sys-bora, preflight, CI/CD, jenkins, gerrit, verified]
 ---
 
 # Sys Bora Preflight Flow

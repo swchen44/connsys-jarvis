@@ -2,10 +2,6 @@
 name: wifi-bora-arch-knowhow
 description: "WiFi Bora 韌體架構概覽，包含模組劃分、task 架構、IPC 機制與 code 導覽指南"
 version: "1.0.0"
-domain: wifi-bora
-type: knowhow
-scope: wifi-bora-base-expert
-tags: [wifi, bora, architecture, firmware, task, IPC]
 ---
 
 # WiFi Bora Architecture Knowhow
