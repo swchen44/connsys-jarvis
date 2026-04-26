@@ -296,6 +296,12 @@ class TestGenerateClaudeMdMulti:
         content = inst.generate_claude_md(workspace, self._two_experts())
         assert "@CLAUDE.local.md" not in content
 
+    def test_must_lines_count_matches_expert_count(self, workspace):
+        """Every expert gets its own MUST line — none are skipped."""
+        content = inst.generate_claude_md(workspace, self._two_experts())
+        must_lines = [l for l in content.splitlines() if l.startswith("MUST use the skill")]
+        assert len(must_lines) == 2
+
     def test_multi_expert_has_html_comment_header(self, workspace):
         """v2.0: HTML comment header lists all expert names."""
         content = inst.generate_claude_md(workspace, self._two_experts())

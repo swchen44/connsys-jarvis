@@ -291,6 +291,12 @@ class TestGenerateClaudeMdMulti:
         content = inst.generate_claude_md(workspace, self._two_experts())
         assert "@CLAUDE.local.md" not in content
 
+    def test_must_lines_count_matches_expert_count(self, workspace):
+        """Every expert gets its own MUST line — none are skipped."""
+        content = inst.generate_claude_md(workspace, self._two_experts())
+        must_lines = [l for l in content.splitlines() if l.startswith("MUST use the skill")]
+        assert len(must_lines) == 2
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TC-U07  write_env_file
