@@ -1357,6 +1357,8 @@ def cmd_list(workspace: Path, output_format: str = "table") -> None:
         return
 
     # ── Table 格式 ──
+    installed_count = sum(1 for r in result if r["status"] == "installed")
+
     print("\n=== Connsys Jarvis — Expert List ===\n")
     for r in result:
         status_icon   = "✅" if r["status"] == "installed" else "○ "
@@ -1365,8 +1367,10 @@ def cmd_list(workspace: Path, output_format: str = "table") -> None:
         print(f"{status_icon} {r['name']} ({r['domain']}){order_mark}{identity_mark}")
         if r["description"]:
             print(f"      {r['description']}")
+        cmd = "--init" if installed_count == 0 else "--add"
+        expert_path = f"{JARVIS_DIR_NAME}/{r['path']}"
+        print(f"      python {JARVIS_DIR_NAME}/scripts/setup.py {cmd}  {expert_path}")
 
-    installed_count = sum(1 for r in result if r["status"] == "installed")
     print(f"\nInstalled: {installed_count}  Available: {len(result)}")
 
     # ── Symlink 清單 ──
