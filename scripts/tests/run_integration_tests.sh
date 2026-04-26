@@ -178,8 +178,8 @@ assert_contains "TC-08-3 wifi-bora listed"           "$out" "wifi-bora-memory-sl
 assert_contains "TC-08-4 Installed count"            "$out" "Installed:"
 
 cd "$WS" && $SETUP --list --format json > /tmp/cj_list.json 2>&1
-if python3 -c "import json,sys; data=json.load(open('/tmp/cj_list.json')); assert isinstance(data,dict); assert 'experts' in data; assert 'skills' in data" 2>/dev/null; then
-    ok "TC-08-5 --list --format json valid JSON object with experts+skills"
+if python3 -c "import json,sys; data=json.load(open('/tmp/cj_list.json')); assert isinstance(data,dict); [assert k in data for k in ('experts','skills','hooks','commands','agents','rules')]" 2>/dev/null; then
+    ok "TC-08-5 --list --format json valid JSON object with all keys"
 else
     fail "TC-08-5 --list --format json invalid"
 fi

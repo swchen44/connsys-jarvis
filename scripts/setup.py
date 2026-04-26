@@ -1423,35 +1423,61 @@ def _collect_dependency_names(workspace: Path, installed: dict) -> set:
     return dep_names
 
 
-def _scan_all_skills(workspace: Path, available: list) -> list:
-    """掃描所有 expert 的 skills，讀取 SKILL.md description。
+def _scan_all_items(workspace: Path, available: list) -> dict:
+    """掃描所有 expert 的 skills/hooks/commands/agents/rules。
+
+    各 kind 掃描邏輯：
+      - skills:  子目錄，讀 SKILL.md frontmatter 取 description
+      - hooks:   hooks/scripts/ 下的 .sh/.py 檔案
+      - commands/agents/rules: 扁平 .md 檔案
 
     Args:
         workspace: workspace 根目錄
         available: scan_available_experts 的回傳值
 
     Returns:
-        list of dict：每個元素含 name, expert, description, installed
-        （installed 在呼叫端再標記）
+        dict: {kind: [{"name": str, "expert": str, "description": str}, ...]}
     """
     jarvis_dir = get_jarvis_dir(workspace)
-    skills = []
+    result = {k: [] for k in ("skills", "hooks", "commands", "agents", "rules")}
+
     for exp in available:
-        expert_dir = (jarvis_dir / exp["path"]).parent  # expert.json 所在目錄
+        expert_dir = (jarvis_dir / exp["path"]).parent
+        expert_name = exp["name"]
+
+        # skills — 子目錄
         skills_dir = expert_dir / "skills"
-        if not skills_dir.exists():
-            continue
-        for d in sorted(skills_dir.iterdir()):
-            if not d.is_dir():
+        if skills_dir.exists():
+            for d in sorted(skills_dir.iterdir()):
+                if not d.is_dir():
+                    continue
+                skill_md = d / "SKILL.md"
+                desc = _read_skill_description(skill_md) if skill_md.exists() else ""
+                result["skills"].append({
+                    "name": d.name, "expert": expert_name, "description": desc,
+                })
+
+        # hooks — hooks/scripts/ 下的執行檔
+        hooks_scripts = expert_dir / "hooks" / "scripts"
+        if hooks_scripts.exists():
+            for f in sorted(hooks_scripts.iterdir()):
+                if f.is_file() and f.suffix in (".sh", ".py"):
+                    result["hooks"].append({
+                        "name": f.name, "expert": expert_name, "description": "",
+                    })
+
+        # commands / agents / rules — 扁平 .md 檔案
+        for kind in ("commands", "agents", "rules"):
+            kind_dir = expert_dir / kind
+            if not kind_dir.exists():
                 continue
-            skill_md = d / "SKILL.md"
-            desc = _read_skill_description(skill_md) if skill_md.exists() else ""
-            skills.append({
-                "name":        d.name,
-                "expert":      exp["name"],
-                "description": desc,
-            })
-    return skills
+            for f in sorted(kind_dir.iterdir()):
+                if f.is_file() and f.suffix == ".md":
+                    result[kind].append({
+                        "name": f.name, "expert": expert_name, "description": "",
+                    })
+
+    return result
 
 
 def cmd_list(workspace: Path, output_format: str = "table") -> None:
@@ -1503,22 +1529,20 @@ def cmd_list(workspace: Path, output_format: str = "table") -> None:
             "install_order": inst.get("install_order") if inst else None,
         })
 
-    # Skills 清單：掃描所有 expert 的 skills，標記安裝狀態
-    all_skills = _scan_all_skills(workspace, available)
-    installed_skill_names: set = set()
-    skills_dir = claude_dir / "skills"
-    if skills_dir.exists():
-        installed_skill_names = {
-            s.name for s in skills_dir.iterdir() if s.is_symlink()
-        }
-    for sk in all_skills:
-        sk["status"] = "installed" if sk["name"] in installed_skill_names else "available"
+    # 掃描所有 kind 的 items，標記安裝狀態
+    all_items = _scan_all_items(workspace, available)
+    for kind, items in all_items.items():
+        kind_dir = claude_dir / kind
+        installed_names: set = set()
+        if kind_dir.exists():
+            installed_names = {s.name for s in kind_dir.iterdir() if s.is_symlink()}
+        for item in items:
+            item["status"] = "installed" if item["name"] in installed_names else "available"
 
     if output_format == "json":
-        print(json.dumps({
-            "experts": expert_result,
-            "skills":  all_skills,
-        }, indent=2, ensure_ascii=False))
+        output = {"experts": expert_result}
+        output.update(all_items)
+        print(json.dumps(output, indent=2, ensure_ascii=False))
         return
 
     # ── Expert Table 格式 ──
@@ -1541,38 +1565,28 @@ def cmd_list(workspace: Path, output_format: str = "table") -> None:
 
     print(f"\nInstalled: {installed_expert_count}  Total: {len(expert_result)}")
 
-    # ── Skills Table 格式 ──
-    installed_skill_count = sum(1 for s in all_skills if s["status"] == "installed")
-
-    print("\n=== Connsys Jarvis — Skills List ===\n")
-    # 按 expert 分組
-    current_expert = None
-    for sk in all_skills:
-        if sk["expert"] != current_expert:
-            current_expert = sk["expert"]
-            print(f"{current_expert}:")
-        status_icon = "✅" if sk["status"] == "installed" else "○ "
-        print(f"  {status_icon} {sk['name']}")
-        if sk["description"]:
-            print(f"      {sk['description']}")
-    print(f"\nInstalled: {installed_skill_count}  Total: {len(all_skills)}")
-
-    # ── Symlink 清單 ──
-    print("\n=== Symlinks in .claude/ ===\n")
-    for kind in ["skills", "agents", "commands", "hooks", "rules"]:
-        kind_dir = claude_dir / kind
-        if not kind_dir.exists():
-            continue
-        items = sorted([i for i in kind_dir.iterdir() if i.is_symlink()])
+    # ── 各 kind 的 Table 格式（skills / hooks / commands / agents / rules）──
+    kind_labels = {
+        "skills": "Skills", "hooks": "Hooks",
+        "commands": "Commands", "agents": "Agents", "rules": "Rules",
+    }
+    for kind in ("skills", "hooks", "commands", "agents", "rules"):
+        items = all_items[kind]
         if not items:
             continue
-        kind_label = kind.capitalize()
-        print(f"{kind_label} ({len(items)}):")
+        installed_count = sum(1 for s in items if s["status"] == "installed")
+        label = kind_labels[kind]
+        print(f"\n=== Connsys Jarvis — {label} List ===\n")
+        current_expert = None
         for item in items:
-            target = Path(os.readlink(item))
-            status_icon = "✅" if item.exists() else "❌"
-            print(f"  {status_icon} {item.name} → {target}")
-        print()
+            if item["expert"] != current_expert:
+                current_expert = item["expert"]
+                print(f"{current_expert}:")
+            status_icon = "✅" if item["status"] == "installed" else "○ "
+            print(f"  {status_icon} {item['name']}")
+            if item["description"]:
+                print(f"      {item['description']}")
+        print(f"\nInstalled: {installed_count}  Total: {len(items)}")
 
 
 def cmd_query(workspace: Path, expert_name: str, output_format: str = "table") -> None:

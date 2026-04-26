@@ -393,8 +393,8 @@ class TestCmdListUpdated:
         inst.cmd_list(workspace, output_format="json")
         data = json.loads(capsys.readouterr().out)
         assert isinstance(data, dict)
-        assert "experts" in data
-        assert "skills" in data
+        for key in ("experts", "skills", "hooks", "commands", "agents", "rules"):
+            assert key in data, f"missing key: {key}"
         assert len(data["experts"]) > 0
         assert len(data["skills"]) > 0
 

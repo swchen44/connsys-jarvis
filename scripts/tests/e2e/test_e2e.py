@@ -191,8 +191,8 @@ class TestE2EList:
         assert result.returncode == 0
         data = json.loads(result.stdout)
         assert isinstance(data, dict)
-        assert "experts" in data
-        assert "skills" in data
+        for key in ("experts", "skills", "hooks", "commands", "agents", "rules"):
+            assert key in data, f"missing key: {key}"
 
     def test_list_shows_installed_and_available(self, ws):
         import json
