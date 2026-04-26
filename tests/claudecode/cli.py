@@ -29,10 +29,14 @@ import json
 import logging
 import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 
 from . import config
+from .assertions import run_all_checks, AssertResult
+from .report import ReportEngine
 from .runner import ClaudeRunner, SessionResult
+from .token_analyzer import TokenAnalyzer
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +89,7 @@ def run_test_case(
     test_case: dict,
     expert_name: str,
 ) -> dict:
-    """Execute a single test case and collect results.
+    """Execute a single test case, run assertion checks, and collect results.
 
     Args:
         runner: The configured ClaudeRunner instance.
@@ -93,7 +97,8 @@ def run_test_case(
         expert_name: Expert name for context.
 
     Returns:
-        Dictionary with test results, checks, and session data.
+        Dictionary with test results including session, assert_results,
+        and token_report for report generation.
     """
     case_id = test_case.get("id", "unknown")
     case_name = test_case.get("name", "unnamed")
@@ -106,8 +111,10 @@ def run_test_case(
             "id": case_id,
             "name": case_name,
             "type": "dependency_check",
-            "status": "pending_verification",
-            "checks": test_case.get("checks", {}),
+            "status": "skipped",
+            "session": None,
+            "assert_results": [],
+            "token_report": None,
         }
 
     # Get prompt
@@ -118,42 +125,71 @@ def run_test_case(
             "id": case_id,
             "name": case_name,
             "status": "skipped",
-            "reason": "no prompt",
+            "session": None,
+            "assert_results": [],
+            "token_report": None,
         }
 
     # Resolve prompt base directory
     base_dir = config.TESTS_ROOT / expert_name
 
-    # Execute
+    # Execute Claude session
     timeout = test_case.get("timeout", config.DEFAULT_TIMEOUT)
     runner.executor.timeout = timeout
+    session = runner.run(prompt, expert_name=expert_name, base_dir=base_dir)
 
-    result = runner.run(prompt, expert_name=expert_name, base_dir=base_dir)
+    # Run 6-layer assertion checks
+    checks = test_case.get("checks", {})
+    workspace = runner.executor.workspace
+    assert_results = run_all_checks(checks, session, workspace, base_dir)
+
+    # Token analysis
+    token_report = None
+    if session.raw_json_lines:
+        analyzer = TokenAnalyzer()
+        token_report = analyzer.parse_session(session.raw_json_lines)
+
+    # Determine pass/fail
+    required_checks = [r for r in assert_results
+                       if r.details.get("required", True)]
+    all_passed = all(r.passed for r in required_checks) if required_checks else True
+    status = "pass" if all_passed else "fail"
 
     return {
         "id": case_id,
         "name": case_name,
-        "status": "executed",
-        "exit_code": result.exit_code,
-        "duration": result.duration,
-        "output_length": len(result.output),
-        "json_lines_count": len(result.raw_json_lines),
-        "model": result.model,
-        "mode": result.mode,
-        "log_path": str(result.log_path),
-        "session_id": result.session_id,
-        "checks": test_case.get("checks", {}),
+        "status": status,
+        "session": session,
+        "assert_results": assert_results,
+        "token_report": token_report,
+        "exit_code": session.exit_code,
+        "duration": session.duration,
+        "output_length": len(session.output),
+        "json_lines_count": len(session.raw_json_lines),
+        "model": session.model,
+        "mode": session.mode,
+        "log_path": str(session.log_path),
+        "session_id": session.session_id,
+        "token_budget": test_case.get("token_budget"),
     }
 
 
 def cmd_run(args: argparse.Namespace) -> int:
-    """Execute integration tests for specified Expert(s).
+    """Execute integration tests, run checks, and generate reports.
+
+    Flow:
+      1. For each (model, expert) combination, execute test cases
+      2. Run 6-layer assertion checks on each result
+      3. Feed results into ReportEngine
+      4. Generate L1/L2/L3 reports (JSON + text)
+      5. Print text report to stdout
+      6. Optionally run session analysis
 
     Args:
         args: Parsed CLI arguments.
 
     Returns:
-        Exit code (0 = success, 1 = failures).
+        Exit code (0 = all passed, 1 = any failures).
     """
     models = [args.model]
     if args.models:
@@ -174,7 +210,8 @@ def cmd_run(args: argparse.Namespace) -> int:
         logger.error("Specify --expert <name> or --all")
         return 1
 
-    all_results = []
+    has_failures = False
+    all_raw_results = []  # for session analysis
 
     for model in models:
         for expert_name in experts:
@@ -195,36 +232,92 @@ def cmd_run(args: argparse.Namespace) -> int:
                 verbose=args.verbose,
             )
 
+            report_engine = ReportEngine()
+
             for test_case in test_data.get("test_cases", []):
                 result = run_test_case(runner, test_case, expert_name)
                 result["expert"] = expert_name
                 result["model_key"] = model
-                all_results.append(result)
+                all_raw_results.append(result)
 
-                # Log summary
-                status = result.get("status", "unknown")
-                logger.info(
-                    "  [%s] %s: %s (%.1fs)",
-                    result.get("id", "?"),
-                    result.get("name", "?"),
-                    status,
-                    result.get("duration", 0),
+                # Feed into report engine
+                report_engine.add_result(
+                    case_id=result["id"],
+                    case_name=result["name"],
+                    session=result.get("session"),
+                    assert_results=result.get("assert_results", []),
+                    token_report=result.get("token_report"),
                 )
 
-    # Save aggregated results
-    if all_results:
+                # Log per-case summary
+                status = result.get("status", "unknown")
+                duration = result.get("duration", 0)
+                n_checks = len(result.get("assert_results", []))
+                n_passed = sum(
+                    1 for r in result.get("assert_results", []) if r.passed
+                )
+                logger.info(
+                    "  [%s] %s: %s (%d/%d checks, %.1fs)",
+                    result["id"], result["name"],
+                    status, n_passed, n_checks, duration,
+                )
+                if status == "fail":
+                    has_failures = True
+                    for ar in result.get("assert_results", []):
+                        if not ar.passed:
+                            logger.warning(
+                                "    FAIL [%s] %s", ar.check_type, ar.message
+                            )
+
+            # Generate reports for this (model, expert) pair
+            reports = report_engine.generate(expert_name, model)
+
+            # Save reports
+            run_ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            report_dir = config.RESULTS_DIR / "reports" / f"{run_ts}_{expert_name}_{model}"
+            report_engine.save(reports, report_dir)
+
+            # Print text report to stdout
+            text_report = report_engine.format_text(reports)
+            print("\n" + text_report)
+
+    # Save raw results for reference
+    if all_raw_results:
         results_file = config.RESULTS_DIR / "latest_results.json"
         results_file.parent.mkdir(parents=True, exist_ok=True)
+        # Serialize without non-serializable objects
+        serializable = []
+        for r in all_raw_results:
+            sr = {
+                k: v for k, v in r.items()
+                if k not in ("session", "assert_results", "token_report")
+            }
+            # Add assert summary
+            sr["checks_total"] = len(r.get("assert_results", []))
+            sr["checks_passed"] = sum(
+                1 for ar in r.get("assert_results", []) if ar.passed
+            )
+            sr["checks_failed"] = sr["checks_total"] - sr["checks_passed"]
+            sr["check_details"] = [
+                {
+                    "type": ar.check_type,
+                    "passed": ar.passed,
+                    "message": ar.message,
+                    "expected": ar.expected,
+                    "actual": ar.actual,
+                }
+                for ar in r.get("assert_results", [])
+            ]
+            serializable.append(sr)
         with open(results_file, "w", encoding="utf-8") as fh:
-            json.dump(all_results, fh, indent=2, ensure_ascii=False)
+            json.dump(serializable, fh, indent=2, ensure_ascii=False)
         logger.info("Results saved to: %s", results_file)
 
-    # --- Session Analysis Report ---
-    # Collect session JSONL paths from test results and run analyzer
-    if all_results and not args.no_analysis:
-        _run_session_analysis(all_results)
+    # Session analysis
+    if all_raw_results and not args.no_analysis:
+        _run_session_analysis(all_raw_results)
 
-    return 0
+    return 1 if has_failures else 0
 
 
 def _run_session_analysis(results: list[dict]) -> None:
@@ -380,6 +473,47 @@ def cmd_analyze(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_report(args: argparse.Namespace) -> int:
+    """Display the latest saved report.
+
+    Args:
+        args: Parsed CLI arguments with --report and --format.
+
+    Returns:
+        Exit code.
+    """
+    # Find most recent report directory
+    reports_base = config.RESULTS_DIR / "reports"
+    if not reports_base.exists():
+        logger.error("No reports found. Run tests first with --expert.")
+        return 1
+
+    # Find the latest report.json by modification time
+    report_files = sorted(
+        reports_base.glob("**/report.json"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    if not report_files:
+        logger.error("No report.json found under %s", reports_base)
+        return 1
+
+    latest = report_files[0]
+    logger.info("Loading report: %s", latest)
+
+    if args.format == "json":
+        print(latest.read_text(encoding="utf-8"))
+    else:
+        # Print the text report if it exists alongside
+        text_file = latest.parent / "report.txt"
+        if text_file.exists():
+            print(text_file.read_text(encoding="utf-8"))
+        else:
+            print(latest.read_text(encoding="utf-8"))
+
+    return 0
+
+
 def cmd_scaffold(args: argparse.Namespace) -> int:
     """Scaffold a new Expert test from a reference.
 
@@ -527,6 +661,8 @@ def main() -> int:
     # Route to subcommand
     if args.analyze:
         return cmd_analyze(args)
+    if args.report:
+        return cmd_report(args)
     if args.scaffold:
         return cmd_scaffold(args)
     if args.expert or args.all:

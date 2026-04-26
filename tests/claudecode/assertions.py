@@ -110,10 +110,14 @@ def check_files_created(
 # ---------------------------------------------------------------------------
 
 def _extract_skill_invocations(session: SessionResult) -> list[dict]:
-    """Extract Skill tool invocations from session JSON lines.
+    """Extract Skill invocations from session JSON lines.
 
-    Looks for tool_use blocks where the tool name is "Skill"
-    or matches skill invocation patterns.
+    Detects skills triggered via two patterns:
+      1. Skill tool_use (explicit skill invocation)
+      2. Read tool_use reading a SKILL.md file (implicit skill loading)
+
+    Both patterns count as the skill being "invoked" because Claude
+    accesses the skill's content either way.
 
     Args:
         session: The session result to analyze.
@@ -122,6 +126,7 @@ def _extract_skill_invocations(session: SessionResult) -> list[dict]:
         List of skill invocation records.
     """
     invocations = []
+    seen_skills: set = set()
     for line in session.raw_json_lines:
         if line.get("type") != "assistant":
             continue
@@ -133,12 +138,28 @@ def _extract_skill_invocations(session: SessionResult) -> list[dict]:
                 continue
             tool_name = block.get("name", "")
             tool_input = block.get("input", {})
-            # Skill tool invocations
+
+            skill_name = ""
+
+            # Pattern 1: Skill tool invocations
             if tool_name == "Skill":
+                skill_name = tool_input.get("skill", "")
+
+            # Pattern 2: Read of SKILL.md (implicit skill loading)
+            elif tool_name == "Read":
+                file_path = tool_input.get("file_path", "")
+                if "/skills/" in file_path and "SKILL.md" in file_path:
+                    # Extract skill name from path:
+                    # .../skills/{skill-name}/SKILL.md
+                    parts = file_path.split("/skills/")
+                    if len(parts) > 1:
+                        skill_name = parts[1].split("/")[0]
+
+            if skill_name and skill_name not in seen_skills:
+                seen_skills.add(skill_name)
                 invocations.append({
-                    "tool": "Skill",
-                    "skill": tool_input.get("skill", ""),
-                    "args": tool_input.get("args", ""),
+                    "tool": tool_name,
+                    "skill": skill_name,
                     "id": block.get("id", ""),
                 })
     return invocations

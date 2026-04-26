@@ -84,7 +84,7 @@ def _save_session_log(result: SessionResult, expert_name: str) -> Path:
     Returns:
         Path to the saved log directory.
     """
-    ts = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H%M%S")
+    ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     log_dir = config.RESULTS_DIR / ts / expert_name
     log_dir.mkdir(parents=True, exist_ok=True)
 
@@ -185,8 +185,8 @@ class HeadlessExecutor(ExecutorBase):
         if self.allowed_tools:
             cmd.extend(["--allowedTools", ",".join(self.allowed_tools)])
 
-        if self.verbose:
-            cmd.append("--verbose")
+        # --verbose is required when using --output-format stream-json
+        cmd.append("--verbose")
 
         logger.info("Running headless: %s", " ".join(cmd[:6]) + " ...")
         logger.debug("Full command: %s", cmd)
@@ -297,7 +297,7 @@ class TmuxExecutor(ExecutorBase):
         Returns:
             SessionResult with captured text output.
         """
-        ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         session_name = f"jarvis_test_{ts}"
         timestamp = datetime.now(timezone.utc).isoformat()
 
