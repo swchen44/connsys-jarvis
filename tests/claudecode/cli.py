@@ -488,28 +488,20 @@ def cmd_report(args: argparse.Namespace) -> int:
         logger.error("No reports found. Run tests first with --expert.")
         return 1
 
-    # Find the latest report.json by modification time
+    # Find the latest report by modification time
+    ext = "report.json" if args.format == "json" else "report.md"
     report_files = sorted(
-        reports_base.glob("**/report.json"),
+        reports_base.glob(f"**/{ext}"),
         key=lambda p: p.stat().st_mtime,
         reverse=True,
     )
     if not report_files:
-        logger.error("No report.json found under %s", reports_base)
+        logger.error("No %s found under %s", ext, reports_base)
         return 1
 
     latest = report_files[0]
     logger.info("Loading report: %s", latest)
-
-    if args.format == "json":
-        print(latest.read_text(encoding="utf-8"))
-    else:
-        # Print the text report if it exists alongside
-        text_file = latest.parent / "report.txt"
-        if text_file.exists():
-            print(text_file.read_text(encoding="utf-8"))
-        else:
-            print(latest.read_text(encoding="utf-8"))
+    print(latest.read_text(encoding="utf-8"))
 
     return 0
 

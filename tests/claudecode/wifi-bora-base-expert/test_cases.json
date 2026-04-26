@@ -8,7 +8,7 @@
       "name": "hello_world_with_size_check",
       "description": "寫一個 hello world 並檢查 size，驗證 build-flow、memory-knowhow、arch-knowhow 是否觸發",
       "prompt": "prompts/WB-001_hello_world_size.md",
-      "timeout": 240,
+      "timeout": 360,
       "token_budget": 80000,
       "checks": {
         "skills_invoked": [

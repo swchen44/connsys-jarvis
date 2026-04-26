@@ -418,11 +418,11 @@ class ReportEngine:
             json.dump(json_data, fh, indent=2, ensure_ascii=False)
         logger.info("JSON report saved: %s", json_path)
 
-        # Text format
-        text_path = output_dir / "report.txt"
-        text_content = self.format_text(reports)
-        text_path.write_text(text_content, encoding="utf-8")
-        logger.info("Text report saved: %s", text_path)
+        # Markdown format
+        md_path = output_dir / "report.md"
+        md_content = self.format_text(reports)
+        md_path.write_text(md_content, encoding="utf-8")
+        logger.info("Markdown report saved: %s", md_path)
 
     @staticmethod
     def _to_serializable(obj) -> dict:
@@ -439,129 +439,159 @@ class ReportEngine:
         return obj
 
     def format_text(self, reports: dict) -> str:
-        """Format reports as human-readable text.
+        """Format reports as markdown.
 
         Args:
             reports: Dict with L1/L2/L3 report objects.
 
         Returns:
-            Formatted text string.
+            Markdown formatted string.
         """
         lines = []
 
         # L1: Quality
         l1 = reports.get("L1")
         if l1:
-            lines.append("=" * 60)
-            lines.append("  Layer 1: Quality Report")
-            lines.append("=" * 60)
-            lines.append(f"Expert: {l1.expert}")
-            lines.append(f"Model:  {l1.model}")
-            lines.append(f"Date:   {l1.timestamp}")
+            lines.append(f"# Integration Test Report")
             lines.append("")
-            lines.append(
-                f"Test Results: {l1.passed}/{l1.total_tests} passed "
-                f"({l1.pass_rate:.0%})"
-            )
+            lines.append(f"| Field | Value |")
+            lines.append(f"|-------|-------|")
+            lines.append(f"| Expert | `{l1.expert}` |")
+            lines.append(f"| Model | `{l1.model}` |")
+            lines.append(f"| Date | {l1.timestamp} |")
+            lines.append(f"| Pass Rate | **{l1.passed}/{l1.total_tests}** ({l1.pass_rate:.0%}) |")
+            if l1.judge_score_avg:
+                lines.append(f"| Judge Score | {l1.judge_score_avg}/10 |")
+            lines.append("")
+
+            # Per-test results
+            lines.append("## Layer 1: Test Results")
+            lines.append("")
             for tr in l1.test_results:
                 icon = "PASS" if tr.status == "pass" else "FAIL"
-                lines.append(
-                    f"  [{icon}] {tr.case_id} {tr.name} "
-                    f"({tr.duration:.1f}s)"
-                )
-            lines.append("")
+                lines.append(f"### {tr.case_id} {tr.name} — {icon} ({tr.duration:.1f}s)")
+                lines.append("")
+                if tr.check_results:
+                    lines.append("| Check | Result | Detail |")
+                    lines.append("|-------|--------|--------|")
+                    for cr in tr.check_results:
+                        status = "PASS" if cr["passed"] else "**FAIL**"
+                        lines.append(f"| {cr['type']} | {status} | {cr['message']} |")
+                    lines.append("")
+                if tr.nl_scores:
+                    lines.append("**NL Scores:**")
+                    for aspect, score in tr.nl_scores.items():
+                        lines.append(f"- {aspect}: {score}/10")
+                    lines.append("")
+                if tr.judge_score:
+                    lines.append(f"**Judge Score:** {tr.judge_score}/10")
+                    lines.append("")
+                if tr.token_usage.get("total"):
+                    lines.append(f"**Tokens:** {tr.token_usage['total']:,}")
+                    lines.append("")
+
+            # NL score summary
             if l1.nl_scores_avg:
-                lines.append("NL Check Scores:")
+                lines.append("### NL Check Summary")
+                lines.append("")
+                lines.append("| Aspect | Avg | Min | Max | Count |")
+                lines.append("|--------|-----|-----|-----|-------|")
                 for aspect, stats in l1.nl_scores_avg.items():
                     lines.append(
-                        f"  {aspect}: {stats['avg']}/10 "
-                        f"(min={stats['min']}, max={stats['max']})"
+                        f"| {aspect} | {stats['avg']} | "
+                        f"{stats['min']} | {stats['max']} | {stats['count']} |"
                     )
-            if l1.judge_score_avg:
-                lines.append(f"Judge Score: {l1.judge_score_avg}/10")
-            lines.append("")
+                lines.append("")
 
         # L2: Statistics
         l2 = reports.get("L2")
         if l2:
-            lines.append("=" * 60)
-            lines.append("  Layer 2: Invocation Statistics")
-            lines.append("=" * 60)
+            lines.append("## Layer 2: Invocation Statistics")
+            lines.append("")
 
             if l2.skills:
-                lines.append("\nSkill Statistics:")
-                lines.append(
-                    f"  {'Skill':<35} {'Calls':>5} {'OK':>4} "
-                    f"{'Fail':>4} {'Tokens':>8}"
-                )
-                lines.append("  " + "-" * 58)
+                lines.append("### Skill Statistics")
+                lines.append("")
+                lines.append("| Skill | Calls | OK | Fail | Tokens |")
+                lines.append("|-------|------:|---:|-----:|-------:|")
                 for s in l2.skills:
                     lines.append(
-                        f"  {s['name']:<35} {s['calls']:>5} "
-                        f"{s['success']:>4} {s['failed']:>4} "
-                        f"{s['tokens']:>8,}"
+                        f"| {s['name']} | {s['calls']} | "
+                        f"{s['success']} | {s['failed']} | {s['tokens']:,} |"
                     )
+                lines.append("")
 
             if l2.tools:
-                lines.append("\nTool Statistics:")
-                lines.append(
-                    f"  {'Tool':<20} {'Calls':>5} {'OK':>4} "
-                    f"{'Fail':>4} {'Ratio':>6} {'Tokens':>8}"
-                )
-                lines.append("  " + "-" * 49)
+                lines.append("### Tool Statistics")
+                lines.append("")
+                lines.append("| Tool | Calls | OK | Fail | Ratio | Tokens |")
+                lines.append("|------|------:|---:|-----:|------:|-------:|")
                 for t in l2.tools:
                     lines.append(
-                        f"  {t['name']:<20} {t['calls']:>5} "
-                        f"{t['success']:>4} {t['failed']:>4} "
-                        f"{t['ratio']:>5.1%} {t['tokens']:>8,}"
+                        f"| {t['name']} | {t['calls']} | "
+                        f"{t['success']} | {t['failed']} | "
+                        f"{t['ratio']:.1%} | {t['tokens']:,} |"
                     )
+                lines.append("")
 
             if l2.failures:
-                lines.append("\nFailure Distribution:")
+                lines.append("### Failure Distribution")
+                lines.append("")
+                lines.append("| Type | Count | Tokens |")
+                lines.append("|------|------:|-------:|")
                 for f in l2.failures:
                     lines.append(
-                        f"  {f['type']}: {f['count']} occurrence(s), "
-                        f"{f['tokens']:,} tokens"
+                        f"| {f['type']} | {f['count']} | {f['tokens']:,} |"
                     )
+                lines.append("")
 
-            lines.append(
-                f"\nTotal Tokens: {l2.total_tokens.get('total', 0):,}"
-            )
+            total = l2.total_tokens
+            lines.append("### Token Summary")
+            lines.append("")
+            lines.append("| Category | Tokens |")
+            lines.append("|----------|-------:|")
+            lines.append(f"| Input | {total.get('input', 0):,} |")
+            lines.append(f"| Output | {total.get('output', 0):,} |")
+            lines.append(f"| Cache Creation | {total.get('cache_creation', 0):,} |")
+            lines.append(f"| Cache Read | {total.get('cache_read', 0):,} |")
+            lines.append(f"| **Total** | **{total.get('total', 0):,}** |")
             lines.append("")
 
         # L3: Behavior
         l3 = reports.get("L3")
         if l3:
-            lines.append("=" * 60)
-            lines.append("  Layer 3: Behavior Analysis")
-            lines.append("=" * 60)
+            lines.append("## Layer 3: Behavior Analysis")
+            lines.append("")
 
             if l3.phases:
-                lines.append("\nBehavior Phases:")
-                lines.append(
-                    f"  {'Phase':<18} {'Messages':>8} "
-                    f"{'Tokens':>8} {'Ratio':>6}"
-                )
-                lines.append("  " + "-" * 42)
+                lines.append("### Behavior Phases")
+                lines.append("")
+                lines.append("| Phase | Messages | Tokens | Ratio |")
+                lines.append("|-------|--------:|-------:|------:|")
                 for p in l3.phases:
                     lines.append(
-                        f"  {p['phase']:<18} {p['messages']:>8} "
-                        f"{p['tokens']:>8,} {p['ratio']:>5.1%}"
+                        f"| {p['phase']} | {p['messages']} | "
+                        f"{p['tokens']:,} | {p['ratio']:.1%} |"
                     )
+                lines.append("")
 
             eff = l3.efficiency
             if eff:
-                lines.append("\nToken Efficiency:")
+                lines.append("### Token Efficiency")
+                lines.append("")
+                lines.append("| Metric | Tokens | Ratio |")
+                lines.append("|--------|-------:|------:|")
                 lines.append(
-                    f"  Effective: {eff.get('effective_tokens', 0):,} "
-                    f"({eff.get('effective_ratio', 0):.1%})"
+                    f"| Effective | {eff.get('effective_tokens', 0):,} | "
+                    f"{eff.get('effective_ratio', 0):.1%} |"
                 )
                 lines.append(
-                    f"  Wasted:    {eff.get('wasted_tokens', 0):,} "
-                    f"({eff.get('wasted_ratio', 0):.1%})"
+                    f"| Wasted | {eff.get('wasted_tokens', 0):,} | "
+                    f"{eff.get('wasted_ratio', 0):.1%} |"
                 )
                 lines.append(
-                    f"  Total:     {eff.get('total_tokens', 0):,}"
+                    f"| **Total** | **{eff.get('total_tokens', 0):,}** | |"
                 )
+                lines.append("")
 
         return "\n".join(lines)
