@@ -153,7 +153,7 @@ class TestGenerateClaudeMdSingle:
     def test_no_experts_shows_empty(self, workspace):
         content = inst.generate_claude_md(workspace, {"experts": []})
         assert "未安裝" in content
-        assert "@CLAUDE.local.md" in content
+        assert "@CLAUDE.local.md" not in content
 
     def test_single_expert_has_using_knowhow_directive(self, workspace, framework_expert_json):
         """v3.0: CLAUDE.md 包含 using-knowhow skill 指示。"""
@@ -197,13 +197,13 @@ class TestGenerateClaudeMdSingle:
         assert "## Identity" not in content
         assert "## Technical Reference" not in content
 
-    def test_single_expert_ends_with_claude_local(self, workspace):
+    def test_single_expert_no_claude_local(self, workspace):
         installed = self._installed(
             "framework/framework-base-expert/expert.json",
             "framework-base-expert",
         )
         content = inst.generate_claude_md(workspace, installed)
-        assert content.strip().endswith("@CLAUDE.local.md")
+        assert "@CLAUDE.local.md" not in content
 
     def test_single_expert_header_contains_name(self, workspace, framework_expert_json):
         installed = self._installed(
@@ -287,9 +287,9 @@ class TestGenerateClaudeMdMulti:
         assert "framework-base-expert" in content
         assert "wifi-bora-memory-slim-expert" in content
 
-    def test_ends_with_claude_local(self, workspace):
+    def test_multi_expert_no_claude_local(self, workspace):
         content = inst.generate_claude_md(workspace, self._two_experts())
-        assert content.strip().endswith("@CLAUDE.local.md")
+        assert "@CLAUDE.local.md" not in content
 
 
 # ─────────────────────────────────────────────────────────────────────────────

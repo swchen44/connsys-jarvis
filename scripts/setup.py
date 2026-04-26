@@ -743,8 +743,6 @@ def generate_claude_md(workspace: Path, installed: dict) -> str:
 
         MUST use the skill {name}-using-knowhow for expert guidelines and methodology, if the skill exists.
 
-        @CLAUDE.local.md
-
     **設計考量**：
       - 不再 @include soul.md / expert.md；指導原則改由 using-knowhow skill 提供
       - 統一使用 skill 指示，確保 setup.py / Plugin / npx 三種模式行為一致
@@ -761,7 +759,7 @@ def generate_claude_md(workspace: Path, installed: dict) -> str:
     logger.debug("generate_claude_md: %d experts", len(experts))
 
     if not experts:
-        return "# Connsys Jarvis\n\n（未安裝任何 Expert）\n\n@CLAUDE.local.md\n"
+        return "# Connsys Jarvis\n\n（未安裝任何 Expert）\n"
 
     now_str = datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
     expert_names = ", ".join(e["name"] for e in experts)
@@ -786,8 +784,6 @@ def generate_claude_md(workspace: Path, installed: dict) -> str:
             f"and methodology, if the skill exists."
         )
     lines.append("")
-
-    lines += ["@CLAUDE.local.md", ""]
 
     content = "\n".join(lines)
     logger.debug("generate_claude_md: generated %d lines", len(lines))
