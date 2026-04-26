@@ -10,3 +10,10 @@ tests/claudecode/.results/*
 
 # Workspace local state
 .connsys-jarvis/
+
+# Claude Code
+.claude/
+.claude-plugin/
+
+# Test team
+test-team/
