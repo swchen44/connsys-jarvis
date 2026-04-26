@@ -33,7 +33,7 @@ framework-team
 # 從零製作第一版 SKILL.md
 /framework-base-skill-craftsman-flow reverse-engineer
 
-# 診斷觸發問���
+# 診斷觸發問
 /framework-base-skill-craftsman-flow diagnostician
 
 # 執行後復盤迭代
