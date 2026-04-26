@@ -731,6 +731,54 @@ def clear_claude_symlinks(workspace: Path) -> None:
 # 另外建立 AGENTS.md → CLAUDE.md symlink，支援 Open Code、Gemini 等 AI 工具。
 
 
+def _collect_all_expert_names(workspace: Path, experts: list) -> list:
+    """收集所有需要 using-knowhow 指示的 expert 名稱（含直接依賴）。
+
+    對每個已安裝 expert，讀取其 expert.json 的 dependencies，
+    將依賴 expert 名稱加入清單（依賴在前、自身在後），跨 expert 去重。
+    依賴解析深度與 build_symlinks_for_expert 一致（僅直接依賴）。
+
+    Args:
+        workspace: workspace 根目錄
+        experts:   installed["experts"] 陣列
+
+    Returns:
+        去重後的 expert 名稱 list，保留插入順序
+    """
+    jarvis_dir = get_jarvis_dir(workspace)
+    seen: set = set()
+    result: list = []
+
+    for e in experts:
+        # 讀取 expert.json 取得 dependencies
+        expert_json_path = jarvis_dir / e["path"]
+        deps = []
+        try:
+            if expert_json_path.exists():
+                data = load_expert_json(expert_json_path)
+                deps = data.get("dependencies", [])
+        except Exception as exc:
+            logger.warning("_collect_all_expert_names: failed to read %s: %s",
+                           expert_json_path, exc)
+
+        # 依賴 expert 在前
+        for dep in deps:
+            dep_rel = dep.get("expert", "")
+            dep_name = Path(dep_rel).name if dep_rel else ""
+            if dep_name and dep_name not in seen:
+                seen.add(dep_name)
+                result.append(dep_name)
+
+        # 自身在後
+        name = e["name"]
+        if name not in seen:
+            seen.add(name)
+            result.append(name)
+
+    logger.debug("_collect_all_expert_names: %d names collected", len(result))
+    return result
+
+
 def generate_claude_md(workspace: Path, installed: dict) -> str:
     """生成 CLAUDE.md 的文字內容（v3.0 using-knowhow 模式）。
 
@@ -746,6 +794,7 @@ def generate_claude_md(workspace: Path, installed: dict) -> str:
     **設計考量**：
       - 不再 @include soul.md / expert.md；指導原則改由 using-knowhow skill 提供
       - 統一使用 skill 指示，確保 setup.py / Plugin / npx 三種模式行為一致
+      - 已安裝 expert 的直接依賴 expert 也產生 using-knowhow 指示
       - HTML 註解記錄生成時間，方便追蹤
 
     Args:
@@ -774,11 +823,11 @@ def generate_claude_md(workspace: Path, installed: dict) -> str:
         "",
     ]
 
-    # Expert Guidelines 區段：對每個 expert 輸出 using-knowhow skill 指示
+    # Expert Guidelines 區段：對每個 expert（含依賴）輸出 using-knowhow skill 指示
+    all_names = _collect_all_expert_names(workspace, experts)
     lines.append("## Expert Guidelines")
     lines.append("")
-    for e in experts:
-        name = e["name"]
+    for name in all_names:
         lines.append(
             f"MUST use the skill {name}-using-knowhow for expert guidelines "
             f"and methodology, if the skill exists."
@@ -786,7 +835,8 @@ def generate_claude_md(workspace: Path, installed: dict) -> str:
     lines.append("")
 
     content = "\n".join(lines)
-    logger.debug("generate_claude_md: generated %d lines", len(lines))
+    logger.debug("generate_claude_md: generated %d lines (%d expert names)",
+                 len(lines), len(all_names))
     return content
 
 

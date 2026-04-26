@@ -291,11 +291,17 @@ class TestGenerateClaudeMdMulti:
         content = inst.generate_claude_md(workspace, self._two_experts())
         assert "@CLAUDE.local.md" not in content
 
-    def test_must_lines_count_matches_expert_count(self, workspace):
-        """Every expert gets its own MUST line — none are skipped."""
+    def test_must_lines_include_dependency_experts(self, workspace):
+        """MUST lines cover installed experts AND their direct dependencies."""
         content = inst.generate_claude_md(workspace, self._two_experts())
         must_lines = [l for l in content.splitlines() if l.startswith("MUST use the skill")]
-        assert len(must_lines) == 2
+        # framework-base-expert (no deps) + wifi-bora-memory-slim-expert (3 deps)
+        # deps: framework-base-expert (dedup), wifi-bora-base-expert, sys-bora-preflight-expert
+        assert len(must_lines) >= 2
+        assert "framework-base-expert-using-knowhow" in content
+        assert "wifi-bora-memory-slim-expert-using-knowhow" in content
+        assert "wifi-bora-base-expert-using-knowhow" in content
+        assert "sys-bora-preflight-expert-using-knowhow" in content
 
 
 # ─────────────────────────────────────────────────────────────────────────────
