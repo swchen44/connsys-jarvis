@@ -1,0 +1,83 @@
+{
+  "expert": "wifi-bora-base-expert",
+  "version": "1.0.0",
+  "description": "Integration tests for wifi-bora-base-expert skills",
+  "test_cases": [
+    {
+      "id": "WB-001",
+      "name": "hello_world_with_size_check",
+      "description": "寫一個 hello world 並檢查 size，驗證 build-flow、memory-knowhow、arch-knowhow 是否觸發",
+      "prompt": "prompts/WB-001_hello_world_size.md",
+      "timeout": 240,
+      "token_budget": 80000,
+      "checks": {
+        "skills_invoked": [
+          {
+            "skill": "wifi-bora-base-expert-using-knowhow",
+            "required": true,
+            "comment": "MANDATORY — 必須最先讀取"
+          },
+          {
+            "skill": "wifi-bora-build-flow",
+            "required": true,
+            "comment": "寫 hello world 需要 build 知識"
+          },
+          {
+            "skill": "wifi-bora-memory-knowhow",
+            "required": true,
+            "comment": "檢查 size = 記憶體分析"
+          },
+          {
+            "skill": "wifi-bora-arch-knowhow",
+            "required": false,
+            "comment": "了解韌體架構，決定 code 放在哪裡"
+          }
+        ],
+        "tools_called": [
+          {
+            "tool": "Read",
+            "min_count": 1,
+            "comment": "讀取韌體原始碼或 map 檔"
+          },
+          {
+            "tool": "Write",
+            "min_count": 1,
+            "comment": "寫 hello world 程式碼"
+          },
+          {
+            "tool": "Bash",
+            "min_count": 1,
+            "comment": "build 或 size 指令"
+          }
+        ],
+        "output_contains": ["hello"],
+        "output_not_contains": [],
+        "nl_checks": [
+          {
+            "id": "nl-01",
+            "aspect": "completeness",
+            "question": "回應是否完整涵蓋兩個子任務？(1) 寫出 hello world 程式碼並說明放在韌體的哪個位置 (2) 執行 size 檢查並分析結果",
+            "model": "haiku",
+            "scale": 10,
+            "min_pass": 7,
+            "reference": "golden/WB-001_expected.md"
+          },
+          {
+            "id": "nl-02",
+            "aspect": "skill_usage",
+            "question": "回應中是否有使用 build-flow 的知識（正確的 build 指令、toolchain）和 memory-knowhow 的知識（ROM/RAM 分析、section 說明）？",
+            "model": "haiku",
+            "scale": 10,
+            "min_pass": 6
+          }
+        ],
+        "judge": {
+          "enabled": true,
+          "model": "haiku",
+          "rubric": "rubrics/WB-001_rubric.md",
+          "min_score": 7
+        }
+      }
+    }
+  ]
+}
