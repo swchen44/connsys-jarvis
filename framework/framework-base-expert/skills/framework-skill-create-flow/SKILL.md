@@ -217,10 +217,10 @@ After writing the SKILL.md, scaffold the full Layer 5 directory structure:
 ```
 {expert}/skills/{domain}-{name}-{type}/
 ├── SKILL.md           ← (just written)
-└── README.md          ← 台灣繁體中文撰寫的說明文件（見下方模板）
+└── README.md          ← 中文或英文撰寫的說明文件（見下方模板）
 ```
 
-**README.md** — every skill must have this. Write in **Traditional Chinese (Taiwan)**. Use the following template:
+**README.md** — every skill must have this. Write in the user's preferred language (Traditional/Simplified Chinese or English). When modifying an existing file, keep its current language. Use the following template:
 
 ```markdown
 # {domain}-{name}-{type}

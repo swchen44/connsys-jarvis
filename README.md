@@ -280,7 +280,7 @@ python3 connsys-jarvis/scripts/setup.py --add wifi-bora/wifi-bora-base-expert/ex
   version: "1.0.0"
   ---
   ```
-- 建立後確認 skill 目錄下的 `README.md` 完整（繁體中文，含功能、目標、設計理念）
+- 建立後確認 skill 目錄下的 `README.md` 完整（中文或英文，含功能、目標、設計理念）
 
 #### Eval 驗證流程
 

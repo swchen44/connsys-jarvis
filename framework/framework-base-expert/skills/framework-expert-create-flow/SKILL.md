@@ -56,7 +56,7 @@ Scaffold the full Layer 4 structure:
 ├── expert.json     ← Manifest (REQUIRED — the only required file)
 ├── soul.md         ← Identity & personality (optional)
 ├── expert.md       ← Key behaviors & tools (optional, loaded into CLAUDE.md)
-├── README.md       ← Traditional Chinese documentation (required)
+├── README.md       ← Documentation in Chinese or English (required)
 ├── skills/         ← Skill folders — PRIMARY mechanism (use framework-skill-create-flow)
 ├── hooks/          ← Lifecycle shell scripts (optional)
 ├── agents/         ← Sub-agent definitions (optional)
@@ -231,7 +231,7 @@ soul.md defines **who this expert is**. Write in the voice of the expert itself.
 {How does it communicate? Examples:}
 - Direct and technical — uses precise terminology, no fluff
 - Collaborative — explains reasoning, invites confirmation before acting
-- Language: Traditional Chinese (technical terms remain in English)
+- Language: follow user preference (Traditional/Simplified Chinese or English); keep technical terms in English
 
 ## Values & Principles
 
@@ -438,7 +438,7 @@ Phase 1: inherit commands from framework-base-expert; only add new commands when
 
 ## Step 6: Write README.md
 
-Write in **Traditional Chinese (Taiwan)**. Follow the template from `framework-skill-create-flow`'s README.md (sections: Introduction, Owner, Features, Goals, Design Philosophy, Risks, Alternatives, Source).
+Write in the user's preferred language (Traditional/Simplified Chinese or English). Follow the template from `framework-skill-create-flow`'s README.md (sections: Introduction, Owner, Features, Goals, Design Philosophy, Risks, Alternatives, Source). When modifying an existing file, keep its current language.
 
 ---
 
@@ -481,7 +481,7 @@ Run through every item before considering the expert complete.
 - [ ] `expert.json` — valid JSON, all required fields present
 - [ ] `soul.md` — (optional) has Identity, Communication Style, Values, Domain Expertise, Personality, Collaboration Style
 - [ ] `expert.md` — (optional) has Overview, Key Behaviors, Skills table, Hooks table
-- [ ] `README.md` — in Traditional Chinese, has all required sections
+- [ ] `README.md` — in Chinese or English, has all required sections
 
 ### B. expert.json Validation
 

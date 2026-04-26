@@ -298,7 +298,7 @@ sys-bora-cicd-tool
 ```
 {domain}-{name}-{type}/          Layer 5：skill 資料夾
 ├── SKILL.md                     ← Skill 主體（YAML frontmatter + 內容）【必要】
-├── README.md                    ← 台灣繁體中文；介紹/Owner/功能/目標/設計理念/風險 【必要】
+├── README.md                    ← 中文或英文；介紹/Owner/功能/目標/設計理念/風險 【必要】
 ├── test/                        ← Skill 測試【非必要，品質管理啟用後成為必要】
 │   ├── test_{skill_name}.py     ← Python pytest：unit test（有複雜邏輯時加）
 │   ├── conftest.py              ← pytest fixtures（可選）
@@ -313,7 +313,7 @@ sys-bora-cicd-tool
 | 檔案/資料夾 | 用途 | 必要性 | 維護方式 |
 |-----------|------|-------|---------|
 | `SKILL.md` | Skill 主體，Claude 在執行時讀取 | **必要** | 人工撰寫，`framework-learn-expert` 未來可自動更新 |
-| `README.md` | 台灣繁體中文；介紹、Owner、功能、目標、設計理念、風險、替代方案 | **必要** | 人工維護 |
+| `README.md` | 中文或英文；介紹、Owner、功能、目標、設計理念、風險、替代方案 | **必要** | 人工維護 |
 | `test/test_xxx.py` | pytest unit test，適用有 Python helper 的 skill | 非必要，未來必要 | 人工撰寫，`pytest test/` 自動執行 |
 | `report/` | 每次執行的過程記錄、結果摘要、token 用量統計 | 非必要，未來必要 | 人工或 hook 自動寫入 |
 
