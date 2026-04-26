@@ -1,0 +1,175 @@
+{
+  "L1": {
+    "expert": "wifi-bora-base-expert",
+    "model": "sonnet",
+    "timestamp": "2026-04-26T15:34:58.360643+00:00",
+    "total_tests": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "pass_rate": 1.0,
+    "skill_coverage": {},
+    "nl_scores_avg": {
+      "completeness": {
+        "avg": 7.0,
+        "min": 7.0,
+        "max": 7.0,
+        "count": 1
+      },
+      "skill_usage": {
+        "avg": 9.0,
+        "min": 9.0,
+        "max": 9.0,
+        "count": 1
+      }
+    },
+    "judge_score_avg": 10.0,
+    "test_results": [
+      {
+        "case_id": "WB-001",
+        "name": "hello_world_with_size_check",
+        "status": "pass",
+        "check_results": [
+          {
+            "type": "skills_invoked",
+            "passed": true,
+            "message": "Skill 'wifi-bora-base-expert-using-knowhow': invoked"
+          },
+          {
+            "type": "skills_invoked",
+            "passed": true,
+            "message": "Skill 'wifi-bora-build-flow': invoked"
+          },
+          {
+            "type": "skills_invoked",
+            "passed": true,
+            "message": "Skill 'wifi-bora-memory-knowhow': invoked"
+          },
+          {
+            "type": "skills_invoked",
+            "passed": true,
+            "message": "Skill 'wifi-bora-arch-knowhow' (optional): invoked"
+          },
+          {
+            "type": "tools_called",
+            "passed": true,
+            "message": "Tool 'Read': 6 call(s) >= 1 required"
+          },
+          {
+            "type": "tools_called",
+            "passed": true,
+            "message": "Tool 'Write': 3 call(s) >= 1 required"
+          },
+          {
+            "type": "tools_called",
+            "passed": true,
+            "message": "Tool 'Bash': 23 call(s) >= 1 required"
+          },
+          {
+            "type": "output_contains",
+            "passed": true,
+            "message": "Output contains: 'hello'"
+          },
+          {
+            "type": "nl_checks",
+            "passed": true,
+            "message": "NL[completeness]: 7.0/10 PASS (min=7) — 完整涵蓋程式碼位置與修改說明（100%），但 size 檢查部分只提供理論方案與推估數據，未實際執行命令與驗證結果，導致二項子任務中第二項僅達70%完整度。"
+          },
+          {
+            "type": "nl_checks",
+            "passed": true,
+            "message": "NL[skill_usage]: 9.0/10 PASS (min=6) — 充分應用了 build-flow 的完整 SOP 和 ARM toolchain 指令（arm-none-eabi-size/nm），詳細分析了 ROM/RAM/section 級別的 memory 布局（text、rodata、bss、data），提供了 before/after 對比和 byte 級別數字，唯缺實際執行驗證的具體數據。"
+          },
+          {
+            "type": "judge",
+            "passed": true,
+            "message": "Judge: 10.0/10 PASS (min=7) — 代碼位置符合韌體架構（sys/ 模組，在 wifi_sys_init() 註冊），build 流程使用正確的 ARM toolchain 和完整的編譯指令，size 分析包含 ROM/RAM breakdown 和 section 層級細節，並有 before/after 對比和優化建議。"
+          }
+        ],
+        "duration": 252.2448624591343,
+        "token_usage": {
+          "total": 1079467,
+          "cost": 0.5712
+        },
+        "nl_scores": {
+          "completeness": 7.0,
+          "skill_usage": 9.0
+        },
+        "judge_score": 10.0
+      }
+    ]
+  },
+  "L2": {
+    "skills": [],
+    "tools": [],
+    "failures": [],
+    "total_tokens": {
+      "input": 42,
+      "output": 9786,
+      "cache_creation": 29976,
+      "cache_read": 1039663,
+      "total": 1079467,
+      "estimated_cost_usd": 0.5712,
+      "model_id": "claude-sonnet-4-6"
+    },
+    "verification_tokens": {
+      "by_model": [
+        {
+          "model_id": "claude-haiku-4-5-20251001",
+          "calls": 3,
+          "input": 60,
+          "output": 12,
+          "cache_creation": 43400,
+          "cache_read": 212016,
+          "total": 255488,
+          "estimated_cost_usd": 0.0605
+        }
+      ],
+      "total_tokens": 255488,
+      "total_cost_usd": 0.0605
+    }
+  },
+  "L3": {
+    "phases": [
+      {
+        "phase": "understanding",
+        "messages": 2,
+        "tokens": 0,
+        "ratio": 0.0
+      },
+      {
+        "phase": "exploring",
+        "messages": 11,
+        "tokens": 0,
+        "ratio": 0.0
+      },
+      {
+        "phase": "implementing",
+        "messages": 45,
+        "tokens": 0,
+        "ratio": 0.0
+      },
+      {
+        "phase": "verifying",
+        "messages": 4,
+        "tokens": 0,
+        "ratio": 0.0
+      },
+      {
+        "phase": "designing",
+        "messages": 1,
+        "tokens": 0,
+        "ratio": 0.0
+      }
+    ],
+    "efficiency": {
+      "effective_tokens": 1079467,
+      "effective_ratio": 1.0,
+      "wasted_tokens": 0,
+      "wasted_ratio": 0.0,
+      "total_tokens": 1079467
+    },
+    "timeline": [],
+    "model_comparison": {}
+  }
+}
