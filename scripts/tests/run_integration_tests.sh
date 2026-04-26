@@ -178,8 +178,8 @@ assert_contains "TC-08-3 wifi-bora listed"           "$out" "wifi-bora-memory-sl
 assert_contains "TC-08-4 Installed count"            "$out" "Installed:"
 
 cd "$WS" && $SETUP --list --format json > /tmp/cj_list.json 2>&1
-if python3 -c "import json,sys; data=json.load(open('/tmp/cj_list.json')); assert isinstance(data,list)" 2>/dev/null; then
-    ok "TC-08-5 --list --format json valid JSON array"
+if python3 -c "import json,sys; data=json.load(open('/tmp/cj_list.json')); assert isinstance(data,dict); assert 'experts' in data; assert 'skills' in data" 2>/dev/null; then
+    ok "TC-08-5 --list --format json valid JSON object with experts+skills"
 else
     fail "TC-08-5 --list --format json invalid"
 fi
@@ -254,10 +254,14 @@ cd "$WS" && $SETUP --list --format json > /tmp/cj_list16.json 2>&1
 if python3 - /tmp/cj_list16.json <<'PYEOF' 2>/dev/null; then
 import json, sys
 data = json.load(open(sys.argv[1]))
-assert isinstance(data, list), "not a list"
-names = [e['name'] for e in data]
+assert isinstance(data, dict), "not a dict"
+experts = data['experts']
+skills = data['skills']
+names = [e['name'] for e in experts]
 assert 'framework-base-expert' in names, "framework-base-expert missing"
-assert any(e['status']=='installed' and e['name']=='framework-base-expert' for e in data), "status error"
+assert any(e['status']=='installed' and e['name']=='framework-base-expert' for e in experts), "status error"
+assert len(skills) > 0, "no skills"
+assert all('expert' in s and 'status' in s for s in skills), "skill missing fields"
 PYEOF
     ok "TC-16 --list --format json structure correct"
 else

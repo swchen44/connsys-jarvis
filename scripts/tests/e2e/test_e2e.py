@@ -88,6 +88,14 @@ class TestE2EInit:
         # Skill count varies as skills are added/removed; just verify at least 1
         assert len(list(skills_dir.iterdir())) >= 1
 
+    def test_init_with_deps_generates_all_must_lines(self, ws):
+        """--init 含依賴的 expert，CLAUDE.md 應包含所有依賴的 MUST 指示。"""
+        result = run_setup(ws, "--init", "wifi-bora/wifi-bora-memory-slim-expert/expert.json")
+        assert result.returncode == 0
+        content = (ws / "CLAUDE.md").read_text()
+        assert "MUST use the skill framework-base-expert-using-knowhow" in content
+        assert "MUST use the skill wifi-bora-memory-slim-expert-using-knowhow" in content
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TC-E02  --add 流程
@@ -182,14 +190,16 @@ class TestE2EList:
         result = run_setup(ws, "--list", "--format", "json")
         assert result.returncode == 0
         data = json.loads(result.stdout)
-        assert isinstance(data, list)
+        assert isinstance(data, dict)
+        assert "experts" in data
+        assert "skills" in data
 
     def test_list_shows_installed_and_available(self, ws):
         import json
         run_setup(ws, "--init", "framework/framework-base-expert/expert.json")
         result = run_setup(ws, "--list", "--format", "json")
         data = json.loads(result.stdout)
-        statuses = {e["name"]: e["status"] for e in data}
+        statuses = {e["name"]: e["status"] for e in data["experts"]}
         assert statuses.get("framework-base-expert") == "installed"
         assert statuses.get("wifi-bora-memory-slim-expert") == "available"
 
@@ -215,11 +225,12 @@ class TestE2EMultiExpertWorkflow:
         after_add = len(list((ws / ".claude/skills").iterdir()))
         assert after_add > init_skills  # add should bring more skills
 
-        # 3. list → 兩個 installed
+        # 3. list → 兩個 direct installed（依賴 expert 可能更多）
         r = run_setup(ws, "--list", "--format", "json")
         data = json.loads(r.stdout)
-        installed = [e for e in data if e["status"] == "installed"]
-        assert len(installed) == 2
+        direct = [e for e in data["experts"]
+                  if e["status"] == "installed" and e.get("installed_via") == "direct"]
+        assert len(direct) == 2
 
         # 4. remove wifi-bora expert
         r = run_setup(ws, "--remove", "wifi-bora-memory-slim-expert")
@@ -227,9 +238,10 @@ class TestE2EMultiExpertWorkflow:
         after_remove = len(list((ws / ".claude/skills").iterdir()))
         assert after_remove < after_add  # remove should reduce skills
 
-        # 5. list → 一個 installed
+        # 5. list → 一個 direct installed
         r = run_setup(ws, "--list", "--format", "json")
         data = json.loads(r.stdout)
-        installed = [e for e in data if e["status"] == "installed"]
-        assert len(installed) == 1
-        assert installed[0]["name"] == "framework-base-expert"
+        direct = [e for e in data["experts"]
+                  if e["status"] == "installed" and e.get("installed_via") == "direct"]
+        assert len(direct) == 1
+        assert direct[0]["name"] == "framework-base-expert"

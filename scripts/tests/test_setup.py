@@ -743,26 +743,42 @@ class TestCmdListUpdated:
         capsys.readouterr()  # flush init output before capturing json
         inst.cmd_list(workspace, output_format="json")
         data = json.loads(capsys.readouterr().out)
-        assert isinstance(data, list)
-        assert len(data) > 0
+        assert isinstance(data, dict)
+        assert "experts" in data
+        assert "skills" in data
+        assert len(data["experts"]) > 0
+        assert len(data["skills"]) > 0
 
-    def test_list_json_all_entries_have_status(self, workspace, capsys):
+    def test_list_json_all_experts_have_status(self, workspace, capsys):
         self._init_framework(workspace)
         capsys.readouterr()  # flush init output before capturing json
         inst.cmd_list(workspace, output_format="json")
         data = json.loads(capsys.readouterr().out)
-        for item in data:
+        for item in data["experts"]:
             assert "status" in item
             assert item["status"] in ("installed", "available")
+            assert "installed_via" in item
+
+    def test_list_json_all_skills_have_status(self, workspace, capsys):
+        self._init_framework(workspace)
+        capsys.readouterr()
+        inst.cmd_list(workspace, output_format="json")
+        data = json.loads(capsys.readouterr().out)
+        for sk in data["skills"]:
+            assert "status" in sk
+            assert sk["status"] in ("installed", "available")
+            assert "expert" in sk
+            assert "description" in sk
 
     def test_list_json_installed_expert_correct_status(self, workspace, capsys):
         self._init_framework(workspace)
         capsys.readouterr()  # flush init output before capturing json
         inst.cmd_list(workspace, output_format="json")
         data = json.loads(capsys.readouterr().out)
-        fw = next((e for e in data if e["name"] == "framework-base-expert"), None)
+        fw = next((e for e in data["experts"] if e["name"] == "framework-base-expert"), None)
         assert fw is not None
         assert fw["status"] == "installed"
+        assert fw["installed_via"] == "direct"
         assert fw["is_identity"] is True
 
     def test_list_json_available_expert_correct_status(self, workspace, capsys):
@@ -770,9 +786,23 @@ class TestCmdListUpdated:
         capsys.readouterr()  # flush init output before capturing json
         inst.cmd_list(workspace, output_format="json")
         data = json.loads(capsys.readouterr().out)
-        slim = next((e for e in data if e["name"] == "wifi-bora-memory-slim-expert"), None)
+        slim = next((e for e in data["experts"] if e["name"] == "wifi-bora-memory-slim-expert"), None)
         assert slim is not None
         assert slim["status"] == "available"
+
+    def test_list_json_dependency_expert_shows_installed(self, workspace, capsys):
+        """依賴 expert 也應顯示為 installed（installed_via=dependency）。"""
+        inst.cmd_init(
+            workspace,
+            workspace / "connsys-jarvis/wifi-bora/wifi-bora-memory-slim-expert/expert.json",
+        )
+        capsys.readouterr()
+        inst.cmd_list(workspace, output_format="json")
+        data = json.loads(capsys.readouterr().out)
+        fw = next((e for e in data["experts"] if e["name"] == "framework-base-expert"), None)
+        assert fw is not None
+        assert fw["status"] == "installed"
+        assert fw["installed_via"] == "dependency"
 
 
 # ─────────────────────────────────────────────────────────────────────────────

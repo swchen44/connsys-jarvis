@@ -726,7 +726,6 @@ def clear_claude_symlinks(workspace: Path) -> None:
 #   1. 按 install_order 排序所有已安裝 experts
 #   2. 對每個 expert 輸出 skill 指示：MUST use the skill {name}-using-knowhow
 #   3. 不再 @include soul.md / expert.md（改由 using-knowhow skill 提供）
-#   4. 結尾加上 @CLAUDE.local.md
 #
 # 另外建立 AGENTS.md → CLAUDE.md symlink，支援 Open Code、Gemini 等 AI 工具。
 
@@ -1367,12 +1366,103 @@ def cmd_reset(workspace: Path) -> None:
     print(f"\nDone! All state removed. Kept {dot_dir}/log/ only.")
 
 
+def _read_skill_description(skill_md_path: Path) -> str:
+    """從 SKILL.md YAML frontmatter 讀取 description 欄位。
+
+    手動解析，不依賴外部 yaml library。
+
+    Args:
+        skill_md_path: SKILL.md 的絕對路徑
+
+    Returns:
+        description 字串；解析失敗時回傳空字串
+    """
+    try:
+        text = skill_md_path.read_text(encoding="utf-8")
+        if not text.startswith("---"):
+            return ""
+        end = text.index("---", 3)
+        frontmatter = text[3:end]
+        for line in frontmatter.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("description:"):
+                desc = stripped[len("description:"):].strip()
+                # 移除前後引號
+                if len(desc) >= 2 and desc[0] == desc[-1] and desc[0] in ('"', "'"):
+                    desc = desc[1:-1]
+                return desc
+        return ""
+    except Exception:
+        return ""
+
+
+def _collect_dependency_names(workspace: Path, installed: dict) -> set:
+    """收集所有已安裝 expert 的依賴 expert 名稱。
+
+    Args:
+        workspace: workspace 根目錄
+        installed: load_installed_experts 的回傳值
+
+    Returns:
+        set of str：依賴 expert 名稱集合
+    """
+    jarvis_dir = get_jarvis_dir(workspace)
+    dep_names: set = set()
+    for e in installed.get("experts", []):
+        try:
+            ep = jarvis_dir / e["path"]
+            if ep.exists():
+                ed = load_expert_json(ep)
+                for dep in ed.get("dependencies", []):
+                    dep_rel = dep.get("expert", "")
+                    dep_name = Path(dep_rel).name if dep_rel else ""
+                    if dep_name:
+                        dep_names.add(dep_name)
+        except Exception:
+            pass
+    return dep_names
+
+
+def _scan_all_skills(workspace: Path, available: list) -> list:
+    """掃描所有 expert 的 skills，讀取 SKILL.md description。
+
+    Args:
+        workspace: workspace 根目錄
+        available: scan_available_experts 的回傳值
+
+    Returns:
+        list of dict：每個元素含 name, expert, description, installed
+        （installed 在呼叫端再標記）
+    """
+    jarvis_dir = get_jarvis_dir(workspace)
+    skills = []
+    for exp in available:
+        expert_dir = (jarvis_dir / exp["path"]).parent  # expert.json 所在目錄
+        skills_dir = expert_dir / "skills"
+        if not skills_dir.exists():
+            continue
+        for d in sorted(skills_dir.iterdir()):
+            if not d.is_dir():
+                continue
+            skill_md = d / "SKILL.md"
+            desc = _read_skill_description(skill_md) if skill_md.exists() else ""
+            skills.append({
+                "name":        d.name,
+                "expert":      exp["name"],
+                "description": desc,
+            })
+    return skills
+
+
 def cmd_list(workspace: Path, output_format: str = "table") -> None:
-    """--list：列出所有 Expert（已安裝 + 可用），支援 table 和 json 格式。
+    """--list：列出所有 Expert 和 Skills（已安裝 + 可用），支援 table 和 json 格式。
 
     每次都即時掃描 connsys-jarvis 目錄，不依賴 registry.json。
     output_format="json" 時輸出機器可讀的 JSON，供
     framework-expert-discovery skill 或 LLM 使用。
+
+    **依賴視為已安裝**：若 expert A 依賴 expert B，B 的 skills 已透過
+    symlink 安裝，--list 也將 B 標記為 installed（installed_via="dependency"）。
 
     Args:
         workspace:     workspace 根目錄
@@ -1382,47 +1472,90 @@ def cmd_list(workspace: Path, output_format: str = "table") -> None:
     installed_map = {e["name"]: e for e in installed.get("experts", [])}
     available     = scan_available_experts(workspace)
     claude_dir    = get_claude_dir(workspace)
-    logger.debug("cmd_list: %d installed, %d available (format=%s)",
-                 len(installed_map), len(available), output_format)
+    dep_names     = _collect_dependency_names(workspace, installed)
+    logger.debug("cmd_list: %d installed, %d dep_names, %d available (format=%s)",
+                 len(installed_map), len(dep_names), len(available), output_format)
 
     # 合併：標注每個 expert 的 status
-    result = []
+    expert_result = []
     for exp in available:
         name = exp["name"]
         inst = installed_map.get(name)
-        result.append({
+        if inst:
+            status = "installed"
+            installed_via = "direct"
+        elif name in dep_names:
+            status = "installed"
+            installed_via = "dependency"
+        else:
+            status = "available"
+            installed_via = None
+        expert_result.append({
             "name":          name,
             "domain":        exp["domain"],
             "path":          exp["path"],
             "description":   exp["description"],
             "version":       exp["version"],
             "is_base":       exp["is_base"],
-            "status":        "installed" if inst else "available",
+            "status":        status,
+            "installed_via": installed_via,
             "is_identity":   inst.get("is_identity", False) if inst else False,
             "install_order": inst.get("install_order") if inst else None,
         })
 
+    # Skills 清單：掃描所有 expert 的 skills，標記安裝狀態
+    all_skills = _scan_all_skills(workspace, available)
+    installed_skill_names: set = set()
+    skills_dir = claude_dir / "skills"
+    if skills_dir.exists():
+        installed_skill_names = {
+            s.name for s in skills_dir.iterdir() if s.is_symlink()
+        }
+    for sk in all_skills:
+        sk["status"] = "installed" if sk["name"] in installed_skill_names else "available"
+
     if output_format == "json":
-        print(json.dumps(result, indent=2, ensure_ascii=False))
+        print(json.dumps({
+            "experts": expert_result,
+            "skills":  all_skills,
+        }, indent=2, ensure_ascii=False))
         return
 
-    # ── Table 格式 ──
-    installed_count = sum(1 for r in result if r["status"] == "installed")
+    # ── Expert Table 格式 ──
+    installed_expert_count = sum(1 for r in expert_result if r["status"] == "installed")
     py_cmd = Path(sys.executable).name  # python3, python, etc.
 
     print("\n=== Connsys Jarvis — Expert List ===\n")
-    for r in result:
+    for r in expert_result:
         status_icon   = "✅" if r["status"] == "installed" else "○ "
         order_mark    = f" [{r['install_order']}]" if r["install_order"] is not None else ""
         identity_mark = " ← identity" if r["is_identity"] else ""
-        print(f"{status_icon} {r['name']} ({r['domain']}){order_mark}{identity_mark}")
+        dep_mark      = " (dep)" if r["installed_via"] == "dependency" else ""
+        print(f"{status_icon} {r['name']} ({r['domain']}){order_mark}{identity_mark}{dep_mark}")
         if r["description"]:
             print(f"      {r['description']}")
-        cmd = "--init" if installed_count == 0 else "--add"
-        expert_path = f"{JARVIS_DIR_NAME}/{r['path']}"
-        print(f"      {py_cmd} {JARVIS_DIR_NAME}/scripts/setup.py {cmd}  {expert_path}")
+        if r["status"] == "available":
+            cmd = "--init" if installed_expert_count == 0 else "--add"
+            expert_path = f"{JARVIS_DIR_NAME}/{r['path']}"
+            print(f"      {py_cmd} {JARVIS_DIR_NAME}/scripts/setup.py {cmd}  {expert_path}")
 
-    print(f"\nInstalled: {installed_count}  Available: {len(result)}")
+    print(f"\nInstalled: {installed_expert_count}  Total: {len(expert_result)}")
+
+    # ── Skills Table 格式 ──
+    installed_skill_count = sum(1 for s in all_skills if s["status"] == "installed")
+
+    print("\n=== Connsys Jarvis — Skills List ===\n")
+    # 按 expert 分組
+    current_expert = None
+    for sk in all_skills:
+        if sk["expert"] != current_expert:
+            current_expert = sk["expert"]
+            print(f"{current_expert}:")
+        status_icon = "✅" if sk["status"] == "installed" else "○ "
+        print(f"  {status_icon} {sk['name']}")
+        if sk["description"]:
+            print(f"      {sk['description']}")
+    print(f"\nInstalled: {installed_skill_count}  Total: {len(all_skills)}")
 
     # ── Symlink 清單 ──
     print("\n=== Symlinks in .claude/ ===\n")
