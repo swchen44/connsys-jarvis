@@ -63,6 +63,7 @@ class L2StatisticsReport:
     tools: list[dict] = field(default_factory=list)
     failures: list[dict] = field(default_factory=list)
     total_tokens: dict = field(default_factory=dict)
+    verification_tokens: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -140,8 +141,9 @@ class ReportEngine:
         """
         timestamp = datetime.now(timezone.utc).isoformat()
 
+        model_id = config.MODELS.get(model, model)
         l1 = self._generate_l1(expert_name, model, timestamp)
-        l2 = self._generate_l2()
+        l2 = self._generate_l2(model_id)
         l3 = self._generate_l3(model)
 
         return {"L1": l1, "L2": l2, "L3": l3}
@@ -241,8 +243,11 @@ class ReportEngine:
             test_results=test_reports,
         )
 
-    def _generate_l2(self) -> L2StatisticsReport:
+    def _generate_l2(self, model_id: str = "") -> L2StatisticsReport:
         """Generate Layer 2 statistics report.
+
+        Args:
+            model_id: Full model identifier for cost estimation.
 
         Returns:
             L2StatisticsReport with skill/tool/failure statistics.
@@ -319,6 +324,40 @@ class ReportEngine:
                 tool["calls"] / max(total_calls, 1), 3
             )
 
+        # Aggregate verification (judge/NL check) token usage
+        verif_by_model: dict[str, dict] = {}
+        for ar in self._all_assert_results:
+            if ar.check_type not in ("nl_checks", "judge"):
+                continue
+            jt = ar.details.get("judge_tokens")
+            if not jt:
+                continue
+            mid = ar.details.get("model_id", "unknown")
+            if mid not in verif_by_model:
+                verif_by_model[mid] = {
+                    "model_id": mid, "calls": 0,
+                    "input": 0, "output": 0,
+                    "cache_creation": 0, "cache_read": 0, "total": 0,
+                }
+            v = verif_by_model[mid]
+            v["calls"] += 1
+            for k in ("input", "output", "cache_creation", "cache_read", "total"):
+                v[k] += jt.get(k, 0)
+
+        # Compute cost per verification model
+        for mid, v in verif_by_model.items():
+            pricing = config.MODEL_PRICING.get(mid, {})
+            v["estimated_cost_usd"] = round((
+                v["input"] * pricing.get("input", 0)
+                + v["output"] * pricing.get("output", 0)
+                + v["cache_creation"] * pricing.get("cache_creation", 0)
+                + v["cache_read"] * pricing.get("cache_read", 0)
+            ) / 1_000_000, 4)
+
+        # Grand total verification
+        verif_total_tokens = sum(v["total"] for v in verif_by_model.values())
+        verif_total_cost = sum(v["estimated_cost_usd"] for v in verif_by_model.values())
+
         return L2StatisticsReport(
             skills=sorted(
                 skill_stats.values(),
@@ -338,6 +377,13 @@ class ReportEngine:
                 "cache_creation": total_usage.cache_creation_tokens,
                 "cache_read": total_usage.cache_read_tokens,
                 "total": total_usage.total,
+                "estimated_cost_usd": total_usage.estimated_cost(model_id),
+                "model_id": model_id,
+            },
+            verification_tokens={
+                "by_model": list(verif_by_model.values()),
+                "total_tokens": verif_total_tokens,
+                "total_cost_usd": verif_total_cost,
             },
         )
 
@@ -487,7 +533,8 @@ class ReportEngine:
                     lines.append(f"**Judge Score:** {tr.judge_score}/10")
                     lines.append("")
                 if tr.token_usage.get("total"):
-                    lines.append(f"**Tokens:** {tr.token_usage['total']:,}")
+                    cost = tr.token_usage.get('cost', 0)
+                    lines.append(f"**Tokens:** {tr.token_usage['total']:,} (${cost:.4f})")
                     lines.append("")
 
             # NL score summary
@@ -546,15 +593,62 @@ class ReportEngine:
                 lines.append("")
 
             total = l2.total_tokens
-            lines.append("### Token Summary")
+            model_id = total.get('model_id', '')
+            pricing = config.MODEL_PRICING.get(model_id, {})
+            cost_usd = total.get('estimated_cost_usd', 0)
+
+            lines.append("### Test Session Cost")
             lines.append("")
-            lines.append("| Category | Tokens |")
-            lines.append("|----------|-------:|")
-            lines.append(f"| Input | {total.get('input', 0):,} |")
-            lines.append(f"| Output | {total.get('output', 0):,} |")
-            lines.append(f"| Cache Creation | {total.get('cache_creation', 0):,} |")
-            lines.append(f"| Cache Read | {total.get('cache_read', 0):,} |")
-            lines.append(f"| **Total** | **{total.get('total', 0):,}** |")
+            if model_id:
+                lines.append(f"Model: `{model_id}`")
+                lines.append("")
+            lines.append("| Category | Tokens | Unit Price (per 1M) | Cost (USD) |")
+            lines.append("|----------|-------:|--------------------:|-----------:|")
+            inp = total.get('input', 0)
+            out = total.get('output', 0)
+            cc = total.get('cache_creation', 0)
+            cr = total.get('cache_read', 0)
+            ttl = total.get('total', 0)
+            lines.append(f"| Input | {inp:,} | ${pricing.get('input', 0):.2f} | ${inp * pricing.get('input', 0) / 1_000_000:.4f} |")
+            lines.append(f"| Output | {out:,} | ${pricing.get('output', 0):.2f} | ${out * pricing.get('output', 0) / 1_000_000:.4f} |")
+            lines.append(f"| Cache Creation | {cc:,} | ${pricing.get('cache_creation', 0):.2f} | ${cc * pricing.get('cache_creation', 0) / 1_000_000:.4f} |")
+            lines.append(f"| Cache Read | {cr:,} | ${pricing.get('cache_read', 0):.2f} | ${cr * pricing.get('cache_read', 0) / 1_000_000:.4f} |")
+            lines.append(f"| **Subtotal** | **{ttl:,}** | | **${cost_usd:.4f}** |")
+            lines.append("")
+
+            # Verification cost (NL checks + Judge)
+            verif = l2.verification_tokens
+            verif_models = verif.get("by_model", [])
+            if verif_models:
+                lines.append("### Verification Cost (NL Checks + Judge)")
+                lines.append("")
+                lines.append("| Model | Calls | Tokens | Cost (USD) |")
+                lines.append("|-------|------:|-------:|-----------:|")
+                for vm in verif_models:
+                    lines.append(
+                        f"| `{vm['model_id']}` | {vm['calls']} | "
+                        f"{vm['total']:,} | ${vm['estimated_cost_usd']:.4f} |"
+                    )
+                verif_total_cost = verif.get("total_cost_usd", 0)
+                verif_total_tokens = verif.get("total_tokens", 0)
+                lines.append(
+                    f"| **Subtotal** | | **{verif_total_tokens:,}** | "
+                    f"**${verif_total_cost:.4f}** |"
+                )
+                lines.append("")
+
+            # Grand total
+            verif_cost = verif.get("total_cost_usd", 0) if verif else 0
+            verif_tokens = verif.get("total_tokens", 0) if verif else 0
+            grand_tokens = ttl + verif_tokens
+            grand_cost = cost_usd + verif_cost
+            lines.append("### Grand Total")
+            lines.append("")
+            lines.append("| Item | Tokens | Cost (USD) |")
+            lines.append("|------|-------:|-----------:|")
+            lines.append(f"| Test Session | {ttl:,} | ${cost_usd:.4f} |")
+            lines.append(f"| Verification | {verif_tokens:,} | ${verif_cost:.4f} |")
+            lines.append(f"| **Total** | **{grand_tokens:,}** | **${grand_cost:.4f}** |")
             lines.append("")
 
         # L3: Behavior

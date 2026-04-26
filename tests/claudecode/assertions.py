@@ -366,6 +366,30 @@ def check_output_not_contains(
 # Layer 5: Natural language checks (LLM-as-judge)
 # ---------------------------------------------------------------------------
 
+def _extract_session_tokens(session: SessionResult) -> dict:
+    """Extract token usage from a session's raw_json_lines.
+
+    Args:
+        session: SessionResult with raw_json_lines.
+
+    Returns:
+        Dict with input, output, cache_creation, cache_read, total tokens.
+    """
+    usage = {"input": 0, "output": 0, "cache_creation": 0, "cache_read": 0}
+    for line in session.raw_json_lines:
+        if line.get("type") != "assistant":
+            continue
+        u = line.get("message", {}).get("usage", {})
+        if not u:
+            u = line.get("usage", {})
+        usage["input"] += u.get("input_tokens", 0)
+        usage["output"] += u.get("output_tokens", 0)
+        usage["cache_creation"] += u.get("cache_creation_input_tokens", 0)
+        usage["cache_read"] += u.get("cache_read_input_tokens", 0)
+    usage["total"] = sum(usage.values())
+    return usage
+
+
 def check_nl(
     nl_checks: list[dict],
     session: SessionResult,
@@ -418,11 +442,15 @@ def check_nl(
 
         # Execute judge via headless mode
         logger.info("Running NL check %s (aspect=%s)", check_id, aspect)
+        model_id = config.MODELS.get(model, model)
         judge_executor = HeadlessExecutor(model=model, timeout=60)
         judge_session = judge_executor.execute(prompt)
 
         # Parse score
         judge_result = _parse_nl_score(judge_session.output, model, aspect)
+
+        # Extract judge token usage
+        judge_tokens = _extract_session_tokens(judge_session)
 
         passed = judge_result.score >= min_pass
         results.append(AssertResult(
@@ -443,6 +471,8 @@ def check_nl(
                 "min_pass": min_pass,
                 "scale": scale,
                 "model": model,
+                "model_id": model_id,
+                "judge_tokens": judge_tokens,
             },
         ))
 
@@ -530,10 +560,12 @@ def check_judge(
     )
 
     logger.info("Running judge evaluation with model=%s", model)
+    model_id = config.MODELS.get(model, model)
     judge_executor = HeadlessExecutor(model=model, timeout=60)
     judge_session = judge_executor.execute(prompt)
 
     judge_result = _parse_nl_score(judge_session.output, model, "overall")
+    judge_tokens = _extract_session_tokens(judge_session)
     passed = judge_result.score >= min_score
 
     return AssertResult(
@@ -551,6 +583,8 @@ def check_judge(
             "reason": judge_result.reason,
             "min_score": min_score,
             "model": model,
+            "model_id": model_id,
+            "judge_tokens": judge_tokens,
         },
     )
 

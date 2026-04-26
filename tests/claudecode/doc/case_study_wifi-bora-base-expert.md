@@ -96,191 +96,174 @@ python3 -m tests.claudecode.cli --expert wifi-bora-base-expert -v --no-analysis
 ```
 1. CLI 載入 test_cases.json（1 個 test case）
 2. ClaudeRunner 啟動 headless session（claude -p "..." --output-format stream-json）
-3. Claude Code 執行 76.2 秒，產出回應
+3. Claude Code 執行任務，產出回應
 4. 6 層 assertion checks 逐一驗證
-5. TokenAnalyzer 解析 token 使用量
-6. ReportEngine 生成 L1/L2/L3 三層報告
-7. 報告存到 .results/reports/2026-04-26_23-08-01_wifi-bora-base-expert_sonnet/
+5. NL checks + Judge 呼叫 haiku 模型評分（各一次 claude -p）
+6. TokenAnalyzer 解析 token 使用量
+7. ReportEngine 生成 L1/L2/L3 三層報告（markdown + JSON）
+8. 報告存到 .results/reports/{timestamp}_{expert}_{model}/
 ```
 
-## 4. AI 的實際輸出
+## 4. 測試報告（實際輸出）
 
-Claude 的回應（節錄）：
+以下是 2026-04-26 的實際測試報告：
 
-```
-假設你有 WiFi Bora firmware source，以下是完整的 Hello World + Size 分析 SOP：
+### 總覽
 
-## Step 1：寫 Hello World
+| Field | Value |
+|-------|-------|
+| Expert | `wifi-bora-base-expert` |
+| Model | `sonnet` (claude-sonnet-4-6) |
+| Pass Rate | **1/1** (100%) |
+| Judge Score | 10.0/10 |
 
-在 firmware 裡沒有 printf，通常是透過 log macro：
+### 逐項 Check 結果
 
-  /* hello_world.c */
-  #include "wifi_log.h"
-  void hello_world_init(void)
-  {
-      wifi_log_info("Hello World from WiFi Bora firmware!\n");
-  }
+| Check | Result | Detail |
+|-------|--------|--------|
+| skills_invoked | PASS | Skill 'wifi-bora-base-expert-using-knowhow': invoked |
+| skills_invoked | PASS | Skill 'wifi-bora-build-flow': invoked |
+| skills_invoked | PASS | Skill 'wifi-bora-memory-knowhow': invoked |
+| skills_invoked | PASS | Skill 'wifi-bora-arch-knowhow' (optional): invoked |
+| tools_called | PASS | Tool 'Read': 6 call(s) >= 1 required |
+| tools_called | PASS | Tool 'Write': 3 call(s) >= 1 required |
+| tools_called | PASS | Tool 'Bash': 23 call(s) >= 1 required |
+| output_contains | PASS | Output contains: 'hello' |
+| nl_checks | PASS | NL[completeness]: 7.0/10 PASS (min=7) |
+| nl_checks | PASS | NL[skill_usage]: 9.0/10 PASS (min=6) |
+| judge | PASS | Judge: 10.0/10 PASS (min=7) |
 
-## Step 2：Build
+### Token & Cost
 
-  export CROSS_COMPILE=arm-none-eabi-
-  export WIFI_BORA_CHIP=bora_b0
-  make -j$(nproc)
+#### Test Session Cost
 
-## Step 3：檢查 Size 影響
+Model: `claude-sonnet-4-6`
 
-  arm-none-eabi-size build/wifi_bora.elf
+| Category | Tokens | Unit Price (per 1M) | Cost (USD) |
+|----------|-------:|--------------------:|-----------:|
+| Input | 42 | $3.00 | $0.0001 |
+| Output | 9,786 | $15.00 | $0.1468 |
+| Cache Creation | 29,976 | $3.75 | $0.1124 |
+| Cache Read | 1,039,663 | $0.30 | $0.3119 |
+| **Subtotal** | **1,079,467** | | **$0.5712** |
 
-  | Section   | 增加量     | 原因                          |
-  |-----------|-----------|-------------------------------|
-  | .text     | ~48 bytes | hello_world_init() 函式本體    |
-  | .rodata   | ~40 bytes | 字串 "Hello World from..."    |
-  | .bss/.data| 0         | 沒有全域變數                   |
-```
+#### Verification Cost (NL Checks + Judge)
 
-## 5. 測試報告解讀
+| Model | Calls | Tokens | Cost (USD) |
+|-------|------:|-------:|-----------:|
+| `claude-haiku-4-5-20251001` | 3 | 255,488 | $0.0605 |
+| **Subtotal** | | **255,488** | **$0.0605** |
+
+#### Grand Total
+
+| Item | Tokens | Cost (USD) |
+|------|-------:|-----------:|
+| Test Session | 1,079,467 | $0.5712 |
+| Verification | 255,488 | $0.0605 |
+| **Total** | **1,334,955** | **$0.6317** |
+
+## 5. 報告解讀指南
 
 ### 5.1 Layer 1: Quality Report — 「測試有沒有過？」
 
-```markdown
-| Field | Value |
-|-------|-------|
-| Expert | wifi-bora-base-expert |
-| Model | sonnet |
-| Pass Rate | 0/1 (0%) |
-| Judge Score | 8.0/10 |
-```
+- **Pass Rate** — 所有 check 都通過才算 PASS。本次 11/11 = 100%
+- **Judge Score** — rubric 評分，10/10 代表 AI 回應在每個維度都達標
+- **不要只看 pass/fail** — 看具體哪些 check 的分數邊界值（例如 completeness 7/10 剛好及格）
 
-**解讀：**
-- Pass Rate 0% 看起來很差，但只因為 11 項 check 中有 2 項 FAIL，整體判定為 FAIL
-- Judge Score 8.0/10 代表 AI 的回應品質其實不錯
-- **重點：不要只看 pass/fail，要看具體哪些 check 失敗**
+### 5.2 逐項 Check 解讀
 
-### 5.2 逐項 Check 結果分析
+| Check 類型 | 怎麼讀 | 失敗時該做什麼 |
+|-----------|--------|--------------|
+| skills_invoked | 預期的 skill 有沒有被讀取 | 檢查 skill description 是否包含觸發關鍵字 |
+| tools_called | AI 有沒有用到預期的工具 | 調整 prompt 讓 AI 實際執行而非只描述 |
+| output_contains | 輸出是否包含必要關鍵字 | 檢查 AI 是否偏離主題 |
+| nl_checks | LLM judge 給的品質分數 | 看 reason 欄位了解扣分原因 |
+| judge | rubric 總評分數 | 對照 rubric 各項配分找出弱項 |
 
-| Check | Result | 解讀 |
-|-------|--------|------|
-| skills_invoked: using-knowhow | PASS | MANDATORY skill 正確觸發，good |
-| skills_invoked: build-flow | PASS | 寫 code 前先讀 build 知識，correct |
-| skills_invoked: memory-knowhow | PASS | 檢查 size 前先讀 memory 知識，correct |
-| skills_invoked: arch-knowhow | PASS (optional) | 沒被觸發但標記為 optional，不扣分 |
-| tools_called: Read >= 1 | PASS (4 calls) | 讀了 4 次檔案，合理 |
-| **tools_called: Write >= 1** | **FAIL (0 calls)** | **AI 沒有實際寫檔，只用文字描述程式碼** |
-| tools_called: Bash >= 1 | PASS (8 calls) | 執行了 8 次命令，合理 |
-| output_contains: "hello" | PASS | 輸出包含 hello 關鍵字 |
-| **nl_checks: completeness** | **FAIL (6/10, min=7)** | **差 1 分：缺少 Makefile 修改範例和 baseline 比較** |
-| nl_checks: skill_usage | PASS (7/10, min=6) | 正確使用了 ARM toolchain 和 size 分析知識 |
-| judge | PASS (8/10, min=7) | 整體品質好，程式碼位置正確 |
+### 5.3 Cost 解讀
 
-### 5.3 FAIL 項目深度分析
+**Test Session Cost** — 實際跑 Claude Code 的花費：
+- **Cache Read 佔 94%**（$0.31）— 大部分 token 來自 cache，單價最低（$0.30/1M），這是正常行為
+- **Output** 佔 $0.15 — AI 實際生成的內容
+- **Cache Creation** 佔 $0.11 — 首次載入 CLAUDE.md 和 skill 內容
 
-**FAIL 1: Write tool 未被呼叫**
+**Verification Cost** — NL check + Judge 的 haiku 評分花費：
+- 3 次 haiku 呼叫（2 NL checks + 1 Judge）共 $0.06
+- haiku 單價便宜（output $4/1M vs sonnet $15/1M），驗證成本只佔總成本 10%
 
-```
-Expected: >= 1 calls
-Actual:   0 calls
-```
+**Grand Total** — 一次完整測試的總花費 = **$0.63**
 
-AI 選擇用 markdown code block 描述程式碼，而非使用 Write tool 實際寫入檔案。
-這在「沒有實際 firmware repo」的情境下是合理行為 — AI 判斷 workspace 中沒有
-firmware source code，因此改為提供 SOP 指引。
+> **判讀建議**：
+> - 若只做 smoke test（不需 NL check），成本可降到 $0.57
+> - 若改用 opus 模型，預估 test session 成本會 x5（$2.85），但品質可能更高
+> - 若改用 haiku 模型做 test session，成本約 $0.05，但品質可能大幅下降
 
-> **判讀建議**：此 FAIL 是 test case 對「行為模式」的期待與 AI 實際判斷的落差。
-> 若要讓 AI 一定寫檔，prompt 應明確說 "請在 workspace 中建立檔案"。
-> 或者，將 Write 的 min_count 改為 0（不要求一定寫檔）。
+### 5.4 Layer 3: Behavior — 「AI 怎麼花時間的？」
 
-**FAIL 2: NL completeness 6/10（門檻 7）**
+| Phase | Messages | 含義 |
+|-------|--------:|------|
+| understanding | 2 | 讀取 prompt，理解需求 |
+| exploring | 11 | 搜尋 codebase（Read, Grep, Glob） |
+| implementing | 45 | 寫程式碼和文字回應（Write, Edit, Bash） |
+| verifying | 4 | 確認結果（跑測試、檢查 output） |
+| designing | 1 | 規劃做法 |
 
-```
-AI 涵蓋了兩個子任務的理論框架和步驟，但缺少 Makefile 修改的具體範例、
-實際執行過程、baseline 比較結果，以及完整的 symbol size 分佈分析。
-```
+> **判讀建議**：
+> - implementing 佔最多 messages = AI 花最多時間在實作，正常
+> - 若 debugging > 20% = AI 卡在某處反覆嘗試，需檢查錯誤來源
+> - 若 exploring > 30% = AI 找不到需要的東西，可能需改善 prompt 或 skill description
 
-haiku judge 認為 AI 的回應缺少：
-1. Makefile 修改的具體範例（`obj-y += hello.o`）
-2. 實際執行 build + size 的結果（只有預估值）
-3. Baseline vs 修改後的 diff 比較
+## 6. 迭代過程：從 FAIL 到 PASS
 
-> **判讀建議**：6 分離 7 分只差 1 分，屬於邊界值。
-> 可以考慮 (a) 降低 min_pass 到 6，或 (b) 改善 prompt 讓 AI 更完整。
+本測試經過多次迭代才穩定通過，以下是過程中發現的問題和修正：
 
-### 5.4 Layer 2: Token Statistics — 「花了多少 token？」
+### 6.1 第一次執行（FAIL: 4/11）
 
-```markdown
-| Category | Tokens |
-|----------|-------:|
-| Input | 15 |
-| Output | 2,786 |
-| Cache Creation | 15,725 |
-| Cache Read | 289,166 |
-| **Total** | **307,692** |
-```
+| 問題 | 原因 | 修正 |
+|------|------|------|
+| skills_invoked 全部 NOT invoked | `_extract_skill_invocations` 只偵測 Skill tool_use，但 Claude 用 Read SKILL.md | 擴展偵測邏輯，支援 Read 模式 |
+| NL check Parse error | HeadlessExecutor 缺少 `--verbose` flag | stream-json 必須搭配 --verbose |
+| Judge Parse error | 同上 | 同上 |
 
-**解讀：**
-- Cache Read 佔 94% — 大部分 token 來自 cache（便宜），因為 CLAUDE.md 和 skill 內容都被 cache 了
-- Output 只有 2,786 — AI 的實際生成量很小
-- Total 307,692 超過 token_budget 80,000 — 但 budget 主要是對 output token 的軟限制，cache read 不算在成本中
+### 6.2 第二次執行（FAIL: 2/11）
 
-### 5.5 Layer 3: Behavior Analysis — 「AI 怎麼花時間的？」
+| 問題 | 原因 | 修正 |
+|------|------|------|
+| Write tool 0 calls | AI 用文字描述程式碼而非寫檔 | 考慮降低 min_count 或改善 prompt |
+| NL completeness 6/10 | 缺少 Makefile 修改範例和 baseline 比較 | 邊界值，可調整 min_pass |
 
-```markdown
-| Phase | Messages | Tokens | Ratio |
-|-------|--------:|-------:|------:|
-| understanding | 3 | 0 | 0.0% |
-| implementing | 11 | 0 | 0.0% |
-| exploring | 6 | 0 | 0.0% |
-```
+### 6.3 第三次執行（PASS: 11/11）
 
-**解讀：**
-- 20 個 messages：3 個理解需求、6 個探索 codebase、11 個實作回應
-- Token 為 0 是因為 behavior phase 的 token 歸因尚未完整實作（per-phase token 未從 stream-json 的 usage 欄位拆分）
-- Wasted 0% — 沒有偵測到重試或錯誤浪費
+所有 skills 正確觸發，Write 3 次、Bash 23 次，NL 和 Judge 都通過。
 
-> **判讀建議**：若 debugging phase 超過 20%，代表 AI 卡在某處反覆嘗試，
-> 應檢查是哪個 tool call 失敗。本次測試沒有此問題。
+> **學習**：整合測試的價值不僅在最終 PASS/FAIL，更在於迭代過程中發現的
+> 框架問題（skill 偵測邏輯）和 AI 行為模式（描述 vs 執行）。
 
-## 6. 改善建議
+## 7. 跨模型成本預估
 
-根據測試結果，以下是具體可行的改善方向：
+根據 config.py 中的定價，相同測試案例在不同模型下的預估成本：
 
-### 6.1 Test Case 調整
+| Model | Input (per 1M) | Output (per 1M) | Cache Read (per 1M) | 預估 Test Cost | 預估 Total |
+|-------|---------------:|------------------:|--------------------:|---------------:|-----------:|
+| Sonnet | $3.00 | $15.00 | $0.30 | $0.57 | $0.63 |
+| Opus | $15.00 | $75.00 | $1.50 | ~$2.85 | ~$2.91 |
+| Haiku | $0.80 | $4.00 | $0.08 | ~$0.05 | ~$0.11 |
 
-| 問題 | 建議 | 修改位置 |
-|------|------|---------|
-| Write tool FAIL 不合理 | 將 `min_count` 改為 0，或新增條件判斷 | `test_cases.json` tools_called |
-| NL completeness 門檻太高 | 將 `min_pass` 從 7 降為 6 | `test_cases.json` nl_checks |
-| Prompt 太模糊 | 加入 "請在 workspace 中實際建立檔案" | `prompts/WB-001_hello_world_size.md` |
+> 可用 `--models sonnet,opus,haiku` 一次跑三個模型比較品質與成本。
 
-### 6.2 Skill 改善
-
-| 觀察 | 建議 |
-|------|------|
-| using-knowhow 正確觸發 | MANDATORY 模式有效，維持 |
-| build-flow 正確觸發 | skill description 中的 "build" 關鍵字觸發成功 |
-| memory-knowhow 正確觸發 | "size" 和 "記憶體" 成功映射到此 skill |
-| arch-knowhow 沒觸發 | 非必要，但可在 description 加入 "hello world" 或 "code placement" 增加觸發率 |
-
-### 6.3 跨模型比較（未來）
-
-```bash
-# 比較 sonnet vs opus 的表現
-python3 -m tests.claudecode.cli --expert wifi-bora-base-expert \
-    --models sonnet,opus --no-analysis
-```
-
-預期差異：
-- Opus：completeness 分數可能更高（更詳細的輸出），但 token 成本更高
-- Haiku：completeness 分數可能更低，但速度最快
-
-## 7. 總結
+## 8. 總結
 
 | 面向 | 結論 |
 |------|------|
-| Skill 觸發 | 3/3 required skills 全部正確觸發 |
-| 回應品質 | Judge 8/10，整體良好，細節有改善空間 |
+| Skill 觸發 | 3/3 required + 1 optional 全部正確觸發 |
+| 回應品質 | Judge 10/10，NL skill_usage 9/10 |
 | Token 效率 | 94% cache read，成本控制良好 |
-| 測試框架 | 六層檢查有效抓出「知道 vs 做到」的差異（AI 知道怎麼做但沒有實際執行） |
+| 測試成本 | 一次完整測試 $0.63（test $0.57 + verification $0.06） |
+| 測試框架 | 六層檢查 + 三層報告 + 完整 cost breakdown |
 
-**核心發現：** 整合測試最大的價值不在於判定 pass/fail，而在於揭示 AI 行為模式 —
-它選擇用「說明」而非「執行」來回應，以及它引用了哪些 skill 的知識。
-這些洞察可以回饋到 skill description 和 prompt 設計的改善循環中。
+**核心發現：**
+
+1. **Skill 觸發可靠性取決於 description 品質** — using-knowhow 的 MANDATORY 語言確保 100% 觸發率
+2. **AI 行為不穩定** — 同樣的 prompt，有時會寫檔，有時只描述。整合測試可以量化這個不穩定性
+3. **驗證成本可控** — haiku judge 只佔總成本 10%，是划算的品質保證投資
+4. **報告的價值在於可追蹤** — 每次執行都有 timestamp 目錄，可以回溯和比較不同時間點的表現
