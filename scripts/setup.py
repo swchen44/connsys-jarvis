@@ -1358,6 +1358,7 @@ def cmd_list(workspace: Path, output_format: str = "table") -> None:
 
     # ── Table 格式 ──
     installed_count = sum(1 for r in result if r["status"] == "installed")
+    py_cmd = Path(sys.executable).name  # python3, python, etc.
 
     print("\n=== Connsys Jarvis — Expert List ===\n")
     for r in result:
@@ -1369,7 +1370,7 @@ def cmd_list(workspace: Path, output_format: str = "table") -> None:
             print(f"      {r['description']}")
         cmd = "--init" if installed_count == 0 else "--add"
         expert_path = f"{JARVIS_DIR_NAME}/{r['path']}"
-        print(f"      python {JARVIS_DIR_NAME}/scripts/setup.py {cmd}  {expert_path}")
+        print(f"      {py_cmd} {JARVIS_DIR_NAME}/scripts/setup.py {cmd}  {expert_path}")
 
     print(f"\nInstalled: {installed_count}  Available: {len(result)}")
 
